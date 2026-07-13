@@ -1,0 +1,155 @@
+@{
+    Layout = null; 
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - SCM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-card h2 {
+            color: #1e3c72;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .btn-primary {
+            background-color: #1e3c72;
+            border: none;
+            padding: 0.8rem;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .btn-primary:hover {
+            background-color: #2a5298;
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 0.8rem;
+        }
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <h2 class="mb-0" style="color: #1e3c72; font-weight: 700; text-align: center;">SCM</h2>
+        </div>
+        <form asp-action="Login" method="post">
+            @if (ViewBag.Error != null)
+            {
+                <div class="error-message">@ViewBag.Error</div>
+            }
+            <div class="mb-3">
+                <label for="ruc" class="form-label">RUC / Código de la Empresa</label>
+                <input type="text" name="ruc" id="ruc" class="form-label form-control" required value="@ViewBag.Ruc" placeholder="Ej. 1792173875001" />
+            </div>
+            <div class="mb-3">
+                <label for="username" class="form-label">Usuario</label>
+                <input type="text" name="username" id="username" class="form-label form-control" required placeholder="Ingresa tu usuario" />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" name="password" id="password" class="form-label form-control" required placeholder="••••••••" />
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="rememberMe" style="cursor: pointer;">
+                <label class="form-check-label" for="rememberMe" style="cursor: pointer; color: #1e3c72; font-size: 0.9rem; user-select: none;">
+                    Recordar mi RUC y Usuario
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+        </form>
+    </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const rememberMeCheckbox = document.getElementById('rememberMe');
+            const rucInput = document.getElementById('ruc');
+            const usernameInput = document.getElementById('username');
+            const loginForm = document.querySelector('form');
+
+            // 1. Cargar datos recordados si existen
+            const savedRuc = localStorage.getItem('erp_remember_ruc');
+            const savedUsername = localStorage.getItem('erp_remember_username');
+            const isRememberMeActive = localStorage.getItem('erp_remember_me') === 'true';
+
+            if (isRememberMeActive) {
+                rememberMeCheckbox.checked = true;
+                if (usernameInput && savedUsername) {
+                    usernameInput.value = savedUsername;
+                }
+                // Rellenar RUC solo si el input existe y no fue forzado por el servidor
+                if (rucInput && savedRuc && (!rucInput.value || rucInput.value.trim() === '')) {
+                    rucInput.value = savedRuc;
+                }
+            }
+
+            // 2. Guardar o limpiar datos al enviar el formulario
+            if (loginForm) {
+                loginForm.addEventListener('submit', function() {
+                    if (rememberMeCheckbox.checked) {
+                        localStorage.setItem('erp_remember_me', 'true');
+                        if (rucInput) {
+                            localStorage.setItem('erp_remember_ruc', rucInput.value);
+                        }
+                        if (usernameInput) {
+                            localStorage.setItem('erp_remember_username', usernameInput.value);
+                        }
+                    } else {
+                        localStorage.removeItem('erp_remember_me');
+                        localStorage.removeItem('erp_remember_ruc');
+                        localStorage.removeItem('erp_remember_username');
+                    }
+                });
+            }
+
+            // 3. Control de alerta por sesión expirada
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasExpiredParam = urlParams.get('sessionExpired') === 'true';
+            const wasSessionActive = localStorage.getItem('erp_session_active') === 'true';
+
+            if (hasExpiredParam || wasSessionActive) {
+                // Limpiar banderas de sesión inactiva
+                localStorage.removeItem('erp_session_active');
+                localStorage.removeItem('erp_session_last_activity');
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión caducada',
+                    text: 'Tu sesión ha caducado por inactividad o tiempo límite. Por favor, inicia sesión nuevamente.',
+                    confirmButtonColor: '#1e3c72',
+                    confirmButtonText: 'Entendido'
+                });
+            }
+        });
+    </script>
+</body>
+</html>

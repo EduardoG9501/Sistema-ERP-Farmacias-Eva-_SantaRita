@@ -1,0 +1,217 @@
+@model SistemaERP.Controllers.ReportesController.VentasDiariasReportViewModel
+@using SistemaERP.Models.Entities
+@{
+    Layout = null;
+    var simb = (ViewBag.MonedaSimbolo as string) ?? "$";
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <style>
+        table {
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 5px;
+            font-size: 11px;
+        }
+        th {
+            background-color: #d9d9d9;
+            font-weight: bold;
+        }
+        .header-section {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .subtitle {
+            font-size: 11px;
+            color: #595959;
+        }
+        .despachador-title {
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #f2f2f2;
+            padding: 5px;
+            margin-top: 15px;
+        }
+        .double-border {
+            border-top: 3px double #000000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="title">@ViewBag.Parametros.NombreEmpresa</div>
+        <div class="subtitle">@ViewBag.Parametros.Direccion</div>
+        <div class="subtitle">Reporte de ventas del día</div>
+        <div class="subtitle">Desde: @Model.Desde.ToString("dd/MM/yyyy") - Hasta: @Model.Hasta.ToString("dd/MM/yyyy")</div>
+        <div class="subtitle" style="font-size: 9px; color: #7f7f7f;">Exportado: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</div>
+    </div>
+
+    @foreach (var grupo in Model.VentasPorDespachador)
+    {
+        <div style="margin-top: 20px;">
+            <div class="despachador-title">DESPACHADOR: @grupo.Despachador.ToUpper()</div>
+            
+            @if (Model.DetalleProducto)
+            {
+                @foreach (var v in grupo.Ventas)
+                {
+                    <div style="margin-top: 10px; margin-bottom: 15px;">
+                        <table style="margin-bottom: 5px;">
+                            <tr style="border: 0;">
+                                <td colspan="6" style="border: 0; font-weight: bold; font-size: 12px; padding: 2px;">
+                                    Docc.#: @v.NumDoc &nbsp;&nbsp;&nbsp;&nbsp; Cliente: @v.Cliente
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th style="text-align: right; width: 10%;">SubTotal</th>
+                                    <th style="text-align: right; width: 10%;">Descuento</th>
+                                    <th style="text-align: right; width: 10%;">Iva</th>
+                                    <th style="text-align: right; width: 12%;">Total a pagar</th>
+                                    <th style="text-align: right; width: 10%;">Ganancia</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in v.DetalleProductos)
+                                {
+                                    <tr>
+                                        <td>@p.Producto</td>
+                                        <td style="text-align: right;">@((p.Subtotal ?? 0).ToString("N2"))</td>
+                                        <td style="text-align: right;">@((p.Descuento ?? 0).ToString("N2"))</td>
+                                        <td style="text-align: right;">@((p.IVA ?? 0).ToString("N2"))</td>
+                                        <td style="text-align: right;">@((p.Total_Pagar ?? 0).ToString("N2"))</td>
+                                        <td style="text-align: right; color: green;">@((p.Ganancia ?? 0).ToString("N2"))</td>
+                                    </tr>
+                                }
+                                <tr class="double-border">
+                                    <td>Total venta#: @v.NumDoc</td>
+                                    <td style="text-align: right;">@(v.DetalleProductos.Sum(p => p.Subtotal ?? 0).ToString("N2"))</td>
+                                    <td style="text-align: right;">@(v.DetalleProductos.Sum(p => p.Descuento ?? 0).ToString("N2"))</td>
+                                    <td style="text-align: right;">@(v.DetalleProductos.Sum(p => p.IVA ?? 0).ToString("N2"))</td>
+                                    <td style="text-align: right;">@v.TotalPagado.ToString("N2")</td>
+                                    <td style="text-align: right; color: green;">@v.Ganancia.ToString("N2")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+            else
+            {
+                <table style="margin-top: 10px; width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Docc.#</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Tipo Pago</th>
+                            <th style="text-align: right; width: 15%;">Total pagado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in grupo.Ventas)
+                        {
+                            <tr>
+                                <td style="font-weight: bold;">@v.NumDoc</td>
+                                <td>@v.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td>@v.Cliente</td>
+                                <td>@v.TipoPago</td>
+                                <td style="text-align: right; font-weight: bold;">@v.TotalPagado.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="double-border">
+                            <td colspan="4" style="text-align: right;">Totales : @Model.Desde.ToString("dd/MM/yyyy")</td>
+                            <td style="text-align: right;">@grupo.TotalCobrado.ToString("N2")</td>
+                        </tr>
+                        <tr style="font-weight: bold; background-color: #f2f2f2;">
+                            <td colspan="4" style="text-align: right;">Totales : @grupo.Despachador</td>
+                            <td style="text-align: right;">@grupo.TotalCobrado.ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+
+    <!-- Summary tables section -->
+    <table style="border: 0; margin-top: 30px; width: 100%;">
+        <tr style="border: 0;">
+            <td style="border: 0; vertical-align: top; width: 48%;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th colspan="3" style="text-align: center;">Resumen de ventas por día.</th>
+                        </tr>
+                        <tr>
+                            <th>Fecha</th>
+                            <th style="text-align: right;">Se Vendio</th>
+                            <th style="text-align: right;">Ganancia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var day in Model.ResumenPorDia)
+                        {
+                            <tr>
+                                <td>@day.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td style="text-align: right;">@day.SeVendio.ToString("N2")</td>
+                                <td style="text-align: right;">@day.Ganancia.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr style="font-weight: bold; background-color: #f2f2f2;">
+                            <td>Totales:</td>
+                            <td style="text-align: right;">@Model.TotalVentas.ToString("N2")</td>
+                            <td style="text-align: right;">@Model.TotalGanancia.ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+            <td style="border: 0; width: 4%;">&nbsp;</td>
+            <td style="border: 0; vertical-align: top; width: 48%;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th colspan="3" style="text-align: center;">Resumen de ventas por despachador.</th>
+                        </tr>
+                        <tr>
+                            <th>Despachador</th>
+                            <th style="text-align: right;">Se Vendio</th>
+                            <th style="text-align: right;">Ganancia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.ResumenPorDespachador)
+                        {
+                            <tr>
+                                <td style="text-transform: uppercase;">@d.Despachador</td>
+                                <td style="text-align: right;">@d.SeVendio.ToString("N2")</td>
+                                <td style="text-align: right;">@d.Ganancia.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr style="font-weight: bold; background-color: #f2f2f2;">
+                            <td>Totales:</td>
+                            <td style="text-align: right;">@Model.TotalVentas.ToString("N2")</td>
+                            <td style="text-align: right;">@Model.TotalGanancia.ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

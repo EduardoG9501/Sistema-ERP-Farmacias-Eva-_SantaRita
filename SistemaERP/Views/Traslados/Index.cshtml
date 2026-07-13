@@ -1,0 +1,211 @@
+@model IEnumerable<SistemaERP.Models.Entities.Traslado>
+
+@{
+    ViewData["Title"] = "Traslados de Inventario";
+    var bodegas = (ViewBag.Bodegas as Dictionary<int, string>) ?? new Dictionary<int, string>();
+    var usuarios = (ViewBag.Usuarios as Dictionary<int, string>) ?? new Dictionary<int, string>();
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-arrow-left-right me-2"></i>Traslados de Inventario</h2>
+        <p class="text-muted">Gestione las órdenes de salida y recepción de mercancías entre bodegas y sucursales.</p>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <button type="button" onclick="exportExcel()" class="btn btn-success shadow-sm px-3 py-2 fw-medium d-flex align-items-center">
+            <i class="bi bi-file-earmark-excel me-2"></i> Excel
+        </button>
+        <button type="button" onclick="printPdf()" class="btn btn-info text-white shadow-sm px-3 py-2 fw-medium d-flex align-items-center">
+            <i class="bi bi-printer me-2"></i> Imprimir
+        </button>
+        <a asp-action="Create" class="btn btn-premium shadow-sm px-4 py-2 fw-medium d-flex align-items-center">
+            <i class="bi bi-plus-lg me-2"></i> Nuevo Traslado
+        </a>
+    </div>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-primary text-white text-uppercase" style="font-size: 0.85rem; font-weight: 600;">
+                <tr>
+                    <th class="py-3 ps-4" style="width: 80px;">N° Orden</th>
+                    <th class="py-3">Fecha Envío</th>
+                    <th class="py-3">Bodega Origen</th>
+                    <th class="py-3">Bodega Destino</th>
+                    <th class="py-3">Estado</th>
+                    <th class="py-3 text-center">F. Recepción</th>
+                    <th class="py-3 text-center" style="min-width: 180px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        bodegas.TryGetValue(item.Id_Bodega_Origen, out var bodegaOrgName);
+                        bodegas.TryGetValue(item.Id_Bodega_Destino, out var bodegaDstName);
+                        usuarios.TryGetValue(item.Id_Usuario_Envio, out var userEnvio);
+                        usuarios.TryGetValue(item.Id_Usuario_Recepcion ?? 0, out var userRec);
+
+                        string statusBadgeClass = "bg-warning-subtle text-warning border-warning-subtle";
+                        if (item.Estado == "RECIBIDO")
+                        {
+                            statusBadgeClass = "bg-success-subtle text-success border-success-subtle";
+                        }
+                        else if (item.Estado == "ANULADO")
+                        {
+                            statusBadgeClass = "bg-danger-subtle text-danger border-danger-subtle";
+                        }
+
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">
+                                #@item.Id
+                            </td>
+                            <td>
+                                <span class="d-block fw-semibold text-secondary" style="font-size: 0.9rem;">@item.Fecha_Envio.ToString("dd/MM/yyyy")</span>
+                                <span class="text-muted text-xs"><i class="bi bi-clock me-1"></i>@item.Fecha_Envio.ToString("hh:mm tt")</span>
+                            </td>
+                            <td class="fw-medium text-dark">
+                                <span class="badge bg-light text-dark border"><i class="bi bi-box-arrow-right me-1 text-danger"></i> @(bodegaOrgName ?? "N/A")</span>
+                            </td>
+                            <td class="fw-medium text-dark">
+                                <span class="badge bg-light text-dark border"><i class="bi bi-box-arrow-in-left me-1 text-success"></i> @(bodegaDstName ?? "N/A")</span>
+                            </td>
+                            <td>
+                                <span class="badge @statusBadgeClass border px-3 py-2 rounded-pill fw-medium">
+                                    <i class="bi @(item.Estado == "RECIBIDO" ? "bi-check-circle" : (item.Estado == "ANULADO" ? "bi-x-circle" : "bi-truck")) me-1"></i>
+                                    @item.Estado
+                                </span>
+                            </td>
+                            <td class="text-center text-secondary small">
+                                @if (item.Fecha_Recepcion.HasValue)
+                                {
+                                    <span class="d-block fw-semibold text-secondary">@item.Fecha_Recepcion.Value.ToString("dd/MM/yyyy")</span>
+                                    <span class="text-muted text-xs">por @(userRec ?? "N/A")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted italic">Pendiente</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a asp-action="Ticket" asp-route-id="@item.Id" target="_blank" class="btn btn-outline-dark btn-sm px-3 py-1 d-flex align-items-center" title="Imprimir Ticket">
+                                        <i class="bi bi-receipt me-1"></i> Ticket
+                                    </a>
+                                    @if (item.Estado == "PENDIENTE")
+                                    {
+                                        <a asp-action="Recepcionar" asp-route-id="@item.Id" class="btn btn-warning btn-sm text-dark px-3 py-1 fw-semibold d-flex align-items-center">
+                                            <i class="bi bi-arrow-down-left-square me-1"></i> Recepcionar
+                                        </a>
+                                        <button onclick="anularTraslado(@item.Id)" class="btn btn-outline-danger btn-sm px-3 py-1 d-flex align-items-center">
+                                            <i class="bi bi-trash me-1"></i> Anular
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Recepcionar" asp-route-id="@item.Id" class="btn btn-outline-secondary btn-sm px-3 py-1 d-flex align-items-center">
+                                            <i class="bi bi-eye me-1"></i> Auditar
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-arrow-left-right fs-1 d-block mb-3 opacity-25"></i>
+                            <span class="fs-5 fw-semibold d-block">No hay traslados registrados</span>
+                            <span>Cree un nuevo traslado para enviar productos entre sus sucursales.</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function anularTraslado(id) {
+        Swal.fire({
+            title: '¿Está seguro de anular?',
+            text: "Esta acción anulará de forma definitiva la orden de salida del traslado #" + id,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, Anular',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("Anular", "Traslados")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire('Anulado', res.message, 'success').then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    },
+                    error: function () {
+                        Swal.fire('Error', 'Error de red al intentar anular el traslado.', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function exportExcel() {
+        window.open('@Url.Action("ExportarExcel", "Traslados")', '_blank');
+    }
+
+    function printPdf() {
+        window.open('@Url.Action("TrasladosPrint", "Traslados")', '_blank');
+    }
+</script>
+
+<style>
+    /* Styling elements to make it feel extremely premium */
+    .premium-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .bg-primary {
+        background-color: #4f46e5 !important; /* Premium Indigo theme */
+    }
+    .btn-premium {
+        background-color: #4f46e5;
+        color: #ffffff;
+        border: none;
+    }
+    .btn-premium:hover {
+        background-color: #4338ca;
+        color: #ffffff;
+    }
+    .bg-success-subtle {
+        background-color: #ecfdf5 !important;
+        color: #047857 !important;
+    }
+    .bg-warning-subtle {
+        background-color: #fffbeb !important;
+        color: #b45309 !important;
+    }
+    .bg-danger-subtle {
+        background-color: #fef2f2 !important;
+        color: #b91c1c !important;
+    }
+    .text-xs {
+        font-size: 0.75rem;
+    }
+</style>

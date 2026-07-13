@@ -1,0 +1,367 @@
+@model IEnumerable<SistemaERP.Models.Entities.Stock_Producto>
+
+@{
+    Layout = null; // Independent clean printable page
+    var productos = (ViewBag.Productos as List<SistemaERP.Models.Entities.Producto>) ?? new List<SistemaERP.Models.Entities.Producto>();
+    var bodegas = (ViewBag.Bodegas as List<SistemaERP.Models.Entities.Bodega>) ?? new List<SistemaERP.Models.Entities.Bodega>();
+    var usuarios = (ViewBag.Usuarios as Dictionary<int, string>) ?? new Dictionary<int, string>();
+    var stockPorBodega = (ViewBag.StockPorBodega as Dictionary<string, List<SistemaERP.Models.Entities.StockBodega>>) ?? new Dictionary<string, List<SistemaERP.Models.Entities.StockBodega>>();
+    var proveedores = (ViewBag.Proveedores as Dictionary<long, string>) ?? new Dictionary<long, string>();
+
+    // Filter labels passed from controller
+    var fProd = ViewBag.FilteredProducto as string;
+    var fBod = ViewBag.FilteredBodega as string;
+    var fMov = ViewBag.FilteredTipoMovimiento as string;
+    var fDesde = ViewBag.FilteredDesde as string;
+    var fHasta = ViewBag.FilteredHasta as string;
+    var fLab = ViewBag.FilteredLaboratorio as string;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Kardex de Inventario</title>
+    <!-- Include Bootstrap CSS for layout stability -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background-color: #fff;
+            padding: 20px;
+            font-size: 0.85rem;
+        }
+        
+        .report-header {
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .report-title {
+            color: #1e3a8a;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 1.6rem;
+            margin: 0;
+        }
+
+        .report-subtitle {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .filter-badge {
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            color: #374151;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            display: inline-block;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th {
+            background-color: #1e3a8a !important;
+            color: #ffffff !important;
+            text-transform: uppercase;
+            font-weight: 600;
+            padding: 10px 8px !important;
+            border: 1px solid #dee2e6 !important;
+        }
+
+        td {
+            padding: 8px 8px !important;
+            border: 1px solid #dee2e6 !important;
+        }
+
+        .text-entry {
+            color: #047857;
+            font-weight: 600;
+        }
+
+        .text-exit {
+            color: #b91c1c;
+            font-weight: 600;
+        }
+
+        .stock-tag {
+            font-size: 0.75rem;
+            font-family: monospace;
+            background-color: #f9fafb;
+            border: 1px solid #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+            margin: 1px;
+        }
+
+        .no-print-btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+            transition: all 0.2s;
+        }
+
+        .no-print-btn:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            th {
+                background-color: #1e3a8a !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <!-- Print control bar (hidden in print) -->
+    <div class="no-print d-flex justify-content-between align-items-center mb-4 p-3 bg-light border rounded">
+        <div>
+            <span class="fw-semibold text-secondary"><i class="bi bi-info-circle me-1"></i> Vista de impresión generada con éxito.</span>
+        </div>
+        <button class="no-print-btn" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir / Guardar como PDF
+        </button>
+    </div>
+
+    @{
+        var p = ViewBag.Parametros as SistemaERP.Models.Entities.ParametrosSistema;
+    }
+
+    <!-- Encabezado de Reporte -->
+    <div class="report-header row align-items-center">
+        <div class="col-8 d-flex align-items-center gap-3">
+            @if (p?.ReporteMostrarLogo == true && !string.IsNullOrEmpty(p?.LogoPath))
+            {
+                <img src="@(p.LogoPath.Split('?')[0])" alt="Logo" style="max-height: 60px; max-width: 150px; object-fit: contain;" />
+            }
+            <div>
+                <h1 class="report-title">Kardex de Inventario</h1>
+                <p class="report-subtitle">@(p?.ReporteEncabezado ?? "Reporte Oficial de Transacciones y Movimientos de Stock")</p>
+            </div>
+        </div>
+        <div class="col-4 text-end text-secondary small">
+            <div><strong>Empresa:</strong> @(p?.NombreEmpresa ?? "SCM")</div>
+            <div><strong>Fecha Emisión:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+        </div>
+    </div>
+
+    <!-- Detalles de Filtros Aplicados y Stock Actual -->
+    <div class="mb-4 d-flex justify-content-between align-items-end flex-wrap gap-3">
+        <div>
+            <h5 class="fw-bold mb-2 text-dark" style="font-size: 0.9rem;">Criterios de Filtro:</h5>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="filter-badge">
+                    <span class="filter-label">Producto:</span> @(string.IsNullOrEmpty(fProd) ? "Todos" : fProd)
+                </span>
+                <span class="filter-badge">
+                    <span class="filter-label">Bodega:</span> @(string.IsNullOrEmpty(fBod) ? "Todas" : fBod)
+                </span>
+                <span class="filter-badge">
+                    <span class="filter-label">Movimiento:</span> @(string.IsNullOrEmpty(fMov) || fMov == "TODOS" ? "Todos" : fMov)
+                </span>
+                @if (!string.IsNullOrEmpty(fLab))
+                {
+                    <span class="filter-badge">
+                        <span class="filter-label">Proveedor:</span> @fLab
+                    </span>
+                }
+                @if (!string.IsNullOrEmpty(fDesde))
+                {
+                    <span class="filter-badge">
+                        <span class="filter-label">Desde:</span> @fDesde
+                    </span>
+                }
+                @if (!string.IsNullOrEmpty(fHasta))
+                {
+                    <span class="filter-badge">
+                        <span class="filter-label">Hasta:</span> @fHasta
+                    </span>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ViewBag.IdProducto))
+        {
+            var selIdProducto = ViewBag.IdProducto as string;
+            var currentProd = productos.FirstOrDefault(p => p.Id.ToString() == selIdProducto);
+            if (currentProd != null)
+            {
+                long totalUnits = currentProd.Disponible ?? 0;
+                long contiene = currentProd.Contiene ?? 1;
+                if (contiene <= 0) contiene = 1;
+                long cajas = totalUnits / contiene;
+                long fracs = totalUnits % contiene;
+                
+                <div class="border p-2 rounded bg-light" style="font-size: 0.78rem; min-width: 250px;">
+                    <div><strong>Stock Actual Total:</strong> <span class="badge bg-dark text-white font-monospace">@cajas F @fracs</span> (@totalUnits unidades)</div>
+                    @if (ViewBag.IdBodega != null)
+                    {
+                        var selIdBodega = ViewBag.IdBodega as int?;
+                        var selectedBodegaName = bodegas.FirstOrDefault(b => b.Id == selIdBodega.Value)?.Nombre ?? "Bodega";
+                        long bodegaUnits = 0;
+                        if (stockPorBodega.TryGetValue(selIdProducto, out var productStocks))
+                        {
+                            var sb = productStocks.FirstOrDefault(s => s.Id_Bodega == selIdBodega.Value);
+                            bodegaUnits = sb?.Stock ?? 0;
+                        }
+                        long bCajas = bodegaUnits / contiene;
+                        long bFracs = bodegaUnits % contiene;
+                        <div class="mt-1"><strong>Stock en @selectedBodegaName:</strong> <span class="badge bg-warning text-dark font-monospace">@bCajas F @bFracs</span> (@bodegaUnits unidades)</div>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Tabla Principal de Movimientos -->
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead>
+            <tr>
+                <th style="width: 4%; text-align: center;">N°</th>
+                <th style="width: 20%; text-align: left;">Producto</th>
+                <th style="width: 15%; text-align: left;">Proveedor</th>
+                <th style="width: 9%; text-align: center;">Fecha</th>
+                <th style="width: 7%; text-align: center;">Hora</th>
+                <th style="width: 13%; text-align: left;">Movimiento</th>
+                <th style="width: 8%; text-align: center;">Ref. Doc</th>
+                <th style="width: 6%; text-align: center;">Cant.</th>
+                <th style="width: 18%; text-align: left;">Disponible (por Bodega)</th>
+                <th style="width: 10%; text-align: left;">Responsable</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                int counter = 1;
+                @foreach (var item in Model)
+                {
+                    var isEntry = item.Cantidad > 0;
+                    var prodIdStr = item.Id_Producto ?? "";
+                    productos.ToDictionary(x => x.Id.ToString(), x => x).TryGetValue(prodIdStr, out var currentProd);
+                    var contiene = currentProd?.Contiene ?? 1;
+                    if (contiene <= 0) contiene = 1;
+
+                    <tr>
+                        <td class="text-center text-muted">@counter</td>
+                        <td class="text-start">
+                            <strong>@(currentProd?.Nombre ?? item.Producto)</strong>
+                            @if (currentProd != null && !string.IsNullOrEmpty(currentProd.CodigoBarra))
+                            {
+                                <div class="text-muted" style="font-size: 0.7rem;">Cód: @currentProd.CodigoBarra</div>
+                            }
+                        </td>
+                        <td class="text-start">
+                            @{
+                                var provNom = "N/A";
+                                if (currentProd?.Id_Proveedor.HasValue == true)
+                                {
+                                    proveedores.TryGetValue(currentProd.Id_Proveedor.Value, out var pName);
+                                    provNom = pName ?? "N/A";
+                                }
+                            }
+                            @provNom
+                        </td>
+                        <td>@item.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                        <td>@item.FechaRegistro.ToString("hh:mm tt")</td>
+                        <td class="text-start">
+                            <span class="@(isEntry ? "text-entry" : "text-exit")">
+                                @(isEntry ? "📥 " : "📤 ")@item.TipoMovimiento
+                            </span>
+                        </td>
+                        <td>@(string.IsNullOrEmpty(item.Id_Factura) ? "N/A" : "#" + item.Id_Factura)</td>
+                        <td class="fw-bold @(isEntry ? "text-entry" : "text-exit")">
+                            @(isEntry ? "+" : "")@item.Cantidad
+                        </td>
+                        <td class="text-start">
+                            @{
+                                var affectedBodegaId = item.Id_Bodega ?? 1;
+                                var affectedBodega = bodegas.FirstOrDefault(b => b.Id == affectedBodegaId);
+                            }
+                            @if (affectedBodega != null)
+                            {
+                                long stockVal = item.Stock ?? 0;
+                                long cajas = stockVal / contiene;
+                                long fracs = stockVal % contiene;
+                                <div class="stock-tag">
+                                    <strong>@cajas F @fracs</strong> <span class="text-muted">(@affectedBodega.Nombre)</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">N/A</span>
+                            }
+                        </td>
+                        <td class="text-start">
+                            @if (item.Id_Usuario.HasValue && usuarios.TryGetValue(item.Id_Usuario.Value, out var uName))
+                            {
+                                <span>@uName</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">N/A</span>
+                            }
+                        </td>
+                    </tr>
+                    counter++;
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="10" class="text-center py-4 text-muted">
+                        No hay movimientos registrados para los filtros seleccionados.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!string.IsNullOrEmpty(p?.ReportePie))
+    {
+        <div class="mt-4 pt-2 border-top text-center text-muted" style="font-size: 0.75rem;">
+            @foreach (var line in p.ReportePie.Split('\n'))
+            {
+                <div>@line</div>
+            }
+        </div>
+    }
+
+</body>
+</html>

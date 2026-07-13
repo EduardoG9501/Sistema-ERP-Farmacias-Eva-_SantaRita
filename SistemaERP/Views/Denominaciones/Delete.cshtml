@@ -1,0 +1,42 @@
+@model SistemaERP.Models.Entities.Denominacion
+
+@{
+    ViewData["Title"] = "Eliminar Denominación";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-danger">Eliminar Denominación</h2>
+        <p class="text-muted">¿Estás seguro que deseas eliminar esta moneda o billete?</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-md-6">
+        <div class="premium-card p-4 border border-danger-subtle">
+            <dl class="row mb-0">
+                <dt class="col-sm-4 text-muted small text-uppercase">Nombre</dt>
+                <dd class="col-sm-8 fw-bold">@Html.DisplayFor(model => model.Nombre)</dd>
+
+                <dt class="col-sm-4 text-muted small text-uppercase">Valor</dt>
+                <dd class="col-sm-8 text-success fw-bold">@ViewBag.MonedaSimbolo@Html.DisplayFor(model => model.Valor)</dd>
+
+                <dt class="col-sm-4 text-muted small text-uppercase">Tipo</dt>
+                <dd class="col-sm-8">@Html.DisplayFor(model => model.Tipo)</dd>
+
+                <dt class="col-sm-4 text-muted small text-uppercase">Estado</dt>
+                <dd class="col-sm-8">@(Model.Activo ? "Activo" : "Inactivo")</dd>
+            </dl>
+            
+            <hr class="opacity-10 my-4" />
+
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger px-4">Sí, Eliminar</button>
+                    <a asp-action="Index" class="btn btn-light px-4">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

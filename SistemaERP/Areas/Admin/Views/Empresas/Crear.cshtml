@@ -1,0 +1,370 @@
+@model SistemaERP.Areas.Admin.Models.Empresa
+@{
+    ViewData["Title"] = "Crear Nueva Empresa";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .wizard-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .wizard-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .form-group-full {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(10, 15, 30, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 15px;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px var(--primary-glow);
+            background: rgba(10, 15, 30, 0.6);
+        }
+
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        select.form-control option {
+            background-color: var(--bg-sidebar);
+            color: var(--text-main);
+        }
+
+        /* Test Connection Button */
+        .conn-test-box {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn-test {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .btn-test:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-1px);
+        }
+
+        #conn-result {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status-success { color: var(--success); }
+        .status-error { color: var(--danger); }
+
+        /* Form Wizard Actions */
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            border: none;
+            color: white;
+            padding: 14px 35px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .error-summary {
+            background: rgba(248, 113, 113, 0.08);
+            border: 1px solid rgba(248, 113, 113, 0.15);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: var(--error-color);
+            font-size: 14px;
+            margin-bottom: 30px;
+            list-style: none;
+        }
+    </style>
+}
+
+<div class="wizard-container">
+    <div class="wizard-card">
+        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px;">Registrar Nueva Empresa</h2>
+        <p style="color: var(--text-muted); font-size: 14px; font-weight: 300; margin-bottom: 35px;">
+            El rubro de negocio seleccionado pre-cargará los catálogos y presentaciones adecuados de forma automatizada.
+        </p>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="error-summary">
+                <div style="font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Verifique los errores del formulario:</span>
+                </div>
+                <ul>
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <form asp-action="Crear" method="post" autocomplete="off">
+            <div class="form-grid">
+                <!-- Información General -->
+                <div class="form-group">
+                    <label asp-for="Nombre">Nombre Comercial de la Empresa</label>
+                    <input asp-for="Nombre" class="form-control" placeholder="Ferretería La Llave" required />
+                    <span asp-validation-for="Nombre" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="RUC">RUC / Identificación Fiscal</label>
+                    <input asp-for="RUC" class="form-control" placeholder="1792173875001" required />
+                    <span asp-validation-for="RUC" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="RubroId">Rubro de Negocio</label>
+                    <select asp-for="RubroId" class="form-control" asp-items="ViewBag.RubroId" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Subdominio">Alias de Subdominio (ej: lallave)</label>
+                    <input asp-for="Subdominio" class="form-control" placeholder="lallave" required />
+                    <span asp-validation-for="Subdominio" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="picker-host">Servidor / Host (IP o Nombre)</label>
+                    <input type="text" id="picker-host" class="form-control" placeholder="38.247.140.172 o localhost" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="picker-port">Puerto (Dejar en blanco para instancia con puerto dinámico)</label>
+                    <input type="number" id="picker-port" class="form-control" placeholder="Opcional (Ej: 1433)" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="NombreDB">Nombre de la Base de Datos</label>
+                    <input asp-for="NombreDB" id="picker-dbname" class="form-control" placeholder="SCM_LaLlave" required />
+                    <span asp-validation-for="NombreDB" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="picker-user">Usuario SQL Server</label>
+                    <input type="text" id="picker-user" class="form-control" placeholder="sa" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="picker-pass">Contraseña SQL Server</label>
+                    <input type="password" id="picker-pass" class="form-control" placeholder="••••••••" required />
+                </div>
+
+                <!-- Conexión SQL Server Remota Generada -->
+                <div class="form-group-full">
+                    <label for="connectionStringPlan">Cadena de Conexión SQL Server Generada (Se encriptará con AES-256)</label>
+                    <div class="conn-test-box">
+                        <input type="text" id="connectionStringPlan" name="connectionStringPlan" class="form-control" readonly 
+                               placeholder="Se autogenerará al rellenar los campos técnicos de arriba..." required />
+                        <button type="button" id="btn-test-connection" class="btn-test">
+                            <i class="fa-solid fa-plug"></i>
+                            <span>Probar Conexión</span>
+                        </button>
+                    </div>
+                    <div id="conn-result"></div>
+                </div>
+
+                <!-- Datos de Contacto y Config Adicional -->
+                <div class="form-group">
+                    <label asp-for="NombreContacto">Contacto Administrativo</label>
+                    <input asp-for="NombreContacto" class="form-control" placeholder="Ing. Carlos Pérez" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Email">Correo Electrónico</label>
+                    <input asp-for="Email" type="email" class="form-control" placeholder="contacto@lallave.com" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Telefono">Teléfono</label>
+                    <input asp-for="Telefono" class="form-control" placeholder="0987654321" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Ciudad">Ciudad</label>
+                    <input asp-for="Ciudad" class="form-control" placeholder="Quito" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Direccion">Dirección Matriz</label>
+                    <input asp-for="Direccion" class="form-control" placeholder="Av. Amazonas N24-10 y Colón" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="FechaVencimiento">Fecha de Vencimiento de Licencia</label>
+                    <input asp-for="FechaVencimiento" type="date" class="form-control" />
+                </div>
+            </div>
+
+            <div class="wizard-actions">
+                <a href="@Url.Action("Index")" class="btn-back">
+                    <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i>
+                    <span>Cancelar</span>
+                </a>
+                <button type="submit" class="btn-submit">
+                    <span>Crear e Inicializar</span>
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Generador automático de Cadena de Conexión en tiempo real
+            function buildConnectionString() {
+                var host = $('#picker-host').val().trim();
+                var port = $('#picker-port').val().trim();
+                var db = $('#picker-dbname').val().trim();
+                var user = $('#picker-user').val().trim();
+                var pass = $('#picker-pass').val().trim();
+
+                var connStr = '';
+                if (host && db && user && pass) {
+                    var serverAddress = host;
+                    if (port) {
+                        serverAddress += ',' + port;
+                    }
+                    connStr = 'Server=' + serverAddress + ';Database=' + db + ';User Id=' + user + ';Password=' + pass + ';TrustServerCertificate=True;Connect Timeout=60;';
+                }
+                $('#connectionStringPlan').val(connStr);
+            }
+
+            // Vincular eventos de entrada
+            $('#picker-host, #picker-port, #picker-dbname, #picker-user, #picker-pass').on('input', function() {
+                buildConnectionString();
+            });
+
+            // Prueba de conexión AJAX en tiempo real
+            $('#btn-test-connection').click(function() {
+                var connStr = $('#connectionStringPlan').val();
+                var resultDiv = $('#conn-result');
+                var btn = $(this);
+
+                if (!connStr) {
+                    alert("Debe escribir una cadena de conexión antes de probar.");
+                    return;
+                }
+
+                btn.prop('disabled', true);
+                btn.find('i').removeClass('fa-plug').addClass('fa-spinner fa-spin');
+                resultDiv.html('<i class="fa-solid fa-spinner fa-spin" style="color: var(--text-muted);"></i> <span style="color: var(--text-muted);">Estableciendo contacto con la DB remota...</span>');
+
+                $.post('@Url.Action("TestConexion", "Empresas", new { area = "Admin" })', { connectionString: connStr }, function(response) {
+                    if (response.success) {
+                        resultDiv.html('<i class="fa-solid fa-circle-check status-success" style="font-size: 16px;"></i> <span class="status-success">Conexión establecida con éxito. Autenticación y permisos validados.</span>');
+                    } else {
+                        resultDiv.html('<i class="fa-solid fa-circle-xmark status-error" style="font-size: 16px;"></i> <span class="status-error">Fallo al conectar. Verifique que la base de datos exista y las credenciales sean correctas.</span>');
+                    }
+                }).fail(function() {
+                    resultDiv.html('<i class="fa-solid fa-circle-xmark status-error" style="font-size: 16px;"></i> <span class="status-error">Error al enviar la solicitud al servidor.</span>');
+                }).always(function() {
+                    btn.prop('disabled', false);
+                    btn.find('i').removeClass('fa-spinner fa-spin').addClass('fa-plug');
+                });
+            });
+        });
+    </script>
+}

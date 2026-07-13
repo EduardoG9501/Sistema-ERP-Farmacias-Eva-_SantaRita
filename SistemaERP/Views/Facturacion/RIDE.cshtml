@@ -1,0 +1,278 @@
+@model SistemaERP.Models.Entities.VentaOperacion
+
+@{
+    Layout = null;
+    var cliente = ViewBag.ClienteObj as SistemaERP.Models.Entities.Cliente;
+    var detalles = ViewBag.Detalles as List<SistemaERP.Models.Entities.Venta_Producto>;
+    var settings = ViewBag.Settings as SistemaERP.Models.Entities.ConfiguracionSRI;
+
+    decimal subtotal   = detalles?.Sum(d => d.Subtotal ?? 0) ?? 0;
+    decimal descuento  = detalles?.Sum(d => d.Descuento ?? 0) ?? 0;
+    decimal totalIva   = detalles?.Sum(d => d.IVA ?? 0) ?? 0;
+    decimal totalPagar = detalles?.Sum(d => d.Total_Pagar ?? 0) ?? 0;
+    decimal subCon     = totalIva > 0 ? subtotal : 0;
+    decimal subSin     = totalIva == 0 ? subtotal : 0;
+
+    string claveAcceso = Model.SRI_ClaveAcceso ?? "PENDIENTE DE AUTORIZACIÓN";
+    string estab       = settings?.Establecimiento?.PadLeft(3,'0') ?? "001";
+    string pto         = settings?.PuntoEmision?.PadLeft(3,'0') ?? "001";
+    string secNum      = (Model.Id % 1000000000).ToString().PadLeft(9,'0');
+
+    string claveFormato = claveAcceso;
+    if (claveAcceso.Length == 49) {
+        claveFormato = claveAcceso[..10] + " " + claveAcceso[10..20] + " " + claveAcceso[20..30] + "\n"
+                     + claveAcceso[30..39] + " " + claveAcceso[39..49];
+    }
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>RIDE Factura - @Model.NumDoc</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            background: #f0f0f0;
+            color: #000;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 8px auto;
+            background: white;
+            padding: 10mm 12mm;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+        .actions {
+            width: 210mm;
+            margin: 8px auto 0;
+            display: flex;
+            gap: 8px;
+        }
+        .actions button, .actions a {
+            flex: 1; padding: 8px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 12px; font-weight: bold;
+            text-decoration: none; text-align: center;
+        }
+        .btn-print { background: #1e3a8a; color: white; }
+        .btn-close  { background: #6c757d; color: white; }
+
+        /* Cabecera */
+        .header-grid {
+            display: grid;
+            grid-template-columns: 1fr 210px;
+            gap: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .emisor-name { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+        .emisor-row  { margin-bottom: 2px; }
+
+        /* Caja tributaria */
+        .tax-box { border: 1.5px solid #000; padding: 6px 8px; font-size: 9px; }
+        .tax-box .ruc-label   { font-size: 11px; font-weight: bold; }
+        .tax-box .fact-label  { font-size: 13px; font-weight: bold; text-align: center; margin: 3px 0; }
+        .tax-box .doc-num     { font-size: 11px; font-weight: bold; text-align: center; margin-bottom: 5px; }
+        .tax-box .lbl         { font-weight: bold; font-size: 8px; margin-top: 4px; }
+        .tax-box .clave       { font-size: 9px; color: #0a3c8a; font-weight: bold; word-break: break-all; line-height: 1.5; margin-top: 2px; }
+        .tax-box .ambrow      { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px; }
+
+        /* Comprador */
+        .buyer-section {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 16px;
+            font-size: 9.5px;
+        }
+        .buyer-full  { grid-column: 1 / -1; }
+        .buyer-label { font-weight: bold; }
+
+        /* Tabla productos */
+        table.products { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9px; }
+        table.products thead th {
+            background: #d0d7e8; border: 1px solid #999;
+            padding: 4px 5px; text-align: center;
+            font-size: 8.5px; text-transform: uppercase;
+        }
+        table.products tbody td { border: 1px solid #ccc; padding: 3px 5px; vertical-align: middle; }
+        table.products tbody td.num { text-align: right; }
+        table.products tbody td.cen { text-align: center; }
+
+        /* Bloque inferior */
+        .footer-grid { display: grid; grid-template-columns: 1fr 200px; gap: 16px; }
+        .info-box h6 { font-weight: bold; font-size: 9.5px; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 5px; }
+        .info-row    { margin-bottom: 2px; font-size: 9px; }
+        .info-label  { font-weight: bold; display: inline-block; width: 65px; }
+
+        table.pago { width: 100%; border-collapse: collapse; font-size: 9px; margin-top: 8px; }
+        table.pago thead th { background: #d0d7e8; border: 1px solid #999; padding: 3px 5px; text-align: center; }
+        table.pago tbody td { border: 1px solid #ccc; padding: 3px 5px; }
+
+        table.totales { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+        table.totales td { border: 1px solid #ccc; padding: 4px 7px; }
+        table.totales td:last-child { text-align: right; font-weight: bold; }
+        table.totales tr:last-child td { background: #d0d7e8; font-size: 11px; font-weight: bold; }
+
+        @@media print {
+            body { background: white; }
+            .actions { display: none; }
+            .page { margin: 0; box-shadow: none; padding: 8mm 10mm; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="actions">
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+    <a class="btn-close" href="javascript:window.close()">✕ Cerrar</a>
+</div>
+
+<div class="page">
+
+    <!-- CABECERA -->
+    <div class="header-grid">
+        <!-- Datos del Emisor -->
+        <div>
+            <div class="emisor-name">@settings?.RazonSocial</div>
+            <div class="emisor-row"><strong>Nombre Comercial:</strong> @settings?.NombreComercial</div>
+            <div class="emisor-row"><strong>Dirección Matriz:</strong> @settings?.DireccionMatriz</div>
+            <div class="emisor-row"><strong>Dirección Sucursal:</strong> @(settings?.DireccionEstablecimiento ?? settings?.DireccionMatriz)</div>
+            @if (!string.IsNullOrEmpty(settings?.SenderEmail)) {
+                <div class="emisor-row"><strong>Email:</strong> @settings.SenderEmail.ToUpper()</div>
+            }
+            <div class="emisor-row"><strong>Régimen:</strong> @(settings?.Regimen ?? "RIMPE")</div>
+            <div class="emisor-row" style="margin-top:5px">
+                <strong>OBLIGADO A LLEVAR CONTABILIDAD: @(settings?.ObligadoContabilidad == true ? "SÍ" : "NO")</strong>
+            </div>
+        </div>
+
+        <!-- Caja Tributaria -->
+        <div class="tax-box">
+            <div class="ruc-label">R.U.C &nbsp; @((settings?.RUC_Emisor ?? "").PadLeft(13,'0'))</div>
+            <div class="fact-label">FACTURA</div>
+            <div class="doc-num">No. @estab-@pto-@secNum</div>
+
+            <div class="lbl">NÚMERO DE AUTORIZACIÓN</div>
+            <div style="font-size:8px;font-weight:bold;word-break:break-all;margin:2px 0;">@claveAcceso</div>
+
+            <div class="lbl">FECHA Y HORA DE AUTORIZACIÓN</div>
+            <div style="margin:2px 0 4px;font-size:9px;">
+                @Model.FechaHora_Registro?.ToString("d 'de' MMMM 'de' yyyy  hh:mm tt", new System.Globalization.CultureInfo("es-EC"))
+            </div>
+
+            <div class="ambrow">
+                <div>
+                    <div class="lbl">AMBIENTE</div>
+                    <div>@(settings?.Entorno == "PRODUCCION" ? "PRODUCCION" : "PRUEBAS")</div>
+                </div>
+                <div>
+                    <div class="lbl">EMISIÓN</div>
+                    <div>NORMAL</div>
+                </div>
+            </div>
+
+            <div class="lbl" style="margin-top:5px;">CLAVE DE ACCESO</div>
+            <div class="clave">@claveFormato</div>
+        </div>
+    </div>
+
+    <!-- COMPRADOR -->
+    <div class="buyer-section">
+        <div class="buyer-full">
+            <span class="buyer-label">Razón Social / Nombre y Apellidos:</span>&nbsp;&nbsp;
+            @(ViewBag.NombreComprador ?? "CONSUMIDOR FINAL")
+        </div>
+        <div>
+            <span class="buyer-label">Identificación:</span>&nbsp;
+            @(ViewBag.IdentificacionComp ?? "9999999999999")
+        </div>
+        <div>
+            <span class="buyer-label">Fecha Emisión:</span>&nbsp;
+            @Model.FechaHora_Registro?.ToString("d 'de' MMMM 'de' yyyy  hh:mm tt", new System.Globalization.CultureInfo("es-EC"))
+        </div>
+        <div>
+            <span class="buyer-label">Guía:</span>&nbsp;
+            @estab-@pto-@secNum
+        </div>
+    </div>
+
+    <!-- TABLA DE PRODUCTOS -->
+    <table class="products">
+        <thead>
+            <tr>
+                <th style="width:45px">CANT.</th>
+                <th>DESCRIPCIÓN</th>
+                <th style="width:70px">P.UNITARIO</th>
+                <th style="width:65px">SUBTOTAL</th>
+                <th style="width:65px">DESCUENTO</th>
+                <th style="width:65px">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (detalles != null) {
+                foreach (var d in detalles) {
+                    <tr>
+                        <td class="cen">@d.Cantidad?.ToString("N2")</td>
+                        <td>@d.Producto</td>
+                        <td class="num">@d.PVP?.ToString("N2")</td>
+                        <td class="num">@d.Subtotal?.ToString("N2")</td>
+                        <td class="num">@d.Descuento?.ToString("N2")</td>
+                        <td class="num">@d.Total_Pagar?.ToString("N2")</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <!-- BLOQUE INFERIOR -->
+    <div class="footer-grid">
+        <!-- Información Adicional + Pago -->
+        <div>
+            <div class="info-box">
+                <h6>INFORMACIÓN ADICIONAL</h6>
+                @if (!string.IsNullOrEmpty(cliente?.Direccion)) {
+                    <div class="info-row"><span class="info-label">Dirección:</span> @cliente.Direccion</div>
+                }
+                @if (!string.IsNullOrEmpty(cliente?.Correo)) {
+                    <div class="info-row"><span class="info-label">Email:</span> @cliente.Correo</div>
+                }
+                @if (!string.IsNullOrEmpty(cliente?.Telefono)) {
+                    <div class="info-row"><span class="info-label">Teléfono:</span> @cliente.Telefono</div>
+                }
+            </div>
+
+            <table class="pago">
+                <thead>
+                    <tr><th colspan="2">Forma de Pago</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>(01) SIN UTILIZACION DEL SISTEMA FINANCIERO</td>
+                        <td style="text-align:right;font-weight:bold">@totalPagar.ToString("N2")</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totales -->
+        <div>
+            <table class="totales">
+                <tr><td>SUBTOTAL</td><td>@subtotal.ToString("N2")</td></tr>
+                <tr><td>DESCUENTO</td><td>@descuento.ToString("N2")</td></tr>
+                <tr><td>SUBTOTAL 15.00%</td><td>@subCon.ToString("N2")</td></tr>
+                <tr><td>SUBTOTAL 0%</td><td>@subSin.ToString("N2")</td></tr>
+                <tr><td>IVA 15.00%</td><td>@totalIva.ToString("N2")</td></tr>
+                <tr><td>TOTAL</td><td>@totalPagar.ToString("N2")</td></tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

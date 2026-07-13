@@ -1,0 +1,111 @@
+@model IEnumerable<SistemaERP.Models.Entities.Usuario>
+
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Usuarios del Sistema</h2>
+        <p class="text-muted">Gestión de accesos, roles y seguridad de la plataforma.</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="Create" class="btn btn-premium shadow-sm">
+            <i class="bi bi-person-plus-fill me-1"></i> Nuevo Usuario
+        </a>
+    </div>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 text-xs text-uppercase py-3">Usuario / Login</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Tipo / Rol</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Estado</th>
+                    <th class="border-0 text-xs text-uppercase py-3 text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center me-3 border" style="width: 40px; height: 40px; flex-shrink: 0; background: rgba(99,102,241,0.08);">
+                                        @if (!string.IsNullOrEmpty(item.FotoPath))
+                                        {
+                                            <img src="@item.FotoPath" alt="@item.Login" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-person-circle fs-5 text-indigo"></i>
+                                        }
+                                    </div>
+                                    <div>
+                                        <span class="fw-bold text-dark d-block">@(item.UsuarioNombre ?? item.Login)</span>
+                                        <span class="text-xs text-muted">@item.Login</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (item.Tipo_Usuario?.Trim().ToUpper() == "ADMINISTRADOR")
+                                {
+                                    <span class="badge bg-success text-success bg-opacity-10 border border-success border-opacity-20 rounded-pill px-3">
+                                        <i class="bi bi-shield-fill-check me-1"></i> ADMINISTRADOR
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-primary text-primary bg-opacity-10 border border-primary border-opacity-20 rounded-pill px-3">
+                                        <i class="bi bi-person-lock me-1"></i> CIERTO ACCESO
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.Estado?.Trim().ToUpper() == "ACTIVO")
+                                {
+                                    <span class="badge bg-success-subtle text-success rounded-pill px-3">
+                                        <i class="bi bi-check-circle-fill me-1"></i> ACTIVO
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-3">
+                                        <i class="bi bi-x-circle-fill me-1"></i> INACTIVO
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-primary me-1" title="Editar">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-danger" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-lock fs-1 d-block mb-2 opacity-25"></i>
+                            No se encontraron usuarios registrados.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted fw-medium">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+    </a>
+</div>

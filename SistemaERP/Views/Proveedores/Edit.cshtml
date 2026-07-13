@@ -1,0 +1,133 @@
+@model SistemaERP.Models.Entities.Proveedor
+
+@{
+    ViewData["Title"] = (Model?.Id > 0) ? "Editar Proveedor" : "Nuevo Proveedor";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">@(Model?.Id > 0 ? "Editar Proveedor" : "Registrar Proveedor")</h2>
+        <p class="text-muted">Complete la información legal y de contacto del proveedor.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-8">
+        <div class="premium-card">
+            <form asp-action="@(Model?.Id > 0 ? "Edit" : "Create")">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Nombre" class="form-label fw-semibold">Razón Social</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-building"></i></span>
+                            <input asp-for="Nombre" class="form-control border-start-0 ps-0" placeholder="Ej. Corporación Favorita S.A." required />
+                        </div>
+                        <span asp-validation-for="Nombre" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="NombreComercial" class="form-label fw-semibold">Nombre Comercial</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-shop"></i></span>
+                            <input asp-for="NombreComercial" class="form-control border-start-0 ps-0" placeholder="Ej. Supermaxi" />
+                        </div>
+                        <span asp-validation-for="NombreComercial" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="RUC" class="form-label fw-semibold">RUC / Identificación</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-card-text"></i></span>
+                            <input asp-for="RUC" class="form-control border-start-0 ps-0" placeholder="01XXXXXXXXX001" />
+                        </div>
+                        <span asp-validation-for="RUC" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Gerente" class="form-label fw-semibold">Representante Legal</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                            <input asp-for="Gerente" class="form-control border-start-0 ps-0" placeholder="Nombre del Gerente" />
+                        </div>
+                        <span asp-validation-for="Gerente" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Correo" class="form-label fw-semibold">Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                            <input asp-for="Correo" type="email" class="form-control border-start-0 ps-0" placeholder="ventas@proveedor.com" />
+                        </div>
+                        <span asp-validation-for="Correo" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Telefono" class="form-label fw-semibold">Teléfono / Celular</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-telephone"></i></span>
+                            <input asp-for="Telefono" class="form-control border-start-0 ps-0" placeholder="09XXXXXXXX" />
+                        </div>
+                        <span asp-validation-for="Telefono" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Direccion" class="form-label fw-semibold">Dirección Principal</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-geo-alt"></i></span>
+                        <input asp-for="Direccion" class="form-control border-start-0 ps-0" placeholder="Calle, Nro, Sector" />
+                    </div>
+                    <span asp-validation-for="Direccion" class="text-danger small"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="AgenteRetencion" class="form-label fw-semibold">Agente de Retención</label>
+                        <select asp-for="AgenteRetencion" class="form-select">
+                            <option value="">No</option>
+                            <option value="Si">Sí</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Tipocontribuyente" class="form-label fw-semibold">Tipo Contribuyente</label>
+                        <select asp-for="Tipocontribuyente" class="form-select">
+                            <option value="RIMPE">RIMPE</option>
+                            <option value="REGIMEN GENERAL">Régimen General</option>
+                            <option value="CONTRIBUYENTE ESPECIAL">Contribuyente Especial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Proveedor
+                    </button>
+                    <a asp-action="Index" class="btn btn-light border flex-grow-1">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="alert alert-info border-0 shadow-sm">
+            <h5 class="fw-bold"><i class="bi bi-info-circle me-2"></i> Importante</h5>
+            <p class="small mb-0">Asegúrese de ingresar el <strong>RUC correcto</strong> para la validación de facturación electrónica en módulos posteriores.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

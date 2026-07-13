@@ -1,0 +1,328 @@
+@{
+    string waNum = "";
+    if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Telefono))
+    {
+        string rawPhone = ViewBag.SysParams?.CatalogoWhatsApp ?? ViewBag.EmpresaCentral.Telefono;
+        waNum = new string(rawPhone.Where(char.IsDigit).ToArray());
+        if (waNum.StartsWith("09") && waNum.Length == 10) waNum = "593" + waNum.Substring(1);
+    }
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewBag.SysParams?.CatalogoTitulo ?? ViewBag.EmpresaCentral?.Nombre ?? "Catálogo Digital")</title>
+    
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-soft: rgba(79, 70, 229, 0.08);
+            --dark-color: #0f172a;
+            --light-bg: #f8fafc;
+            --card-border: rgba(226, 232, 240, 0.8);
+            --font-display: 'Outfit', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--light-bg);
+            color: #334155;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1, h2, h3, h4, h5, .font-display {
+            font-family: var(--font-display);
+        }
+
+        /* Glassmorphism Header */
+        .public-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+
+        .header-logo {
+            max-height: 50px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 3.5rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z'/%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.8;
+        }
+
+        .product-card {
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px -10px rgba(79, 70, 229, 0.15);
+            border-color: rgba(79, 70, 229, 0.2);
+        }
+
+        .product-img-wrapper {
+            position: relative;
+            padding-top: 100%; /* 1:1 Aspect Ratio */
+            background: #f1f5f9;
+            overflow: hidden;
+        }
+
+        .product-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover .product-img {
+            transform: scale(1.06);
+        }
+
+        .badge-category {
+            background-color: var(--primary-soft);
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
+        .badge-brand {
+            background-color: #f1f5f9;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
+        .btn-whatsapp {
+            background-color: #25d366;
+            color: white;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s;
+            border-radius: 10px;
+        }
+
+        .btn-whatsapp:hover {
+            background-color: #20ba5a;
+            color: white;
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+        }
+
+        .btn-detail {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s;
+            border-radius: 10px;
+        }
+
+        .btn-detail:hover {
+            background-color: var(--primary-hover);
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        /* Footer Premium */
+        .public-footer {
+            background-color: var(--dark-color);
+            color: #94a3b8;
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .public-footer a {
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .public-footer a:hover {
+            color: white;
+        }
+
+        /* Filter sidebar */
+        .filter-sidebar {
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .filter-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0.8rem;
+            color: #475569;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .filter-link:hover, .filter-link.active {
+            background-color: var(--primary-soft);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Custom Detail Tabs */
+        .custom-tabs .nav-link {
+            font-weight: 600;
+            color: #64748b;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 0.8rem 1.5rem;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .custom-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="public-header py-3 shadow-xs">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a href="/catalogo/@ViewBag.Alias" class="d-flex align-items-center gap-2 text-decoration-none">
+                @if (ViewBag.SysParams != null && !string.IsNullOrEmpty(ViewBag.SysParams.LogoPath))
+                {
+                    <img src="@(ViewBag.SysParams.LogoPath.Split('?')[0])" alt="Logo" class="header-logo" />
+                }
+                else
+                {
+                    <span class="fs-4 fw-extrabold text-indigo font-display">@(ViewBag.EmpresaCentral?.Nombre ?? "Catálogo Web")</span>
+                }
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                @if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Telefono))
+                {
+                    <a href="https://wa.me/@waNum" target="_blank" class="btn btn-whatsapp py-2 px-3 d-flex align-items-center gap-2 text-xs">
+                        <i class="bi bi-whatsapp"></i> <span class="d-none d-sm-inline">Contactar Ventas</span>
+                    </a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1">
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="public-footer py-5 mt-5">
+        <div class="container">
+            <div class="row g-4 justify-content-between">
+                <div class="col-lg-5">
+                    <h5 class="text-white fw-bold mb-3 font-display">@(ViewBag.EmpresaCentral?.Nombre ?? "Nuestra Empresa")</h5>
+                    <p class="small mb-4 opacity-75">
+                        Bienvenidos a nuestro catálogo de productos digital. Aquí podrá encontrar toda la información actualizada, fichas técnicas y disponibilidad de nuestros artículos.
+                    </p>
+                    <div class="d-flex gap-2">
+                        @if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Email))
+                        {
+                            <a href="mailto:@ViewBag.EmpresaCentral.Email" class="btn btn-sm btn-outline-light rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:36px; height:36px;"><i class="bi bi-envelope"></i></a>
+                        }
+                        @if (ViewBag.SysParams != null && !string.IsNullOrEmpty(ViewBag.SysParams.SitioWeb))
+                        {
+                            var siteUrl = ViewBag.SysParams.SitioWeb.StartsWith("http") ? ViewBag.SysParams.SitioWeb : "https://" + ViewBag.SysParams.SitioWeb;
+                            <a href="@siteUrl" target="_blank" class="btn btn-sm btn-outline-light rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:36px; height:36px;"><i class="bi bi-globe"></i></a>
+                        }
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <h6 class="text-white fw-bold mb-3 text-uppercase text-xs tracking-widest">Información de Contacto</h6>
+                    <ul class="list-unstyled small d-flex flex-column gap-2 opacity-75">
+                        @if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Direccion))
+                        {
+                            <li class="d-flex gap-2"><i class="bi bi-geo-alt text-indigo"></i> @ViewBag.EmpresaCentral.Direccion</li>
+                        }
+                        @if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Telefono))
+                        {
+                            <li class="d-flex gap-2"><i class="bi bi-telephone text-indigo"></i> @ViewBag.EmpresaCentral.Telefono</li>
+                        }
+                        @if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Email))
+                        {
+                            <li class="d-flex gap-2"><i class="bi bi-envelope text-indigo"></i> @ViewBag.EmpresaCentral.Email</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            
+            <hr class="my-4 opacity-10">
+            
+            <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3 small opacity-50">
+                <div>&copy; @DateTime.Now.Year - Catálogo Web de @(ViewBag.EmpresaCentral?.Nombre ?? "Nuestra Empresa"). Todos los derechos reservados.</div>
+                <div>Desarrollado con <i class="bi bi-heart-fill text-danger mx-1"></i> Sistema ERP Multi-Tenant</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

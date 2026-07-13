@@ -1,0 +1,318 @@
+@{
+    ViewData["Title"] = "Aplicación Masiva de IVA";
+    var proveedores = ViewBag.ProveedoresList as List<SistemaERP.Models.Entities.Proveedor> ?? new();
+    var presentaciones = ViewBag.PresentacionesMap as Dictionary<long, string> ?? new();
+    var defaultIva = ViewBag.IvaDefault ?? 15.00m;
+}
+@Html.AntiForgeryToken()
+
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Aplicador Masivo de IVA y PVP</h2>
+        <p class="text-muted">Aplica o remueve el IVA y configura de forma masiva si el PVP incluye impuestos por proveedor o producto.</p>
+    </div>
+</div>
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <!-- Left Panel: Providers List -->
+    <div class="col-lg-4 col-md-5">
+        <div class="premium-card p-0" style="height: 480px; display: flex; flex-direction: column;">
+            <div class="p-3 bg-light border-bottom" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <label class="form-label fw-bold small text-uppercase mb-2"><i class="bi bi-search me-1 text-primary"></i>Buscar Proveedor</label>
+                <input type="text" id="searchProveedor" class="form-control form-control-sm" placeholder="Escribe para filtrar proveedores..." oninput="filterProveedoresList(this.value)">
+            </div>
+            <div class="flex-grow-1 p-2" style="overflow-y: auto;" id="proveedoresListContainer">
+                @foreach (var prov in proveedores.OrderBy(p => p.Nombre))
+                {
+                    <div class="provider-item p-2 mb-1 rounded" style="cursor: pointer; transition: background-color 0.2s;" data-id="@prov.Id" data-name="@prov.Nombre" onclick="selectProvider(@prov.Id, this)">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary-subtle text-primary fw-bold" style="min-width: 32px;">@prov.Id</span>
+                            <span class="fw-semibold text-dark text-xs text-truncate">@prov.Nombre</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel: Actions and Settings -->
+    <div class="col-lg-8 col-md-7">
+        <div class="row g-3">
+            <!-- Action Card 1: IVA application -->
+            <div class="col-md-6">
+                <div class="premium-card p-3 h-100 border-start border-4 border-primary">
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-percent me-1"></i>Configuración de IVA</h6>
+                    
+                    <div class="mb-3">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="ivaScope" id="ivaScopeProduct" value="producto" checked>
+                            <label class="form-check-label fw-semibold text-xs" for="ivaScopeProduct">POR PRODUCTO SELECCIONADO</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ivaScope" id="ivaScopeAll" value="todos">
+                            <label class="form-check-label fw-semibold text-xs" for="ivaScopeAll">TODOS LOS PRODUCTOS DEL PROV.</label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-danger w-50 fw-bold text-xs py-2 shadow-sm" onclick="executeBatchAction('iva_remove')">
+                            <i class="bi bi-x-circle me-1"></i> QUITAR
+                        </button>
+                        <button type="button" class="btn btn-primary w-50 fw-bold text-xs py-2 shadow-sm" onclick="executeBatchAction('iva_apply')">
+                            <i class="bi bi-check-circle me-1"></i> APLICAR
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Card 2: PVP includes IVA -->
+            <div class="col-md-6">
+                <div class="premium-card p-3 h-100 border-start border-4 border-success">
+                    <h6 class="fw-bold text-success mb-3"><i class="bi bi-cash-stack me-1"></i>PVP incluye IVA</h6>
+                    
+                    <div class="mb-3">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="pvpScope" id="pvpScopeProduct" value="producto" checked>
+                            <label class="form-check-label fw-semibold text-xs" for="pvpScopeProduct">POR PRODUCTO SELECCIONADO</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pvpScope" id="pvpScopeAll" value="todos">
+                            <label class="form-check-label fw-semibold text-xs" for="pvpScopeAll">TODOS LOS PRODUCTOS DEL PROV.</label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-danger w-50 fw-bold text-xs py-2 shadow-sm" onclick="executeBatchAction('pvp_iva_remove')">
+                            <i class="bi bi-x-circle me-1"></i> QUITAR
+                        </button>
+                        <button type="button" class="btn btn-primary w-50 fw-bold text-xs py-2 shadow-sm" onclick="executeBatchAction('pvp_iva_apply')">
+                            <i class="bi bi-check-circle me-1"></i> APLICAR
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Action / Info Box -->
+            <div class="col-12">
+                <div class="premium-card bg-light border-0 p-3 d-flex align-items-center justify-content-between">
+                    <div class="text-xs text-muted">
+                        <i class="bi bi-info-circle-fill text-indigo me-1 fs-6"></i> 
+                        Seleccione un proveedor a la izquierda, elija un producto en la grilla y aplique los cambios mediante las tarjetas superiores. El IVA configurado por defecto es del <strong>@defaultIva%</strong>.
+                    </div>
+                    <a href="/ParametrosSistema/Index" class="btn btn-sm btn-outline-indigo fw-bold text-xs py-1.5"><i class="bi bi-gear-fill me-1"></i> GENERAL</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Panel: Products List Grid -->
+<div class="row mt-4 animate__animated animate__fadeIn">
+    <div class="col-12">
+        <div class="premium-card">
+            <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-box-seam me-2 text-indigo"></i>Listado de Productos</h5>
+                <div style="width: 300px;">
+                    <input type="text" id="searchProductos" class="form-control form-control-sm" placeholder="Buscar por Nombre o Código..." oninput="filterProductsTable(this.value)">
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0" id="productosBatchTable">
+                    <thead class="bg-light sticky-top">
+                        <tr>
+                            <th class="border-0 text-xs text-uppercase py-3" style="width: 5%;">ID</th>
+                            <th class="border-0 text-xs text-uppercase py-3" style="width: 15%;">Código Barra</th>
+                            <th class="border-0 text-xs text-uppercase py-3" style="width: 30%;">Producto</th>
+                            <th class="border-0 text-xs text-uppercase py-3" style="width: 15%;">Presentación</th>
+                            <th class="border-0 text-xs text-uppercase py-3 text-center" style="width: 10%;">Disponible</th>
+                            <th class="border-0 text-xs text-uppercase py-3 text-center" style="width: 10%;">IVA %</th>
+                            <th class="border-0 text-xs text-uppercase py-3 text-center" style="width: 15%;">PVP Incluye IVA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted fw-semibold">
+                                <i class="bi bi-arrow-left-circle fs-2 d-block mb-2 text-secondary"></i>
+                                Seleccione un proveedor para listar sus productos.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .provider-item:hover {
+        background-color: #f1f5f9;
+    }
+    .provider-item.active {
+        background-color: #e2e8f0;
+        border-left: 4px solid var(--bs-primary);
+    }
+    .premium-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .btn-outline-indigo {
+        color: #4f46e5;
+        border-color: #4f46e5;
+    }
+    .btn-outline-indigo:hover {
+        background-color: #4f46e5;
+        color: #fff;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        let currentProviderId = null;
+        let selectedRowId = null;
+        let originalProducts = [];
+        const presentacionesMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(presentaciones));
+
+        function filterProveedoresList(val) {
+            let filter = val.trim().toLowerCase();
+            document.querySelectorAll('.provider-item').forEach(item => {
+                let name = item.getAttribute('data-name').toLowerCase();
+                let id = item.getAttribute('data-id').toLowerCase();
+                if (name.includes(filter) || id.includes(filter)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        async function selectProvider(id, element) {
+            currentProviderId = id;
+            selectedRowId = null;
+            document.querySelectorAll('.provider-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+
+            let tbody = document.querySelector('#productosBatchTable tbody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+            try {
+                let data = await $.getJSON('@Url.Action("GetProductosByProveedor", "Productos")?idProveedor=' + id + '&_t=' + new Date().getTime());
+                originalProducts = data;
+                renderProductsTable(data);
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger"><i class="bi bi-exclamation-octagon fs-3 d-block mb-2"></i>Error al cargar productos</td></tr>';
+            }
+        }
+
+        function renderProductsTable(list) {
+            let tbody = document.querySelector('#productosBatchTable tbody');
+            tbody.innerHTML = '';
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted fw-bold">No se encontraron productos activos para este proveedor.</td></tr>';
+                return;
+            }
+            list.forEach(p => {
+                let cat = presentacionesMap[p.id_Presentacion] || 'General';
+                let tr = document.createElement('tr');
+                tr.id = 'prod-row-' + p.id;
+                tr.style.cursor = 'pointer';
+                if (selectedRowId === p.id) tr.classList.add('table-primary');
+                
+                tr.onclick = function() {
+                    selectedRowId = p.id;
+                    document.querySelectorAll('#productosBatchTable tbody tr').forEach(r => r.classList.remove('table-primary'));
+                    tr.classList.add('table-primary');
+                };
+
+                tr.innerHTML = `
+                    <td class="text-xs fw-bold text-muted">${p.id}</td>
+                    <td class="font-monospace text-xs">${p.codigoBarra || '-'}</td>
+                    <td class="fw-semibold text-xs text-dark">${p.nombre}</td>
+                    <td class="text-xs text-muted">${cat}</td>
+                    <td class="text-center text-xs fw-bold">${p.disponible}</td>
+                    <td class="text-center text-xs font-monospace fw-bold text-secondary">${(p.iva || 0).toFixed(2)}%</td>
+                    <td class="text-center">
+                        <input class="form-check-input" type="checkbox" ${p.pvp_Iva ? 'checked' : ''} disabled>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterProductsTable(val) {
+            let filter = val.trim().toLowerCase();
+            let filtered = originalProducts.filter(p => {
+                let name = (p.nombre || '').toLowerCase();
+                let code = (p.codigoBarra || '').toLowerCase();
+                return name.includes(filter) || code.includes(filter);
+            });
+            renderProductsTable(filtered);
+        }
+
+        async function executeBatchAction(actionType) {
+            if (!currentProviderId) {
+                Swal.fire('Atención', 'Seleccione un proveedor primero.', 'warning');
+                return;
+            }
+
+            let isIvaAction = actionType.startsWith('iva_');
+            let scope = '';
+            if (isIvaAction) {
+                scope = document.querySelector('input[name="ivaScope"]:checked').value;
+            } else {
+                scope = document.querySelector('input[name="pvpScope"]:checked').value;
+            }
+
+            if (scope === 'producto' && !selectedRowId) {
+                Swal.fire('Atención', 'Seleccione un producto en la tabla primero.', 'warning');
+                return;
+            }
+
+            let request = {
+                idProveedor: currentProviderId,
+                scope: scope,
+                idProducto: scope === 'producto' ? selectedRowId : null,
+                actionType: actionType
+            };
+
+            Swal.fire({
+                title: 'Procesando...',
+                html: 'Aplicando cambios en base de datos...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                let res = await $.ajax({
+                    url: '@Url.Action("ApplyBatchIva", "Productos")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() }
+                });
+                Swal.close();
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Operación Exitosa!',
+                        text: res.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    // Refresh data
+                    let activeEl = document.querySelector('.provider-item.active');
+                    if (activeEl) {
+                        selectProvider(currentProviderId, activeEl);
+                    }
+                } else {
+                    Swal.fire('Error', res.message || 'No se pudo aplicar la acción.', 'error');
+                }
+            } catch (e) {
+                Swal.close();
+                Swal.fire('Error', 'Error de conexión con el servidor o token inválido.', 'error');
+            }
+        }
+    </script>
+}

@@ -1,0 +1,475 @@
+@using System.Text.Json
+@model SistemaERP.Areas.Admin.Models.CampoPersonalizado
+@{
+    ViewData["Title"] = "Editar Campo Dinámico";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    string origenOpciones = "Fijo";
+    string tablaNombre = "";
+    bool crearTabla = false;
+    string opcionesListaFija = Model.OpcionesLista ?? "";
+
+    if (!string.IsNullOrEmpty(Model.OpcionesLista) && Model.OpcionesLista.Trim().StartsWith("{"))
+    {
+        try
+        {
+            var json = JsonDocument.Parse(Model.OpcionesLista);
+            if (json.RootElement.TryGetProperty("EsTabla", out var esTablaProp) && esTablaProp.GetBoolean())
+            {
+                origenOpciones = "Tabla";
+                if (json.RootElement.TryGetProperty("TablaNombre", out var tablaProp))
+                {
+                    tablaNombre = tablaProp.GetString() ?? "";
+                }
+                if (json.RootElement.TryGetProperty("CrearTabla", out var crearProp))
+                {
+                    crearTabla = crearProp.GetBoolean();
+                }
+                opcionesListaFija = "";
+            }
+        }
+        catch { }
+    }
+}
+
+@section Styles {
+    <style>
+        .form-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+        }
+
+        .span-2 { grid-column: span 2; }
+        .span-3 { grid-column: span 3; }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(10, 15, 30, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 15px;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px var(--primary-glow);
+            background: rgba(10, 15, 30, 0.6);
+        }
+
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+        }
+
+        select.form-control option {
+            background-color: var(--bg-sidebar);
+        }
+
+        /* Checkbox grid */
+        .checkbox-card-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .checkbox-item span {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* Section divider */
+        .section-title {
+            grid-column: span 3;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-top: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            border: none;
+            color: white;
+            padding: 14px 35px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .error-summary {
+            background: rgba(248, 113, 113, 0.08);
+            border: 1px solid rgba(248, 113, 113, 0.15);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: var(--error-color);
+            font-size: 14px;
+            margin-bottom: 30px;
+            list-style: none;
+        }
+    </style>
+}
+
+<div class="form-container">
+    <div class="glass-card">
+        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px;">Modificar Campo Dinámico</h2>
+        <p style="color: var(--text-muted); font-size: 14px; font-weight: 300; margin-bottom: 35px;">
+            Ajuste los parámetros del campo '@Model.Etiqueta'.
+        </p>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="error-summary">
+                <div style="font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Por favor corrija los siguientes errores:</span>
+                </div>
+                <ul>
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <form asp-action="Editar" method="post" autocomplete="off">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="Entidad" />
+            <input type="hidden" asp-for="NombreCampo" />
+            
+            <div class="form-grid">
+                
+                <div class="section-title">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>Configuración Core del Campo</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Entidad Destino (Solo Lectura)</label>
+                    <input class="form-control" value="@Model.Entidad" disabled style="opacity: 0.6;" />
+                </div>
+
+                <div class="form-group">
+                    <label>Clave de campo (Solo Lectura)</label>
+                    <input class="form-control" value="@Model.NombreCampo" disabled style="opacity: 0.6;" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Etiqueta">Etiqueta Visual (UI Label)</label>
+                    <input asp-for="Etiqueta" class="form-control" required />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="TipoDato">Tipo de Entrada</label>
+                    <select asp-for="TipoDato" class="form-control" id="tipoDatoSelector" required>
+                        <option value="Texto">Texto</option>
+                        <option value="Numero">Número</option>
+                        <option value="Fecha">Fecha / Calendario</option>
+                        <option value="Booleano">Booleano (Sí/No)</option>
+                        <option value="Lista">Lista de Opciones (Dropdown)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="box-origen-opciones" style="display: none;">
+                    <label>Origen de las Opciones</label>
+                    <select name="OrigenOpciones" id="origenOpcionesSelector" class="form-control">
+                        <option value="Fijo" selected="@(origenOpciones == "Fijo")">Lista Fija (Valores separados por coma)</option>
+                        <option value="Tabla" selected="@(origenOpciones == "Tabla")">Desde Tabla de Base de Datos</option>
+                    </select>
+                </div>
+
+                <div class="form-group span-2" id="box-opciones-lista" style="display: none;">
+                    <label asp-for="OpcionesLista">Opciones de la Lista (Valores separados por coma)</label>
+                    <input asp-for="OpcionesLista" class="form-control" value="@opcionesListaFija" placeholder="Nacional, Importado, Genérico" />
+                </div>
+
+                <div class="form-group" id="box-tabla-opciones" style="display: none;">
+                    <label>Nombre de la Tabla SQL</label>
+                    <input name="OpcionesListaTablaNombre" id="OpcionesListaTablaNombre" class="form-control" value="@tablaNombre" placeholder="Ej: Marcas" />
+                </div>
+
+                <div class="form-group" id="box-crear-tabla-opciones" style="display: none; align-items: center; padding-top: 30px;">
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="OpcionesListaCrearTabla" id="OpcionesListaCrearTabla" value="true" @(crearTabla ? "checked" : "") />
+                        <span>Crear tabla automáticamente si no existe</span>
+                    </label>
+                </div>
+
+                <div class="section-title">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Reglas de Validación</span>
+                </div>
+
+                <!-- Reglas de Texto -->
+                <div class="form-group box-val-texto">
+                    <label asp-for="MinLongitud">Longitud Mínima</label>
+                    <input asp-for="MinLongitud" type="number" class="form-control" />
+                </div>
+
+                <div class="form-group box-val-texto">
+                    <label asp-for="MaxLongitud">Longitud Máxima</label>
+                    <input asp-for="MaxLongitud" type="number" class="form-control" />
+                </div>
+
+                <div class="form-group box-val-texto">
+                    <label asp-for="ExpresionRegular">Expresión Regular (Format Regex)</label>
+                    <input asp-for="ExpresionRegular" class="form-control" />
+                </div>
+
+                <!-- Reglas de Número -->
+                <div class="form-group box-val-numero" style="display: none;">
+                    <label asp-for="ValorMinimo">Valor Mínimo</label>
+                    <input asp-for="ValorMinimo" type="number" step="0.0001" class="form-control" />
+                </div>
+
+                <div class="form-group box-val-numero" style="display: none;">
+                    <label asp-for="ValorMaximo">Valor Máximo</label>
+                    <input asp-for="ValorMaximo" type="number" step="0.0001" class="form-control" />
+                </div>
+
+                <div class="form-group box-val-numero" style="display: none;">
+                    <label asp-for="Decimales">Cantidad de Decimales</label>
+                    <input asp-for="Decimales" type="number" class="form-control" />
+                </div>
+
+                <!-- Checkboxes de validaciones booleanas -->
+                <div class="form-group span-3" style="margin-top: 10px;">
+                    <div style="display: flex; gap: 40px;">
+                        <label class="checkbox-item">
+                            <input type="checkbox" asp-for="Requerido" />
+                            <span>Es Obligatorio / Requerido</span>
+                        </label>
+                        <label class="checkbox-item" id="checkbox-unico-box">
+                            <input type="checkbox" asp-for="EsUnico" />
+                            <span>Debe ser Único (Validación de Unicidad)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <i class="fa-solid fa-desktop"></i>
+                    <span>Interfaz, Destino y Ayuda</span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="ValorDefault">Valor por Defecto (UI Default)</label>
+                    <input asp-for="ValorDefault" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Placeholder">Texto de Ayuda (Placeholder)</label>
+                    <input asp-for="Placeholder" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Tooltip">Tooltip explicativo</label>
+                    <input asp-for="Tooltip" class="form-control" />
+                </div>
+
+                <!-- Ámbito de Aplicación -->
+                <div class="form-group">
+                    <label asp-for="RubroId">Rubro Específico (Opcional)</label>
+                    <select asp-for="RubroId" class="form-control" asp-items="ViewBag.RubroId">
+                        <option value="">-- Aplica a todos los Rubros --</option>
+                    </select>
+                </div>
+
+                <div class="form-group span-2">
+                    <label asp-for="EmpresaId">Empresa Cliente Específica (Opcional)</label>
+                    <select asp-for="EmpresaId" class="form-control" asp-items="ViewBag.EmpresaId">
+                        <option value="">-- Aplica a todas las Empresas --</option>
+                    </select>
+                </div>
+
+                <!-- Checkboxes de Destinos y Visibilidad -->
+                <div class="form-group span-3">
+                    <label>Visibilidad y Destinos del Campo</label>
+                    <div class="checkbox-card-grid">
+                        <label class="checkbox-item">
+                            <input type="checkbox" asp-for="VisibleEnFormulario" />
+                            <span>Formulario (Add)</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" asp-for="VisibleEnLista" />
+                            <span>Listado (Tabla)</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" asp-for="VisibleEnReporte" />
+                            <span>Reportes</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" asp-for="VisibleEnEtiqueta" />
+                            <span>Etiquetas Código</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" asp-for="VisibleEnFactura" />
+                            <span>Factura (SRI XML)</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="wizard-actions">
+                <a href="@Url.Action("Index")" class="btn-back">
+                    <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i>
+                    <span>Cancelar</span>
+                </a>
+                <button type="submit" class="btn-submit">
+                    <span>Guardar Cambios</span>
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Manejar tipos de datos interactivos
+            $('#tipoDatoSelector').change(function() {
+                var tipo = $(this).val();
+
+                // Resetear visibilidad de validaciones
+                $('.box-val-texto').hide();
+                $('.box-val-numero').hide();
+                $('#box-origen-opciones').hide();
+                $('#box-opciones-lista').hide();
+                $('#box-tabla-opciones').hide();
+                $('#box-crear-tabla-opciones').hide();
+                $('#checkbox-unico-box').show();
+
+                if (tipo === "Texto") {
+                    $('.box-val-texto').show();
+                } else if (tipo === "Numero") {
+                    $('.box-val-numero').show();
+                } else if (tipo === "Lista") {
+                    $('#box-origen-opciones').show();
+                    $('#origenOpcionesSelector').trigger('change');
+                } else if (tipo === "Fecha" || tipo === "Booleano") {
+                    $('#checkbox-unico-box').hide();
+                }
+            });
+
+            // Manejar origen de opciones (Fijo vs Tabla)
+            $('#origenOpcionesSelector').change(function() {
+                var origen = $(this).val();
+                
+                $('#box-opciones-lista').hide();
+                $('#box-tabla-opciones').hide();
+                $('#box-crear-tabla-opciones').hide();
+                
+                if ($('#tipoDatoSelector').val() === "Lista") {
+                    if (origen === "Fijo") {
+                        $('#box-opciones-lista').show();
+                    } else if (origen === "Tabla") {
+                        $('#box-tabla-opciones').show();
+                        $('#box-crear-tabla-opciones').css('display', 'flex');
+                    }
+                }
+            });
+
+            // Disparar inicialmente para cargar estado
+            $('#tipoDatoSelector').trigger('change');
+        });
+    </script>
+}

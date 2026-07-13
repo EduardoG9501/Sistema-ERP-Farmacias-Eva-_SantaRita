@@ -1,0 +1,798 @@
+@{
+    ViewData["Title"] = "Auditoría de Cierre de Caja";
+    var moneda = ViewBag.MonedaSimbolo ?? "$";
+    var usuarios = ViewBag.Usuarios as List<SistemaERP.Models.Entities.Usuario> ?? new List<SistemaERP.Models.Entities.Usuario>();
+    var selectedUser = (int)ViewBag.SelectedUsuarioId;
+    var fechaStr = ViewBag.Fecha as string;
+    
+    var cierre = ViewBag.Cierre as SistemaERP.Models.Entities.CierreCaja;
+    var denomList = ViewBag.Denominaciones as List<SistemaERP.Models.Entities.Denominacion> ?? new List<SistemaERP.Models.Entities.Denominacion>();
+    var transacciones = ViewBag.Transacciones as List<SistemaERP.Controllers.ReportesController.CierreDetalleTransViewModel> ?? new List<SistemaERP.Controllers.ReportesController.CierreDetalleTransViewModel>();
+
+    // Cálculos de Totales para el Sidebar
+    decimal apCajaVal = 0;
+    decimal countedEfectivoVal = 0;
+    decimal diferenciaVal = 0;
+    decimal sistemaEfectivo = 0;
+    decimal egresosVal = 0;
+    decimal otrosPagosVal = 0;
+
+    var apertura = ViewBag.Apertura as SistemaERP.Models.Entities.AperturaCaja;
+    decimal efectivoVentas = transacciones.Where(t => t.TipoPago == "EFECTIVO").Sum(t => t.TotalPagar);
+
+    if (cierre != null)
+    {
+        apCajaVal = cierre.Apertura?.MontoInicial ?? 0;
+        countedEfectivoVal = cierre.MontoFinal;
+        diferenciaVal = countedEfectivoVal - efectivoVentas; // Dynamic difference (Counted Cash - Cash Sales)
+        sistemaEfectivo = apCajaVal + efectivoVentas; // Expected total including Aperture
+        otrosPagosVal = transacciones.Where(t => t.TipoPago != "EFECTIVO").Sum(t => t.TotalPagar);
+    }
+    else
+    {
+        apCajaVal = apertura?.MontoInicial ?? 0;
+        countedEfectivoVal = 0;
+        diferenciaVal = 0;
+        sistemaEfectivo = apCajaVal + efectivoVentas;
+        otrosPagosVal = transacciones.Where(t => t.TipoPago != "EFECTIVO").Sum(t => t.TotalPagar);
+    }
+
+    decimal sobrante = diferenciaVal > 0 ? diferenciaVal : 0;
+    decimal faltante = diferenciaVal < 0 ? -diferenciaVal : 0;
+}
+
+<style>
+    .auditor-header-bar {
+        background-color: #d2e4f3;
+        border: 1px solid #a3c2de;
+        padding: 10px 15px;
+        border-radius: 6px;
+    }
+    .auditor-sidebar-totals {
+        background-color: #cbdcf2;
+        border: 1px solid #94b9de;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .auditor-sidebar-totals h6 {
+        font-weight: 700;
+        color: #1a365d;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+    }
+    .erp-label-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .erp-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #1a365d;
+        width: 110px;
+        text-align: right;
+        padding-right: 10px;
+    }
+    .erp-input {
+        flex: 1;
+        font-family: monospace;
+        font-weight: 700;
+        text-align: right;
+        font-size: 0.92rem;
+        background-color: #f1f5f9 !important;
+        border: 1px solid #94a3b8;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+    .erp-input-cyan {
+        background-color: #e0f7fa !important;
+        border: 2px solid #00acc1 !important;
+        color: #006064 !important;
+    }
+    .auditor-tabs-container {
+        border: 1px solid #94b9de;
+        border-radius: 8px;
+        background-color: #ffffff;
+        padding: 15px;
+    }
+    .nav-tabs-erp {
+        border-bottom: 2px solid #a3c2de;
+    }
+    .nav-tabs-erp .nav-link {
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: #1a365d;
+        border: 1px solid transparent;
+        margin-bottom: -2px;
+        padding: 6px 12px;
+    }
+    .nav-tabs-erp .nav-link.active {
+        background-color: #ffffff;
+        border: 2px solid #a3c2de;
+        border-bottom-color: #ffffff;
+        border-radius: 4px 4px 0 0;
+    }
+    .table-conteo {
+        border: 1px solid #cbd5e1;
+    }
+    .table-conteo th {
+        background-color: #f1f5f9;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #334155;
+        border-bottom: 1px solid #cbd5e1;
+    }
+    .table-conteo td {
+        padding: 4px 6px;
+        vertical-align: middle;
+        font-size: 0.82rem;
+    }
+    .yellow-total-input {
+        background-color: #fff9c4 !important;
+        border: 1px solid #fbc02d !important;
+        color: #5d4037 !important;
+        font-weight: 700;
+        text-align: right;
+        font-family: monospace;
+    }
+    .cr-auditor-grid {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 30px;
+        font-family: 'Arial', sans-serif;
+    }
+    .cr-grid-header {
+        border-bottom: 1px solid #000000;
+        font-size: 0.72rem;
+        font-weight: bold;
+    }
+    .cr-group-title {
+        font-weight: bold;
+        font-size: 0.82rem;
+        color: #000000;
+        border-bottom: 1px dotted #888888;
+        padding-top: 10px;
+        padding-bottom: 2px;
+    }
+    .cr-row-trans td {
+        font-size: 0.76rem;
+        padding: 4px 8px;
+        font-family: Arial, sans-serif;
+    }
+    .cr-group-total {
+        font-size: 0.8rem;
+        font-weight: bold;
+        border-top: 1px solid #000000;
+        border-bottom: 1px solid #000000;
+        padding: 4px 8px;
+        text-align: right;
+    }
+    .cr-grand-totals {
+        font-size: 0.85rem;
+        font-weight: bold;
+        border-top: 2px solid #000000;
+        border-bottom: 4px double #000000;
+        padding: 6px 8px;
+        text-align: right;
+    }
+
+    @@media print {
+        .no-print, .no-print *, .main-sidebar, .main-header, .navbar, .btn, form {
+            display: none !important;
+        }
+        body, .content-wrapper, .container-fluid, main {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .auditor-sidebar-totals {
+            border: 0 !important;
+            background: transparent !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin-bottom: 20px !important;
+        }
+        .auditor-tabs-container {
+            border: 0 !important;
+            background: transparent !important;
+            padding: 0 !important;
+        }
+        .cr-auditor-grid {
+            border: 0 !important;
+            padding: 0 !important;
+        }
+    }
+</style>
+
+<!-- BARRA DE AUDITORÍA SUPERIOR (SE OCULTA EN IMPRESIÓN) -->
+<div class="auditor-header-bar mb-4 no-print animate__animated animate__fadeIn">
+    <form method="get" class="d-flex flex-wrap align-items-center justify-content-between g-2">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold text-dark small text-uppercase">USUARIO:</span>
+                <select name="usuarioId" class="form-select form-select-sm bg-white" style="width: 160px;" onchange="this.form.submit()">
+                    @foreach (var u in usuarios)
+                    {
+                        <!option value="@u.Id" @(u.Id == selectedUser ? "selected" : "")>@u.Login?.ToUpper()</!option>
+                    }
+                </select>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold text-dark small text-uppercase">FECHA:</span>
+                <input type="date" name="fecha" class="form-control form-control-sm bg-white" style="width: 140px;" value="@fechaStr" onchange="this.form.submit()" />
+            </div>
+
+            <button type="submit" class="btn btn-success btn-sm fw-bold px-3 text-uppercase shadow-sm">
+                Buscar
+            </button>
+            
+            <button type="button" class="btn btn-primary btn-sm fw-bold px-3 text-uppercase shadow-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+            
+            <a asp-action="Index" class="btn btn-danger btn-sm fw-bold px-3 text-uppercase shadow-sm">
+                Salir
+            </a>
+        </div>
+        <div>
+            <span class="fw-bold fs-6 text-primary text-uppercase font-monospace tracking-wide">
+                USUARIO: @(usuarios.FirstOrDefault(u => u.Id == selectedUser)?.Login ?? "SELECCIONE")
+            </span>
+        </div>
+    </form>
+</div>
+
+<!-- INFORMACIÓN SI CAJA NO TIENE CIERRE REGISTRADO -->
+@if (cierre == null)
+{
+    <div class="alert alert-warning d-flex justify-content-between align-items-center shadow-sm no-print mb-4 animate__animated animate__fadeIn">
+        <div>
+            <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+            El usuario seleccionado **no ha registrado su cierre de caja** para la fecha especificada. 
+            Se muestran los cobros del día en tiempo real.
+        </div>
+    </div>
+}
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <!-- COLUMNA IZQUIERDA: MONTO DE CIERRE (TOTALES SIDEBAR) -->
+    <div class="col-12 col-md-3 animate__animated animate__fadeInLeft">
+        <div class="auditor-sidebar-totals h-100 shadow-sm">
+            <h6 class="text-uppercase tracking-wider mb-4 border-bottom border-secondary border-opacity-25 pb-2 text-center">
+                MONTO DE CIERRE
+            </h6>
+
+            <!-- AP. CAJA -->
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-5 text-end fw-bold text-dark" style="font-size: 0.78rem;">AP. CAJA:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light" value="@apCajaVal.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- SISTEMA -->
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-5 text-end fw-bold text-dark" style="font-size: 0.78rem;">SISTEMA:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light" value="@sistemaEfectivo.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- EGRESOS -->
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-5 text-end fw-bold text-dark" style="font-size: 0.78rem;">EGRESOS:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light" value="@egresosVal.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- TOTAL/CIERRE -->
+            <div class="row g-2 align-items-center mb-2 mt-3">
+                <div class="col-5 text-end fw-bold text-dark" style="font-size: 0.78rem; border-top: 1px dotted #94b9de; padding-top: 8px;">TOTAL/CIERRE:</div>
+                <div class="col-7 pt-2">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light border-secondary" value="@countedEfectivoVal.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- FALTANTE -->
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-5 text-end fw-bold text-danger" style="font-size: 0.78rem;">FALTANTE:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light text-danger" value="@faltante.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- SOBRANTE -->
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-5 text-end fw-bold text-success" style="font-size: 0.78rem;">SOBRANTE:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light text-success" value="@sobrante.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- TOTAL EFECTIVO -->
+            <div class="row g-2 align-items-center mb-2 mt-4">
+                <div class="col-5 text-end fw-bold text-dark" style="font-size: 0.78rem;">TOTAL EFECTIVO:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace erp-input-cyan" value="@countedEfectivoVal.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- OTROS PAGOS -->
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-5 text-end fw-bold text-dark" style="font-size: 0.78rem;">OTROS PAGOS:</div>
+                <div class="col-7">
+                    <input type="text" class="form-control form-control-sm text-end fw-bold font-monospace bg-light" value="@otrosPagosVal.ToString("N2")" readonly />
+                </div>
+            </div>
+
+            <!-- DATOS OCULTOS SANEADOS PARA JS (EVITA ERRORES DE ESCAPADO) -->
+            <input type="hidden" id="rawDetalleDenominaciones" value="@(cierre?.DetalleDenominaciones ?? "[]")" />
+            <input type="hidden" id="rawMetodosPago" value="@(cierre?.MetodosPago ?? "[]")" />
+        </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: PANELES DE CONTEO FÍSICO (TABS) -->
+    <div class="col-12 col-md-9">
+        <div class="auditor-tabs-container h-100">
+            <!-- PESTAÑAS DEL AUDITOR -->
+            <ul class="nav nav-tabs nav-tabs-erp mb-3 no-print" id="auditorTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="efectivo-tab" data-bs-toggle="tab" data-bs-target="#efectivo-panel" type="button" role="tab" aria-controls="efectivo-panel" aria-selected="true">
+                        EFECTIVO
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tarjetas-tab" data-bs-toggle="tab" data-bs-target="#tarjetas-panel" type="button" role="tab" aria-controls="tarjetas-panel" aria-selected="false">
+                        TC/TD/CK/TF/DEP
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="egresos-tab" data-bs-toggle="tab" data-bs-target="#egresos-panel" type="button" role="tab" aria-controls="egresos-panel" aria-selected="false">
+                        EGRESOS
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="auditorTabsContent">
+                <!-- TAB 1: EFECTIVO (Doble grilla monedas y billetes) -->
+                <div class="tab-pane fade show active" id="efectivo-panel" role="tabpanel" aria-labelledby="efectivo-tab">
+                    
+                    <!-- JS REALTIME DIAGNOSTIC PANEL (SE OCULTA EN IMPRESIÓN) -->
+                    <div id="jsDebugLog" class="alert alert-info font-monospace small mb-3 no-print" style="max-height: 250px; overflow-y: auto; font-size: 0.72rem; line-height: 1.2;">
+                        <strong>Panel de Diagnóstico en Vivo (JS Log):</strong><br/>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- MONEDAS -->
+                        <div class="col-12 col-md-6 border-end pe-md-4">
+                            <div class="text-uppercase fw-bold text-primary mb-2 small tracking-wider" style="font-size: 0.8rem;">
+                                <i class="bi bi-coin me-1"></i> EFECTIVO MONEDAS
+                            </div>
+                            
+                            <table class="table table-sm table-conteo text-center table-bordered align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45%;">Denominación</th>
+                                        <th style="width: 25%;">Cantidad</th>
+                                        <th style="width: 30%;">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var monedas = denomList.Where(d => string.Equals(d.Tipo, "Moneda", StringComparison.OrdinalIgnoreCase) || 
+                                                                           (!string.Equals(d.Tipo, "Billete", StringComparison.OrdinalIgnoreCase) && d.Valor < 1.00m)).ToList();
+                                    }
+                                    @foreach (var d in monedas)
+                                    {
+                                        <tr>
+                                            <td class="text-start fw-semibold ps-3">@moneda @d.Valor.ToString("F2")</td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm text-center fw-bold bg-light border-0 py-0 denom-count-auditor" 
+                                                       data-id="@d.Id" 
+                                                       data-valor="@d.Valor" 
+                                                       data-tipo="moneda" 
+                                                       value="0" disabled style="font-size: 0.85rem;" />
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm text-end fw-semibold border-0 py-0 bg-transparent denom-subtotal-auditor" value="0.00" disabled style="font-size: 0.85rem;" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <td colspan="2" class="text-end fw-bold text-dark small py-2">TOTAL MONEDAS:</td>
+                                        <td class="p-1">
+                                            <input type="text" id="totalMonedasAuditor" class="form-control form-control-sm yellow-total-input py-0" value="0.00" disabled />
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- BILLETES -->
+                        <div class="col-12 col-md-6 ps-md-4">
+                            <div class="text-uppercase fw-bold text-success mb-2 small tracking-wider" style="font-size: 0.8rem;">
+                                <i class="bi bi-cash me-1"></i> EFECTIVO BILLETES
+                            </div>
+                            
+                            <table class="table table-sm table-conteo text-center table-bordered align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45%;">Denominación</th>
+                                        <th style="width: 25%;">Cantidad</th>
+                                        <th style="width: 30%;">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var billetes = denomList.Where(d => string.Equals(d.Tipo, "Billete", StringComparison.OrdinalIgnoreCase) || 
+                                                                            (!string.Equals(d.Tipo, "Moneda", StringComparison.OrdinalIgnoreCase) && d.Valor >= 1.00m)).ToList();
+                                    }
+                                    @foreach (var d in billetes)
+                                    {
+                                        <tr>
+                                            <td class="text-start fw-semibold ps-3">@moneda @d.Valor.ToString("F2")</td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm text-center fw-bold bg-light border-0 py-0 denom-count-auditor" 
+                                                       data-id="@d.Id" 
+                                                       data-valor="@d.Valor" 
+                                                       data-tipo="billete" 
+                                                       value="0" disabled style="font-size: 0.85rem;" />
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm text-end fw-semibold border-0 py-0 bg-transparent denom-subtotal-auditor" value="0.00" disabled style="font-size: 0.85rem;" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <td colspan="2" class="text-end fw-bold text-dark small py-2">TOTAL BILLETES:</td>
+                                        <td class="p-1">
+                                            <input type="text" id="totalBilletesAuditor" class="form-control form-control-sm yellow-total-input py-0" value="0.00" disabled />
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TARJETAS Y OTROS -->
+                <div class="tab-pane fade" id="tarjetas-panel" role="tabpanel" aria-labelledby="tarjetas-tab">
+                    <div class="text-uppercase fw-bold text-primary mb-3 small tracking-wider" style="font-size: 0.8rem;">
+                        <i class="bi bi-credit-card-2-back me-1"></i> Desglose de Pagos con Tarjeta, Cheques y Transferencias
+                    </div>
+                    
+                    <div class="table-responsive small animate__animated animate__fadeIn">
+                        <table class="table table-sm table-hover table-bordered align-middle">
+                            <thead class="table-light font-monospace text-secondary" style="font-size: 0.76rem;">
+                                <tr class="text-center">
+                                    <th class="text-start">Banco</th>
+                                    <th class="text-start">Adquirente Cliente</th>
+                                    <th>Fecha</th>
+                                    <th>Hora</th>
+                                    <th>#Doc. Venta</th>
+                                    <th>#Ref</th>
+                                    <th class="text-end">Total Pagar</th>
+                                    <th class="text-end">Interes Bancario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var nonCashTrans = transacciones.Where(t => t.TipoPago != "EFECTIVO").ToList();
+                                }
+                                @if (!nonCashTrans.Any())
+                                {
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5 text-muted small font-monospace">
+                                            <i class="bi bi-inbox fs-2 mb-2 d-block"></i>
+                                            No se registran cobros con Tarjeta, Cheque o Transferencia para este usuario y fecha.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var t in nonCashTrans)
+                                    {
+                                        <tr class="small text-uppercase">
+                                            <td class="font-monospace text-start fw-semibold ps-3">@t.Banco</td>
+                                            <td class="text-start">@t.AdquirenteCliente</td>
+                                            <td class="text-center font-monospace">@t.Fecha</td>
+                                            <td class="text-center font-monospace">@t.Hora</td>
+                                            <td class="text-center font-monospace">@t.DocVenta</td>
+                                            <td class="text-center font-monospace">@t.Ref</td>
+                                            <td class="text-end fw-bold font-monospace text-primary">@t.TotalPagar.ToString("N2")</td>
+                                            <td class="text-end font-monospace">@t.InteresBancario.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            @if (nonCashTrans.Any())
+                            {
+                                <tfoot>
+                                    <tr class="table-light fw-bold text-dark font-monospace" style="font-size: 0.8rem;">
+                                        <td colspan="6" class="text-end py-2 pe-3">TOTAL OTROS MÉTODOS (TC/TD/CK/TF):</td>
+                                        <td class="text-end text-primary py-2">@nonCashTrans.Sum(t => t.TotalPagar).ToString("N2")</td>
+                                        <td class="text-end py-2">@nonCashTrans.Sum(t => t.InteresBancario).ToString("N2")</td>
+                                    </tr>
+                                </tfoot>
+                            }
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: EGRESOS -->
+                <div class="tab-pane fade" id="egresos-panel" role="tabpanel" aria-labelledby="egresos-tab">
+                    <div class="text-center py-4 text-muted small">
+                        <i class="bi bi-journal-arrow-down fs-2 mb-2 d-block text-secondary"></i>
+                        No se registran egresos ni salidas extraordinarias de efectivo en esta jornada.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN INFERIOR: DATOS REPORTE (SAP CRYSTAL REPORTS GRID) -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="bg-light p-2 border-top border-bottom border-dark border-opacity-25 no-print">
+            <span class="fw-bold text-uppercase small text-secondary font-monospace tracking-wide"><i class="bi bi-grid-3x3 me-1"></i> Datos Reporte</span>
+        </div>
+        
+        <div class="cr-auditor-grid border shadow-sm mt-3">
+            <!-- RANGOS DE FECHAS EN CRYSTAL GRID -->
+            <div class="d-flex justify-content-center text-dark font-monospace mb-4 pb-2 border-bottom border-dark border-opacity-10" style="font-size: 0.8rem;">
+                Desde: <strong>@fechaStr</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hasta: <strong>@fechaStr</strong>
+            </div>
+
+            <!-- TABLA PRINCIPAL DE CRYSTAL REPORTS -->
+            <table class="w-100 table-borderless text-dark text-uppercase align-middle">
+                <thead>
+                    <tr class="cr-grid-header font-monospace text-secondary">
+                        <th style="width: 15%; text-align: left; padding: 4px 8px;">Banco</th>
+                        <th style="width: 25%; text-align: left; padding: 4px 8px;">Adquirente Cliente</th>
+                        <th style="width: 10%; text-align: center; padding: 4px 8px;">Fecha</th>
+                        <th style="width: 10%; text-align: center; padding: 4px 8px;">Hora</th>
+                        <th style="width: 10%; text-align: center; padding: 4px 8px;">#Doc. Venta</th>
+                        <th style="width: 10%; text-align: center; padding: 4px 8px;">#Ref</th>
+                        <th style="width: 10%; text-align: right; padding: 4px 8px;">Total Pagar</th>
+                        <th style="width: 10%; text-align: right; padding: 4px 8px;">Interes Bancario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (transacciones == null || !transacciones.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted font-monospace small">
+                                No se registran transacciones de venta ni cobros para este usuario en la fecha indicada.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        // Agrupamos transacciones por Tipo de Pago
+                        var grupos = transacciones.GroupBy(t => t.TipoPago).OrderBy(g => g.Key);
+                        decimal grandTotalCobrado = 0;
+                        decimal grandTotalIntereses = 0;
+
+                        // La grilla general está bajo el título VENTAS en Crystal
+                        <tr>
+                            <td colspan="8" class="fw-bold pt-2 fs-6 tracking-wide text-dark" style="border-bottom: 1px dotted #000;">VENTAS</td>
+                        </tr>
+
+                        foreach (var g in grupos)
+                        {
+                            var listado = g.ToList();
+                            var totalGrupo = listado.Sum(t => t.TotalPagar);
+                            var totalInteres = listado.Sum(t => t.InteresBancario);
+                            
+                            grandTotalCobrado += totalGrupo;
+                            grandTotalIntereses += totalInteres;
+
+                            // Nombre descriptivo del subgrupo de pago
+                            var nombreSubGrupo = g.Key;
+                            if (string.Equals(nombreSubGrupo, "EFECTIVO", StringComparison.OrdinalIgnoreCase))
+                            {
+                                nombreSubGrupo = "CONTADO";
+                            }
+
+                            <tr>
+                                <td colspan="8" class="cr-group-title ps-3 text-dark">@nombreSubGrupo</td>
+                            </tr>
+
+                            @foreach (var t in listado)
+                            {
+                                <tr class="cr-row-trans">
+                                    <td class="ps-4 text-start font-monospace">@t.Banco</td>
+                                    <td class="text-start">@t.AdquirenteCliente</td>
+                                    <td class="text-center font-monospace">@t.Fecha</td>
+                                    <td class="text-center font-monospace">@t.Hora</td>
+                                    <td class="text-center font-monospace">@t.DocVenta</td>
+                                    <td class="text-center font-monospace">@t.Ref</td>
+                                    <td class="text-end font-monospace">@t.TotalPagar.ToString("N2")</td>
+                                    <td class="text-end font-monospace">@t.InteresBancario.ToString("N2")</td>
+                                </tr>
+                            }
+
+                            <!-- Totales del Subgrupo -->
+                            <tr>
+                                <td colspan="6" class="text-end fw-bold font-monospace pe-3 py-1 text-dark" style="font-size: 0.76rem;">Totales @nombreSubGrupo :</td>
+                                <td class="text-end fw-bold font-monospace py-1 border-top border-bottom border-dark text-dark" style="font-size: 0.76rem;">@totalGrupo.ToString("N2")</td>
+                                <td class="text-end fw-bold font-monospace py-1 border-top border-bottom border-dark text-dark" style="font-size: 0.76rem;">@totalInteres.ToString("N2")</td>
+                            </tr>
+                        }
+
+                        <!-- Totales de la sección VENTAS -->
+                        <tr>
+                            <td colspan="6" class="text-end fw-bold font-monospace pe-3 py-2 text-dark fs-6" style="border-top: 1px solid #000;">Totales VENTAS :</td>
+                            <td class="text-end fw-bold font-monospace py-2 border-top border-bottom border-dark border-2 text-dark fs-6">@grandTotalCobrado.ToString("N2")</td>
+                            <td class="text-end fw-bold font-monospace py-2 border-top border-bottom border-dark border-2 text-dark fs-6">@grandTotalIntereses.ToString("N2")</td>
+                        </tr>
+
+                        <!-- Totales Generales Finales -->
+                        <tr>
+                            <td colspan="6" class="text-end fw-bold font-monospace pe-3 py-2 text-dark fs-5">TOTALES :</td>
+                            <td class="text-end fw-bold font-monospace py-2 border-top border-bottom border-dark border-3 text-dark fs-5" style="border-bottom-style: double !important;">@grandTotalCobrado.ToString("N2")</td>
+                            <td class="text-end fw-bold font-monospace py-2 border-top border-bottom border-dark border-3 text-dark fs-5" style="border-bottom-style: double !important;">@grandTotalIntereses.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Símbolo monetario
+        const MONEDA_SIMBOLO = '@moneda ';
+
+        function calcularConteoBilletesYMonedas() {
+            var totalBilletes = 0;
+            var totalMonedas = 0;
+            
+            var inputs = document.querySelectorAll('.denom-count-auditor');
+            inputs.forEach(function(input) {
+                var valorAttr = input.getAttribute('data-valor') || '0';
+                valorAttr = valorAttr.replace(',', '.');
+                var valor = parseFloat(valorAttr) || 0;
+                var cant = parseInt(input.value) || 0;
+                var sub = valor * cant;
+                
+                var tipo = (input.getAttribute('data-tipo') || '').toLowerCase();
+                if (tipo === 'billete') {
+                    totalBilletes += sub;
+                } else {
+                    totalMonedas += sub;
+                }
+                
+                // Set the subtotal of the row
+                var row = input.closest('tr');
+                if (row) {
+                    var subtotalInput = row.querySelector('.denom-subtotal-auditor');
+                    if (subtotalInput) {
+                        subtotalInput.value = sub.toFixed(2);
+                    }
+                }
+            });
+            
+            // Set input values for totals
+            var totalMonedasAuditor = document.getElementById('totalMonedasAuditor');
+            var totalBilletesAuditor = document.getElementById('totalBilletesAuditor');
+            
+            if (totalMonedasAuditor) totalMonedasAuditor.value = totalMonedas.toFixed(2);
+            if (totalBilletesAuditor) totalBilletesAuditor.value = totalBilletes.toFixed(2);
+        }
+
+        function logDebug(msg) {
+            var el = document.getElementById('jsDebugLog');
+            if (el) {
+                el.innerHTML += msg + "<br/>";
+            }
+        }
+
+        var auditorInicializado = false;
+
+        function inicializarAuditorCierre() {
+            if (auditorInicializado) return;
+            logDebug("<strong>--- INICIANDO DIAGNÓSTICO ---</strong>");
+            
+            // Diccionario de equivalencia de siembras USD por defecto para resolver cambios de ID en la BD (Re-siembras)
+            var defaultSeedMap = {
+                1: { valor: 100.00, tipo: 'billete' },
+                2: { valor: 50.00,  tipo: 'billete' },
+                3: { valor: 20.00,  tipo: 'billete' },
+                4: { valor: 10.00,  tipo: 'billete' },
+                5: { valor: 5.00,   tipo: 'billete' },
+                6: { valor: 2.00,   tipo: 'billete' },
+                7: { valor: 1.00,   tipo: 'billete' },
+                8: { valor: 1.00,   tipo: 'moneda' },
+                9: { valor: 0.50,   tipo: 'moneda' },
+                10: { valor: 0.25,  tipo: 'moneda' },
+                11: { valor: 0.10,  tipo: 'moneda' },
+                12: { valor: 0.05,  tipo: 'moneda' },
+                13: { valor: 0.01,  tipo: 'moneda' }
+            };
+
+            // Leer el desglose de denominaciones de forma infalible desde el JSON del backend
+            var detalle = '@Html.Raw(cierre?.DetalleDenominaciones ?? "[]")';
+            logDebug("JSON crudo recuperado: <code>" + detalle + "</code>");
+            
+            try {
+                var historico = JSON.parse(detalle);
+                logDebug("JSON parseado con éxito. Elementos históricos: " + (historico ? historico.length : 0));
+                
+                if (historico && Array.isArray(historico)) {
+                    var inputs = document.querySelectorAll('.denom-count-auditor');
+                    logDebug("Casillas de conteo encontradas en pantalla: " + inputs.length);
+                    
+                    inputs.forEach(function(input) {
+                        var inputId = parseInt(input.getAttribute('data-id')) || 0;
+                        var rawValor = input.getAttribute('data-valor') || '';
+                        var inputVal = parseFloat(rawValor.replace(',', '.')) || 0;
+                        var inputTipo = (input.getAttribute('data-tipo') || '').toLowerCase();
+                        
+                        // Buscar en el historico si hay alguna coincidencia para este input de la página
+                        for (var j = 0; j < historico.length; j++) {
+                            var item = historico[j];
+                            var itemId = item.DenominacionId || item.denominacionId || item.id || item.Id;
+                            var itemCant = item.Cantidad || item.cantidad || item.cant || item.Cant || 0;
+                            
+                            var match = false;
+                            
+                            // 1. Coincidencia directa por ID (flexible ==)
+                            if (itemId == inputId) {
+                                match = true;
+                            }
+                            // 2. Coincidencia por equivalencia de valor/tipo
+                            else if (defaultSeedMap[itemId]) {
+                                var seed = defaultSeedMap[itemId];
+                                if (Math.abs(inputVal - seed.valor) < 0.001) {
+                                    if (seed.valor === 1.0) {
+                                        // Para el valor de 1.00, comparamos el tipo para diferenciar moneda vs billete
+                                        if (inputTipo === seed.tipo) {
+                                            match = true;
+                                        }
+                                    } else {
+                                        // Para valores distintos de 1.00, la coincidencia de valor es suficiente
+                                        match = true;
+                                    }
+                                }
+                            }
+                            
+                            if (match) {
+                                input.value = itemCant;
+                                logDebug("<span class='text-success'>✓ Asignado ID actual " + inputId + " (" + inputTipo + " $" + inputVal + "): Cantidad " + itemCant + "</span>");
+                                break;
+                            }
+                        }
+                    });
+                }
+            } catch(e) {
+                logDebug("<span class='text-danger'>Error de parsing JS: " + e.message + "</span>");
+                console.error("Error al parsear el desglose histórico de denominaciones", e);
+            }
+            
+            // Realizar el cálculo inicial de las grillas de billetes y monedas
+            calcularConteoBilletesYMonedas();
+            logDebug("<strong>--- DIAGNÓSTICO FINALIZADO ---</strong>");
+            auditorInicializado = true;
+        }
+
+        // Ejecutar de forma segura con DOMContentLoaded nativo e integración con JQuery si existe
+        document.addEventListener("DOMContentLoaded", inicializarAuditorCierre);
+        if (window.jQuery) {
+            $(document).ready(inicializarAuditorCierre);
+        } else {
+            // Re-ejecutar en window load por si acaso
+            window.addEventListener("load", inicializarAuditorCierre);
+        }
+
+        // Ejecución inmediata para cubrir cargas via AJAX/SPA o cargas parciales
+        inicializarAuditorCierre();
+    </script>
+}

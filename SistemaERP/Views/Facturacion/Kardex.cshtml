@@ -1,0 +1,363 @@
+@model IEnumerable<SistemaERP.Models.Entities.Stock_Producto>
+@{
+    ViewData["Title"] = "Kardex de Inventario Completo";
+    var productos = (ViewBag.Productos as List<SistemaERP.Models.Entities.Producto>) ?? new List<SistemaERP.Models.Entities.Producto>();
+    var bodegas = (ViewBag.Bodegas as List<SistemaERP.Models.Entities.Bodega>) ?? new List<SistemaERP.Models.Entities.Bodega>();
+    var usuarios = (ViewBag.Usuarios as Dictionary<int, string>) ?? new Dictionary<int, string>();
+    var stockPorBodega = (ViewBag.StockPorBodega as Dictionary<string, List<SistemaERP.Models.Entities.StockBodega>>) ?? new Dictionary<string, List<SistemaERP.Models.Entities.StockBodega>>();
+    var proveedores = (ViewBag.Proveedores as Dictionary<long, string>) ?? new Dictionary<long, string>();
+
+    // Selected filter values from ViewBag
+    var selIdProducto = ViewBag.IdProducto as string;
+    var selCodBarra = ViewBag.CodBarra as string;
+    var selTipoMovimiento = ViewBag.TipoMovimiento as string;
+    var selDesde = ViewBag.Desde as string;
+    var selHasta = ViewBag.Hasta as string;
+    var selIdBodega = ViewBag.IdBodega as int?;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-journals me-2"></i>Kardex de Inventario</h2>
+        <p class="text-muted">Consulte el historial detallado de movimientos de stock, saldos disponibles por bodega y responsables de transacciones.</p>
+    </div>
+</div>
+
+@{
+    var filteredProd = string.IsNullOrEmpty(selIdProducto) ? null : productos.FirstOrDefault(p => p.Id.ToString() == selIdProducto);
+}
+
+@if (filteredProd != null)
+{
+    long totalUnits = filteredProd.Disponible ?? 0;
+    long contiene = filteredProd.Contiene ?? 1;
+    if (contiene <= 0) contiene = 1;
+    long cajas = totalUnits / contiene;
+    long fracs = totalUnits % contiene;
+
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4 rounded-3 p-3 animate__animated animate__fadeInDown" style="background-color: #e0e7ff; border-left: 5px solid #4f46e5 !important; color: #3730a3;">
+        <i class="bi bi-info-circle-fill fs-4 me-3" style="color: #4f46e5;"></i>
+        <div>
+            <h5 class="alert-heading fw-bold mb-1" style="font-size: 1.05rem;">Stock Actual: @filteredProd.Nombre</h5>
+            <div class="fs-6 d-flex align-items-center flex-wrap gap-1">
+                <span><strong>Total General:</strong></span>
+                <span class="badge text-white font-monospace px-2 py-1 mx-1" style="background-color: #4f46e5 !important; font-size: 0.9rem;">@cajas F @fracs</span>
+                <span>(@totalUnits unidades)</span>
+                
+                @if (selIdBodega.HasValue)
+                {
+                    var selectedBodegaName = bodegas.FirstOrDefault(b => b.Id == selIdBodega.Value)?.Nombre ?? "Bodega";
+                    long bodegaUnits = 0;
+                    if (stockPorBodega.TryGetValue(selIdProducto, out var productStocks))
+                    {
+                        var sb = productStocks.FirstOrDefault(s => s.Id_Bodega == selIdBodega.Value);
+                        bodegaUnits = sb?.Stock ?? 0;
+                    }
+                    long bCajas = bodegaUnits / contiene;
+                    long bFracs = bodegaUnits % contiene;
+                    
+                    <span class="mx-3 text-muted">|</span>
+                    <span><strong>En @selectedBodegaName:</strong></span>
+                    <span class="badge bg-warning text-dark font-monospace px-2 py-1 mx-1" style="font-size: 0.9rem;">@bCajas F @bFracs</span>
+                    <span>(@bodegaUnits unidades)</span>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Filtros y Botones -->
+<div class="premium-card mb-4 animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 p-4">
+    <form id="filterForm" method="get" asp-action="Kardex" class="row g-3">
+        <!-- Fila 1: Producto e ID/Código de Barra -->
+        <div class="col-md-8">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Producto</label>
+            <select name="idProducto" class="form-select border border-secondary-subtle select2-enable bg-light">
+                <option value="">-- Todos los productos --</option>
+                @foreach (var p in productos.OrderBy(x => x.Nombre))
+                {
+                    proveedores.TryGetValue(p.Id_Proveedor ?? 0, out var provName);
+                    provName = provName ?? "N/A";
+                    <option value="@p.Id" selected="@(selIdProducto == p.Id.ToString() ? "selected" : null)">
+                        @p.Nombre - @provName (@p.CodigoBarra)
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-semibold small text-uppercase text-muted">ID / Cód. Barra</label>
+            <input type="text" name="codBarra" value="@selCodBarra" class="form-control border border-secondary-subtle bg-light" placeholder="Ingrese código o ID" />
+        </div>
+
+        <!-- Fila 2: Tipo de Movimiento, Rango de Fechas y Bodega -->
+        <div class="col-md-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Tipo Movimiento</label>
+            <select name="tipoMovimiento" class="form-select border border-secondary-subtle bg-light">
+                <option value="TODOS" selected="@(selTipoMovimiento == "TODOS" ? "selected" : null)">-- Todos --</option>
+                <option value="INGRESO POR COMPRA" selected="@(selTipoMovimiento == "INGRESO POR COMPRA" ? "selected" : null)">INGRESO POR COMPRA</option>
+                <option value="VENTA (FACTURA)" selected="@(selTipoMovimiento == "VENTA (FACTURA)" ? "selected" : null)">VENTA (FACTURA)</option>
+                <option value="INGRESO POR AJUSTE" selected="@(selTipoMovimiento == "INGRESO POR AJUSTE" ? "selected" : null)">INGRESO POR AJUSTE</option>
+                <option value="EGRESO POR AJUSTE" selected="@(selTipoMovimiento == "EGRESO POR AJUSTE" ? "selected" : null)">EGRESO POR AJUSTE</option>
+                <option value="INGRESO POR TRASLADO" selected="@(selTipoMovimiento == "INGRESO POR TRASLADO" ? "selected" : null)">INGRESO POR TRASLADO</option>
+                <option value="EGRESO POR TRASLADO" selected="@(selTipoMovimiento == "EGRESO POR TRASLADO" ? "selected" : null)">EGRESO POR TRASLADO</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Desde el</label>
+            <input type="date" name="desde" value="@selDesde" class="form-control border border-secondary-subtle bg-light" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Hasta el</label>
+            <input type="date" name="hasta" value="@selHasta" class="form-control border border-secondary-subtle bg-light" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Bodega</label>
+            <select name="idBodega" class="form-select border border-secondary-subtle bg-light">
+                <option value="">-- Todas las bodegas --</option>
+                @foreach (var b in bodegas)
+                {
+                    <option value="@b.Id" selected="@(selIdBodega == b.Id ? "selected" : null)">@b.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <!-- Fila 3: Proveedor y Botones de Acción -->
+        <div class="col-md-6">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Proveedor</label>
+            <select name="laboratorio" class="form-select border border-secondary-subtle select2-enable bg-light">
+                <option value="">-- Todos los proveedores --</option>
+                @foreach (var prov in (ViewBag.ProveedoresList as List<SistemaERP.Models.Entities.Proveedor> ?? new List<SistemaERP.Models.Entities.Proveedor>()))
+                {
+                    <option value="@prov.Nombre" selected="@(ViewBag.FilterLaboratorio == prov.Nombre ? "selected" : null)">@prov.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6 d-flex justify-content-end align-items-end gap-2">
+            <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm fw-medium d-flex align-items-center">
+                <i class="bi bi-search me-2"></i> Buscar
+            </button>
+            <button type="button" onclick="exportExcel()" class="btn btn-success px-4 py-2 shadow-sm fw-medium d-flex align-items-center">
+                <i class="bi bi-file-earmark-excel me-2"></i> Exportar
+            </button>
+            <button type="button" onclick="printPdf()" class="btn btn-info text-white px-4 py-2 shadow-sm fw-medium d-flex align-items-center">
+                <i class="bi bi-printer me-2"></i> Imprimir
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Movimientos -->
+<div class="premium-card animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-primary text-white text-uppercase" style="font-size: 0.85rem; font-weight: 600;">
+                <tr>
+                    <th class="py-3 ps-4" style="min-width: 200px;">Producto</th>
+                    <th class="py-3 text-start" style="min-width: 150px;">Proveedor</th>
+                    <th class="py-3 text-center">Fecha</th>
+                    <th class="py-3 text-center">Hora</th>
+                    <th class="py-3">Movimiento</th>
+                    <th class="py-3 text-center">Ref. Documento</th>
+                    <th class="py-3 text-center">Cantidad</th>
+                    <th class="py-3" style="min-width: 220px;">Disponible (por Bodega)</th>
+                    <th class="py-3 pe-4">Responsable</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        var isEntry = item.Cantidad > 0;
+                        var prodIdStr = item.Id_Producto ?? "";
+                        productos.ToDictionary(x => x.Id.ToString(), x => x).TryGetValue(prodIdStr, out var currentProd);
+                        var contiene = currentProd?.Contiene ?? 1;
+                        if (contiene <= 0) contiene = 1;
+
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold text-dark d-block">@(currentProd?.Nombre ?? item.Producto)</span>
+                                <span class="text-muted text-xs d-flex align-items-center gap-2">
+                                    <span>ID: @(item.Id_Producto ?? "N/A")</span>
+                                    @if (currentProd != null && !string.IsNullOrEmpty(currentProd.CodigoBarra))
+                                    {
+                                        <span class="badge bg-light text-secondary border">Cód: @currentProd.CodigoBarra</span>
+                                    }
+                                </span>
+                            </td>
+                            <td class="text-start text-secondary small">
+                                @{
+                                    var provNom = "N/A";
+                                    if (currentProd?.Id_Proveedor.HasValue == true)
+                                    {
+                                        proveedores.TryGetValue(currentProd.Id_Proveedor.Value, out var pName);
+                                        provNom = pName ?? "N/A";
+                                    }
+                                }
+                                @provNom
+                            </td>
+                            <td class="text-center text-secondary small">
+                                @item.FechaRegistro.ToString("dd/MM/yyyy")
+                            </td>
+                            <td class="text-center text-secondary small">
+                                @item.FechaRegistro.ToString("hh:mm tt")
+                            </td>
+                            <td>
+                                <span class="badge @(isEntry ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") rounded-pill px-3 py-2 fw-medium border @(isEntry ? "border-success-subtle" : "border-danger-subtle")">
+                                    <i class="bi @(isEntry ? "bi-arrow-down-left-circle-fill" : "bi-arrow-up-right-circle-fill") me-1"></i>
+                                    @item.TipoMovimiento
+                                </span>
+                            </td>
+                            <td class="text-center text-secondary small fw-medium">
+                                @(string.IsNullOrEmpty(item.Id_Factura) ? "N/A" : "#" + item.Id_Factura)
+                            </td>
+                            <td class="text-center fw-bold @(isEntry ? "text-success" : "text-danger")" style="font-size: 1rem;">
+                                @(isEntry ? "+" : "")@item.Cantidad
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column gap-1 py-1">
+                                    @{
+                                        var affectedBodegaId = item.Id_Bodega ?? 1;
+                                        var affectedBodega = bodegas.FirstOrDefault(b => b.Id == affectedBodegaId);
+                                    }
+                                    @if (affectedBodega != null)
+                                    {
+                                        long stockVal = item.Stock ?? 0;
+                                        long cajas = stockVal / contiene;
+                                        long fracs = stockVal % contiene;
+                                        var isSelectedBodega = selIdBodega.HasValue && selIdBodega.Value == affectedBodega.Id;
+ 
+                                        <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border @(isSelectedBodega ? "bg-warning-subtle border-warning text-warning-emphasis fw-semibold" : "bg-light border-light-subtle text-dark")" style="font-size: 0.78rem; min-width: 190px;">
+                                            <span class="text-truncate me-2" style="max-width: 110px;">@affectedBodega.Nombre</span>
+                                            <span class="badge @(isSelectedBodega ? "bg-warning text-dark" : "bg-dark text-white") rounded font-monospace">
+                                                @cajas F @fracs
+                                            </span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">N/A</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="pe-4">
+                                @if (item.Id_Usuario.HasValue && usuarios.TryGetValue(item.Id_Usuario.Value, out var uName))
+                                {
+                                    <span class="fw-semibold text-secondary d-flex align-items-center">
+                                        <i class="bi bi-person-circle text-muted me-1"></i> @uName
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted italic">N/A</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-journals fs-1 d-block mb-3 opacity-25"></i>
+                            <span class="fs-5 fw-semibold d-block">No se encontraron movimientos</span>
+                            <span>Ajuste los filtros de búsqueda e intente nuevamente.</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted fw-semibold d-inline-flex align-items-center transition-all hover-translate-left">
+        <i class="bi bi-arrow-left-short fs-4 me-1"></i> Volver al Dashboard
+    </a>
+</div>
+
+@section Scripts {
+    <script>
+        function exportExcel() {
+            var form = document.getElementById('filterForm');
+            var originalAction = form.action;
+            form.action = '@Url.Action("KardexExportExcel", "Facturacion")';
+            form.target = '_blank';
+            form.submit();
+            // Restore original form properties
+            form.action = originalAction;
+            form.target = '';
+        }
+
+        function printPdf() {
+            var form = document.getElementById('filterForm');
+            var originalAction = form.action;
+            form.action = '@Url.Action("KardexPrint", "Facturacion")';
+            form.target = '_blank';
+            form.submit();
+            // Restore original form properties
+            form.action = originalAction;
+            form.target = '';
+        }
+    </script>
+}
+
+<style>
+    /* Styling elements to make it feel extremely premium */
+    .premium-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .bg-primary {
+        background-color: #4f46e5 !important; /* Premium Indigo theme */
+    }
+    .text-primary {
+        color: #4f46e5 !important;
+    }
+    .btn-primary {
+        background-color: #4f46e5;
+        border-color: #4f46e5;
+    }
+    .btn-primary:hover, .btn-primary:focus {
+        background-color: #4338ca;
+        border-color: #4338ca;
+    }
+    .btn-info {
+        background-color: #06b6d4;
+        border-color: #06b6d4;
+    }
+    .btn-info:hover, .btn-info:focus {
+        background-color: #0891b2;
+        border-color: #0891b2;
+    }
+    .btn-success {
+        background-color: #10b981;
+        border-color: #10b981;
+    }
+    .btn-success:hover, .btn-success:focus {
+        background-color: #059669;
+        border-color: #059669;
+    }
+    .bg-success-subtle {
+        background-color: #ecfdf5 !important;
+        color: #047857 !important;
+    }
+    .bg-danger-subtle {
+        background-color: #fef2f2 !important;
+        color: #b91c1c !important;
+    }
+    .font-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .text-xs {
+        font-size: 0.75rem;
+    }
+    .hover-translate-left:hover {
+        transform: translateX(-4px);
+    }
+    .transition-all {
+        transition: all 0.25s ease-in-out;
+    }
+</style>

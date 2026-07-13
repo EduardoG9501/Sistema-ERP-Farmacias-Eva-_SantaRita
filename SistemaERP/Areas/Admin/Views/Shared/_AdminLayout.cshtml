@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SuperAdmin ERP</title>
+
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --bg-sidebar: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.45);
+            --border-color: rgba(255, 255, 255, 0.06);
+            --primary: hsl(220, 95%, 60%);
+            --primary-glow: hsla(220, 95%, 60%, 0.15);
+            --primary-hover: hsl(220, 95%, 65%);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            transition: all 0.3s;
+        }
+
+        .sidebar-brand {
+            padding: 24px 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-brand i {
+            font-size: 24px;
+            color: var(--primary);
+            filter: drop-shadow(0 0 8px var(--primary-glow));
+        }
+
+        .sidebar-brand span {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-menu {
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 18px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .menu-item i {
+            font-size: 18px;
+            transition: transform 0.2s;
+        }
+
+        .menu-item:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .menu-item:hover i {
+            transform: scale(1.1);
+        }
+
+        .menu-item.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .menu-item.active i {
+            color: #ffffff;
+        }
+
+        .sidebar-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+
+        .admin-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .admin-info span {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        /* Main Content Layout */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            flex-grow: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        /* Header Styling */
+        .main-header {
+            height: 70px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .header-title h2 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .env-badge {
+            background-color: rgba(96, 165, 250, 0.1);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .env-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #60a5fa;
+            animation: pulseDot 1.5s infinite;
+        }
+
+        @@keyframes pulseDot {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        /* Content Wrapper */
+        .content-body {
+            padding: 40px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Ambient Glow effect inside content */
+        .bg-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>SuperAdmin ERP</span>
+        </div>
+
+        <div class="sidebar-menu">
+            @{
+                var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+            }
+
+            <a href="@Url.Action("Index", "Monitor", new { area = "Admin" })" 
+               class="menu-item @(string.Equals(currentController, "Monitor", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Monitoreo Global</span>
+            </a>
+
+            <a href="@Url.Action("Index", "Empresas", new { area = "Admin" })" 
+               class="menu-item @(string.Equals(currentController, "Empresas", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                <i class="fa-solid fa-building"></i>
+                <span>Gestión de Empresas</span>
+            </a>
+
+            <a href="@Url.Action("Index", "Backups", new { area = "Admin" })" 
+               class="menu-item @(string.Equals(currentController, "Backups", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                <i class="fa-solid fa-database"></i>
+                <span>Copias de Seguridad</span>
+            </a>
+
+            <a href="@Url.Action("Index", "CamposPersonalizados", new { area = "Admin" })" 
+               class="menu-item @(string.Equals(currentController, "CamposPersonalizados", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Campos Dinámicos</span>
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="admin-profile">
+                <div class="admin-avatar">
+                    @(User.Identity?.Name?.Substring(0, Math.Min(2, User.Identity.Name.Length)).ToUpper() ?? "SA")
+                </div>
+                <div class="admin-info">
+                    <h4>@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</h4>
+                    <span>Super Administrador</span>
+                </div>
+            </div>
+            <a href="@Url.Action("Logout", "AdminAccount", new { area = "Admin" })" class="menu-item" style="color: var(--danger); background: transparent; padding-left: 10px;">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-container">
+        <!-- Header -->
+        <div class="main-header">
+            <div class="header-title">
+                <h2>@ViewData["Title"]</h2>
+            </div>
+            <div class="header-actions">
+                <div class="env-badge">
+                    <span>Área Administrativa</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Render Content -->
+        <div class="content-body">
+            @RenderBody()
+        </div>
+    </div>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

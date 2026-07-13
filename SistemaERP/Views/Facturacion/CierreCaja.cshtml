@@ -1,0 +1,777 @@
+@{
+    ViewData["Title"] = "Cierre de Caja";
+    var moneda = ViewBag.MonedaSimbolo ?? "$";
+    var yaCerrado = ViewBag.YaCerrado == true;
+    var cierre = ViewBag.CierreExistente as SistemaERP.Models.Entities.CierreCaja;
+    var apertura = ViewBag.Apertura as SistemaERP.Models.Entities.AperturaCaja;
+    var denomList = ViewBag.Denominaciones as List<SistemaERP.Models.Entities.Denominacion>;
+    var efectivoPagos = ViewBag.EfectivoPagos as List<SistemaERP.Models.Entities.FacturasPorCobrarAbono>;
+    var tarjetaPagos = ViewBag.TarjetaPagos as List<SistemaERP.Models.Entities.FacturasPorCobrarAbono>;
+    var transPagos = ViewBag.TransPagos as List<SistemaERP.Models.Entities.FacturasPorCobrarAbono>;
+    var otrosPagos = ViewBag.OtrosPagos as List<SistemaERP.Models.Entities.FacturasPorCobrarAbono>;
+    var creditSales = ViewBag.CreditSales as List<SistemaERP.Models.Entities.FacturasPorCobrar>;
+    
+    // Group and collect all non-cash payments to show them individually
+    var nonCashPagos = new List<SistemaERP.Models.Entities.FacturasPorCobrarAbono>();
+    if (tarjetaPagos != null) nonCashPagos.AddRange(tarjetaPagos);
+    if (transPagos != null) nonCashPagos.AddRange(transPagos);
+    if (otrosPagos != null) nonCashPagos.AddRange(otrosPagos);
+    nonCashPagos = nonCashPagos.OrderBy(p => p.FechaHora_Reg).ToList();
+    
+    var bancosDict = ViewBag.Bancos as Dictionary<int, string> ?? new Dictionary<int, string>();
+}
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+
+<style>
+    body {
+        font-family: 'Outfit', sans-serif;
+        background-color: #f4f6f9;
+    }
+    .win-card {
+        border: 1px solid #8faadc;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        overflow: hidden;
+        background-color: #f0f4f8;
+    }
+    .win-header {
+        background: linear-gradient(180deg, #d9e1f2 0%, #b4c6e7 100%);
+        border-bottom: 1px solid #8faadc;
+        padding: 12px 18px;
+    }
+    .win-title {
+        font-weight: 700;
+        color: #1f4e79;
+        font-size: 1.15rem;
+        letter-spacing: 0.02em;
+    }
+    .win-banner {
+        background-color: #d9e1f2;
+        border: 1px solid #b4c6e7;
+        color: #1f4e79;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.03em;
+        padding: 10px 15px;
+        border-radius: 4px;
+    }
+    .denom-panel {
+        background-color: #ffffff;
+        border: 1px solid #b4c6e7;
+        border-radius: 6px;
+        padding: 16px;
+        height: 100%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .panel-title {
+        border-bottom: 2px solid #8faadc;
+        color: #1f4e79;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.05em;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+    .table-denom th {
+        background-color: #f2f5f9;
+        color: #1f4e79;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border-color: #d9d9d9;
+    }
+    .table-denom td {
+        border-color: #e6e6e6;
+        vertical-align: middle;
+        padding: 6px 8px;
+    }
+    .qty-input {
+        background-color: #ffdca5;
+        border: 1px solid #b4c6e7;
+        color: #000;
+        font-weight: 700;
+        text-align: center;
+        width: 75px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    .qty-input:focus {
+        background-color: #fff;
+        border-color: #0b57d0;
+        box-shadow: 0 0 0 3px rgba(11, 87, 208, 0.2);
+    }
+    .subtotal-input {
+        background-color: #f2f2f2 !important;
+        border: 1px solid #cbd5e0;
+        color: #333;
+        font-weight: 700;
+        text-align: right;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .total-container {
+        background-color: #e2ebf5;
+        border: 1px solid #b4c6e7;
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .total-label {
+        font-weight: 700;
+        color: #1f4e79;
+        font-size: 0.85rem;
+    }
+    .total-input {
+        background-color: #ffffcc;
+        border: 1px solid #b4c6e7;
+        color: #000;
+        font-weight: 700;
+        text-align: right;
+        width: 120px;
+        font-size: 0.95rem;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+</style>
+
+<div class="container-fluid py-3 animate__animated animate__fadeIn">
+    <!-- Main Window Card -->
+    <div class="win-card card">
+        <div class="win-header card-header d-flex justify-content-between align-items-center">
+            <span class="win-title"><i class="bi bi-calculator me-2"></i>CIERRE DE CAJA $$</span>
+            <div>
+                <form method="get" class="d-inline-flex gap-2 align-items-center">
+                    <input type="date" name="fecha" class="form-control form-control-sm bg-white border-secondary" value="@ViewBag.Fecha" onchange="this.form.submit()" style="width: 140px;" />
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary bg-white">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </a>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card-body p-3">
+            @if (yaCerrado && cierre != null)
+            {
+                <div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm py-2 px-3 mb-3 border-info animate__animated animate__fadeIn">
+                    <div>
+                        <i class="bi bi-check-circle-fill me-2 fs-5 text-info"></i>
+                        Cierre de caja realizado el <strong>@cierre.FechaCierre.ToString("dd/MM/yyyy hh:mm tt")</strong>.
+                        Efectivo contado: <strong>@moneda@cierre.MontoFinal.ToString("N2")</strong> | 
+                        Diferencia: <strong class="@(cierre.Diferencia >= 0 ? "text-success" : "text-danger")">@moneda@cierre.Diferencia.ToString("N2")</strong>
+                    </div>
+                    <a asp-action="ImprimirCierre" asp-route-id="@cierre.Id" target="_blank" class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-printer me-1"></i> Imprimir Ticket
+                    </a>
+                </div>
+            }
+
+            @if (apertura == null && !yaCerrado)
+            {
+                <div class="alert alert-warning shadow-sm mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    No tiene una apertura de caja para la fecha @ViewBag.Fecha. Debe abrir caja desde el POS antes de realizar un cierre.
+                </div>
+                return;
+            }
+
+            <div class="win-banner mb-3 text-uppercase">
+                INGRESE LAS DENOMINACIONES DEL EFECTIVO:
+            </div>
+
+            <form id="formCierre">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="fecha" value="@ViewBag.Fecha" />
+
+                <div class="row g-3">
+                    <!-- PANEL 1: EFECTIVO MONEDAS -->
+                    <div class="col-lg-4 col-md-6">
+                        <div class="denom-panel d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="panel-title text-uppercase">
+                                    <i class="bi bi-coin me-2"></i>EFECTIVO MONEDAS
+                                </div>
+                                <table class="table table-sm table-bordered align-middle text-center table-denom">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-start ps-3">Denominación</th>
+                                            <th style="width: 90px;">Cantidad</th>
+                                            <th class="text-end pe-3" style="width: 100px;">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (denomList != null)
+                                        {
+                                            var monedas = denomList.Where(d => string.Equals(d.Tipo, "Moneda", StringComparison.OrdinalIgnoreCase) || 
+                                                                               (!string.Equals(d.Tipo, "Billete", StringComparison.OrdinalIgnoreCase) && d.Valor < 1.00m)).ToList();
+                                            @foreach (var d in monedas)
+                                            {
+                                                <tr>
+                                                    <td class="text-start ps-3 fw-semibold text-dark" style="font-size: 0.9rem;">@d.Nombre</td>
+                                                    <td class="text-center">
+                                                        <input type="number" class="form-control form-control-sm qty-input denom-count mx-auto" 
+                                                               data-id="@d.Id" 
+                                                               data-valor="@d.Valor.ToString(System.Globalization.CultureInfo.InvariantCulture)" 
+                                                               data-tipo="Moneda"
+                                                               min="0" step="1" value="0" @(yaCerrado ? "disabled" : "")
+                                                               oninput="calcularConteo()" onchange="calcularConteo()" onkeyup="calcularConteo()" />
+                                                    </td>
+                                                    <td class="text-end pe-2">
+                                                        <input type="text" class="form-control form-control-sm subtotal-input" value="0.00" readonly />
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="total-container mt-2">
+                                <span class="total-label">TOTAL MONEDAS:</span>
+                                <input type="text" id="totalMonedasVal" class="total-input" value="0.00" readonly />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 2: EFECTIVO BILLETES -->
+                    <div class="col-lg-4 col-md-6">
+                        <div class="denom-panel d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="panel-title text-uppercase">
+                                    <i class="bi bi-cash me-2"></i>EFECTIVO BILLETES
+                                </div>
+                                <table class="table table-sm table-bordered align-middle text-center table-denom">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-start ps-3">Denominación</th>
+                                            <th style="width: 90px;">Cantidad</th>
+                                            <th class="text-end pe-3" style="width: 100px;">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (denomList != null)
+                                        {
+                                            var billetes = denomList.Where(d => string.Equals(d.Tipo, "Billete", StringComparison.OrdinalIgnoreCase) || 
+                                                                                (!string.Equals(d.Tipo, "Moneda", StringComparison.OrdinalIgnoreCase) && d.Valor >= 1.00m)).ToList();
+                                            @foreach (var d in billetes)
+                                            {
+                                                <tr>
+                                                    <td class="text-start ps-3 fw-semibold text-dark" style="font-size: 0.9rem;">@d.Nombre</td>
+                                                    <td class="text-center">
+                                                        <input type="number" class="form-control form-control-sm qty-input denom-count mx-auto" 
+                                                               data-id="@d.Id" 
+                                                               data-valor="@d.Valor.ToString(System.Globalization.CultureInfo.InvariantCulture)" 
+                                                               data-tipo="Billete"
+                                                               min="0" step="1" value="0" @(yaCerrado ? "disabled" : "")
+                                                               oninput="calcularConteo()" onchange="calcularConteo()" onkeyup="calcularConteo()" />
+                                                    </td>
+                                                    <td class="text-end pe-2">
+                                                        <input type="text" class="form-control form-control-sm subtotal-input" value="0.00" readonly />
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="total-container mt-2">
+                                <span class="total-label">TOTAL BILLETES:</span>
+                                <input type="text" id="totalBilletesVal" class="total-input" value="0.00" readonly />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 3: OTRAS FORMAS DE PAGO - MULTI PAGO -->
+                    <div class="col-lg-4 col-md-12">
+                        <div class="denom-panel d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="panel-title text-uppercase">
+                                    <i class="bi bi-credit-card-2-back me-2"></i>OTRAS FORMAS DE PAGO - MULTI PAGO
+                                </div>
+                                <table class="table table-sm table-bordered align-middle text-center table-denom mb-3">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-start ps-3">Forma de Pago</th>
+                                            <th class="text-end pe-3" style="width: 120px;">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (yaCerrado)
+                                        {
+                                            <tr>
+                                                <td class="text-start ps-3"><i class="bi bi-cash-stack text-muted me-2"></i>Apertura (Fondo Fijo)</td>
+                                                <td class="text-end pe-3 fw-semibold">@moneda@ViewBag.TotalApertura.ToString("N2")</td>
+                                            </tr>
+                                            <tr class="table-success table-opacity-10">
+                                                <td class="text-start ps-3"><i class="bi bi-wallet2 text-success me-2"></i>Efectivo Ventas</td>
+                                                <td class="text-end pe-3 fw-bold text-success">@moneda@ViewBag.Efectivo.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                        
+                                        @if (nonCashPagos != null && nonCashPagos.Any())
+                                        {
+                                            @foreach (var p in nonCashPagos)
+                                            {
+                                                string formaPagoNombre = "Otro Método";
+                                                string iconClass = "bi-three-dots text-secondary";
+                                                
+                                                if (p.Tipo_Pago == 2)
+                                                {
+                                                    bool isDebito = (p.Adquirente ?? "").Contains("DEBITO", StringComparison.OrdinalIgnoreCase) || 
+                                                                     (p.Num_Doc ?? "").Contains("DEBITO", StringComparison.OrdinalIgnoreCase);
+                                                    formaPagoNombre = isDebito ? "Tarjeta de Débito" : "Tarjeta de Crédito";
+                                                    iconClass = "bi-credit-card text-info";
+                                                }
+                                                else if (p.Tipo_Pago == 3)
+                                                {
+                                                    formaPagoNombre = "Transferencia";
+                                                    iconClass = "bi-bank text-primary";
+                                                }
+                                                else if (p.Tipo_Pago == 4)
+                                                {
+                                                    formaPagoNombre = "Cheque";
+                                                    iconClass = "bi-file-earmark-check text-success";
+                                                }
+                                                
+                                                string bancoNombre = "";
+                                                if (p.Id_Banco.HasValue && bancosDict.TryGetValue(p.Id_Banco.Value, out var bNom))
+                                                {
+                                                    bancoNombre = bNom;
+                                                }
+                                                
+                                                <tr>
+                                                    <td class="text-start ps-3">
+                                                        <div>
+                                                            <i class="bi @iconClass me-2"></i><strong>@formaPagoNombre</strong>
+                                                        </div>
+                                                        <div class="ps-4 small text-muted" style="font-size: 0.75rem;">
+                                                            @if (!string.IsNullOrEmpty(bancoNombre))
+                                                            {
+                                                                <span>Banco: @bancoNombre</span>
+                                                            }
+                                                            @if (!string.IsNullOrEmpty(p.Adquirente))
+                                                            {
+                                                                <span>@(string.IsNullOrEmpty(bancoNombre) ? "" : " | ")Adq: @p.Adquirente</span>
+                                                            }
+                                                            @if (!string.IsNullOrEmpty(p.Num_Doc))
+                                                            {
+                                                                <span> | Ref: @p.Num_Doc</span>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end pe-3 fw-semibold">@moneda@p.Monto_Efectivo.ToString("N2")</td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="2" class="text-center py-3 text-muted">No hay otros métodos de pago registrados hoy.</td>
+                                            </tr>
+                                        }
+
+                                        @if (creditSales != null && creditSales.Any())
+                                        {
+                                            <tr class="bg-warning bg-opacity-10 text-dark">
+                                                <td class="text-start ps-3">
+                                                    <span class="fw-bold"><i class="bi bi-calendar-check text-warning me-2"></i>Ventas Crédito</span>
+                                                </td>
+                                                <td class="text-end pe-3 fw-bold text-dark">@moneda@ViewBag.TotalCredito.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+
+                                <!-- Referencias de Verificación para cierre de caja -->
+                                @if (!yaCerrado)
+                                {
+                                    <div class="p-3 border rounded bg-white mt-3 shadow-sm">
+                                        <div class="fw-bold mb-2 text-dark text-uppercase border-bottom pb-1" style="font-size: 0.8rem; color: #1f4e79;">
+                                            <i class="bi bi-clipboard-check me-1"></i>Referencias de Verificación
+                                        </div>
+                                        @if (ViewBag.Tarjeta > 0)
+                                        {
+                                            <div class="mb-2">
+                                                <label class="form-label fw-semibold text-muted mb-1" style="font-size: 0.78rem;">Ref. Voucher Tarjeta:</label>
+                                                <input type="text" id="voucherTarjeta" class="form-control form-control-sm border" placeholder="Ingrese número de voucher..." />
+                                            </div>
+                                        }
+                                        @if (ViewBag.Transferencia > 0)
+                                        {
+                                            <div class="mb-2">
+                                                <label class="form-label fw-semibold text-muted mb-1" style="font-size: 0.78rem;">Ref. Transferencia:</label>
+                                                <input type="text" id="voucherTransferencia" class="form-control form-control-sm border" placeholder="Ingrese referencia de transferencia..." />
+                                            </div>
+                                        }
+                                        @if (ViewBag.Otros > 0)
+                                        {
+                                            <div class="mb-2">
+                                                <label class="form-label fw-semibold text-muted mb-1" style="font-size: 0.78rem;">Ref. Cheque / Otros:</label>
+                                                <input type="text" id="voucherOtros" class="form-control form-control-sm border" placeholder="Ingrese referencia..." />
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Totales & Diferencia Conciliación -->
+                            <div class="mt-3 border-top pt-2">
+                                @if (yaCerrado)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: #ebf8ff; border: 1px solid #bee3f8; font-weight: bold;">
+                                        <span style="color: #2b6cb0; font-size: 0.85rem;">EFECTIVO ESPERADO:</span>
+                                        <span style="color: #2b6cb0;">@moneda@ViewBag.Efectivo.ToString("N2")</span>
+                                    </div>
+                                }
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: #edf2f7; border: 1px solid #cbd5e0; font-weight: bold;">
+                                    <span style="color: #2d3748; font-size: 0.85rem;">EFECTIVO CONTADO:</span>
+                                    <span id="totalEfectivoContado" style="color: #2d3748;">@moneda 0.00</span>
+                                </div>
+
+                                @if (yaCerrado)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center p-2 rounded border" id="diferenciaBox" style="font-weight: bold;">
+                                        <span style="font-size: 0.85rem;">DIFERENCIA:</span>
+                                        <span id="diferenciaVal">@moneda 0.00</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTONES DE ACCIÓN (ESTILO ESCRITORIO) -->
+                <div class="d-flex justify-content-end gap-3 mt-4 border-top pt-3">
+                    @if (yaCerrado)
+                    {
+                        <a asp-action="ImprimirCierre" asp-route-id="@cierre?.Id" target="_blank" class="btn btn-light border shadow-sm fw-bold px-4 py-2" style="background-color: #f2f2f2; border-color: #cbd5e0; color: #333;">
+                            <i class="bi bi-printer me-2 fs-5"></i>Imprimir
+                        </a>
+                        @if (ViewBag.IsAdmin == true)
+                        {
+                            <button type="button" class="btn text-white px-4 py-2 fw-bold shadow-sm" id="btnReiniciarCierre" onclick="confirmarReiniciarCierre(@cierre?.Id)" style="background-color: #dc3545; border: 1px solid #bd2130;">
+                                <i class="bi bi-arrow-counterclockwise me-2 fs-5"></i>REINICIAR CIERRE
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-light border shadow-sm fw-bold px-4 py-2" disabled style="background-color: #f2f2f2; border-color: #cbd5e0; color: #888;">
+                            <i class="bi bi-printer me-2 fs-5"></i>Imprimir
+                        </button>
+                    }
+
+                    @if (!yaCerrado)
+                    {
+                        <button type="submit" class="btn text-white px-4 py-2 fw-bold shadow-sm" id="btnGuardar" style="background-color: #2e7d32; border: 1px solid #1b5e20;">
+                            <i class="bi bi-save me-2 fs-5"></i>GUARDAR
+                        </button>
+                    }
+
+                    <a asp-action="Index" class="btn text-white px-4 py-2 fw-bold shadow-sm" style="background-color: #0b57d0; border: 1px solid #002d74;">
+                        <i class="bi bi-x-lg me-2 fs-5"></i>SALIR
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @* =====================================================================
+       BLOQUE 1: Función de cálculo PURA - Aislada en su propio <script>
+       para garantizar que SIEMPRE se define, sin importar errores en
+       otros bloques. NO contiene expresiones Razor complejas.
+       ===================================================================== *@
+    <script>
+        // ---- Función global de cálculo de denominaciones ----
+        function calcularConteo() {
+            var totalBilletes = 0;
+            var totalMonedas = 0;
+
+            var inputs = document.querySelectorAll('.denom-count');
+            for (var i = 0; i < inputs.length; i++) {
+                var input = inputs[i];
+                var valorAttr = input.getAttribute('data-valor');
+                if (!valorAttr) valorAttr = '0';
+                // Replace comma with dot for locales that use comma as decimal separator
+                valorAttr = valorAttr.replace(',', '.');
+                var valor = parseFloat(valorAttr);
+                if (isNaN(valor)) valor = 0;
+
+                var cant = parseInt(input.value, 10);
+                if (isNaN(cant)) cant = 0;
+
+                var sub = valor * cant;
+
+                var tipo = (input.getAttribute('data-tipo') || '').toLowerCase();
+                if (tipo === 'billete') {
+                    totalBilletes += sub;
+                } else {
+                    totalMonedas += sub;
+                }
+
+                // Update the subtotal cell in the same row
+                var row = input.closest('tr');
+                if (row) {
+                    var subtotalInput = row.querySelector('.subtotal-input');
+                    if (subtotalInput) {
+                        subtotalInput.value = sub.toFixed(2);
+                    }
+                }
+            }
+
+            var totalContado = totalBilletes + totalMonedas;
+
+            var elBilletes = document.getElementById('totalBilletesVal');
+            var elMonedas = document.getElementById('totalMonedasVal');
+            var elContado = document.getElementById('totalEfectivoContado');
+
+            if (elBilletes) elBilletes.value = totalBilletes.toFixed(2);
+            if (elMonedas) elMonedas.value = totalMonedas.toFixed(2);
+            if (elContado) {
+                var simbolo = (typeof MONEDA_SIMBOLO !== 'undefined') ? MONEDA_SIMBOLO : '$ ';
+                elContado.textContent = simbolo + totalContado.toFixed(2);
+            }
+
+            // Diferencia (solo visible cuando yaCerrado)
+            if (typeof window._yaCerrado !== 'undefined' && window._yaCerrado) {
+                var esperado = (typeof window._esperadoEfectivo !== 'undefined') ? window._esperadoEfectivo : 0;
+                var diff = totalContado - esperado;
+                var diffEl = document.getElementById('diferenciaVal');
+                var diffBox = document.getElementById('diferenciaBox');
+
+                if (diffEl) {
+                    var sim = (typeof MONEDA_SIMBOLO !== 'undefined') ? MONEDA_SIMBOLO : '$ ';
+                    diffEl.textContent = sim + diff.toFixed(2);
+                }
+
+                if (diffBox) {
+                    diffBox.className = "d-flex justify-content-between align-items-center p-2 rounded border";
+                    if (diffEl) diffEl.className = "";
+                    if (diff >= 0) {
+                        diffBox.classList.add('bg-success', 'bg-opacity-10', 'border-success', 'text-success');
+                    } else {
+                        diffBox.classList.add('bg-danger', 'bg-opacity-10', 'border-danger', 'text-danger');
+                    }
+                }
+            }
+        }
+
+        function limpiarConteo() {
+            var inputs = document.querySelectorAll('.denom-count');
+            for (var i = 0; i < inputs.length; i++) {
+                inputs[i].value = 0;
+            }
+            calcularConteo();
+        }
+
+        // Bind calculation on DOM ready using vanilla JS (no jQuery dependency)
+        document.addEventListener('DOMContentLoaded', function() {
+            var inputs = document.querySelectorAll('.denom-count');
+            for (var i = 0; i < inputs.length; i++) {
+                inputs[i].addEventListener('input', calcularConteo);
+                inputs[i].addEventListener('change', calcularConteo);
+            }
+            // Initial calculation
+            calcularConteo();
+        });
+    </script>
+
+    @* =====================================================================
+       BLOQUE 2: Variables Razor, configuración y lógica de negocio
+       (jQuery-dependiente). Si este bloque falla, el cálculo sigue OK.
+       ===================================================================== *@
+    <script>
+        // ---- Razor-generated configuration variables ----
+        var tarjetaVal = 0;
+        var transferenciaVal = 0;
+        var otrosVal = 0;
+        var totalCreditoVal = 0;
+        var fechaCierreVal = '';
+        var cierreActionUrl = '';
+        var imprimirActionUrl = '';
+        var reiniciarActionUrl = '';
+
+        try {
+            window._yaCerrado = @(yaCerrado ? "true" : "false");
+            window._esperadoEfectivo = @(yaCerrado ? ((decimal?)ViewBag.Efectivo ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture) : "0");
+            tarjetaVal = @(((decimal?)ViewBag.Tarjeta ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            transferenciaVal = @(((decimal?)ViewBag.Transferencia ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            otrosVal = @(((decimal?)ViewBag.Otros ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            totalCreditoVal = @(((decimal?)ViewBag.TotalCredito ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            fechaCierreVal = '@ViewBag.Fecha';
+            cierreActionUrl = '@Url.Action("CierreCaja", "Facturacion")';
+            imprimirActionUrl = '@Url.Action("ImprimirCierre", "Facturacion")';
+            reiniciarActionUrl = '@Url.Action("ReiniciarCierreCaja", "Facturacion")';
+            console.log('[CierreCaja] Config OK. yaCerrado=' + window._yaCerrado + ', cierreUrl=' + cierreActionUrl);
+        } catch(configErr) {
+            console.error('[CierreCaja] Error cargando config Razor:', configErr);
+        }
+
+        // Re-run calculation now that MONEDA_SIMBOLO is defined
+        if (typeof calcularConteo === 'function') calcularConteo();
+
+        function confirmarReiniciarCierre(cierreId) {
+            if (!cierreId) return;
+            Swal.fire({
+                title: '¿Está seguro de reiniciar el cierre?',
+                text: "Esto eliminará el registro de cierre de caja actual y permitirá volver a facturar para este día.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, reiniciar',
+                cancelButtonText: 'Cancelar'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: reiniciarActionUrl,
+                        type: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        data: { id: cierreId },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Reiniciado', response.message || 'El cierre de caja ha sido reiniciado.', 'success')
+                                    .then(function() { location.reload(); });
+                            } else {
+                                Swal.fire('Error', response.message || 'No se pudo reiniciar el cierre.', 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'Ocurrió un error en el servidor al intentar reiniciar el cierre.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            console.log('[CierreCaja] document.ready fired. _yaCerrado=' + window._yaCerrado);
+
+            if (!window._yaCerrado) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                console.log('[CierreCaja] Token AntiForgery: ' + (token ? 'encontrado' : 'NO encontrado'));
+                if (token) {
+                    $.ajaxSetup({ headers: { 'RequestVerificationToken': token } });
+                }
+
+                var form = document.getElementById('formCierre');
+                console.log('[CierreCaja] Formulario formCierre: ' + (form ? 'encontrado' : 'NO encontrado'));
+
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        console.log('[CierreCaja] Submit interceptado');
+
+                        var denominaciones = [];
+                        var inputs = document.querySelectorAll('.denom-count');
+                        for (var i = 0; i < inputs.length; i++) {
+                            var cant = parseInt(inputs[i].value, 10) || 0;
+                            if (cant > 0) {
+                                denominaciones.push({
+                                    DenominacionId: parseInt(inputs[i].getAttribute('data-id'), 10),
+                                    Cantidad: cant
+                                });
+                            }
+                        }
+
+                        console.log('[CierreCaja] Denominaciones con cantidad > 0: ' + denominaciones.length);
+
+                        if (denominaciones.length === 0) {
+                            Swal.fire('Atención', 'Debe ingresar al menos una denominación física para cerrar caja.', 'warning');
+                            return;
+                        }
+
+                        var voucherTarjeta = document.getElementById('voucherTarjeta') ? document.getElementById('voucherTarjeta').value : '';
+                        var voucherTrans   = document.getElementById('voucherTransferencia') ? document.getElementById('voucherTransferencia').value : '';
+                        var voucherOtros   = document.getElementById('voucherOtros') ? document.getElementById('voucherOtros').value : '';
+
+                        var metodosPago = [
+                            { Metodo: 'Apertura',      Monto: 0, Referencia: '' },
+                            { Metodo: 'Efectivo',      Monto: 0, Referencia: '' },
+                            { Metodo: 'Tarjeta',       Monto: tarjetaVal,       Referencia: voucherTarjeta },
+                            { Metodo: 'Transferencia', Monto: transferenciaVal, Referencia: voucherTrans },
+                            { Metodo: 'Otros',         Monto: otrosVal,         Referencia: voucherOtros }
+                        ];
+
+                        if (totalCreditoVal > 0) {
+                            metodosPago.push({ Metodo: 'Credito', Monto: totalCreditoVal });
+                        }
+
+                        var btnGuardar = document.getElementById('btnGuardar');
+                        if (btnGuardar) {
+                            btnGuardar.disabled = true;
+                            btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando Cierre...';
+                        }
+
+                        console.log('[CierreCaja] Enviando AJAX a: ' + cierreActionUrl);
+                        console.log('[CierreCaja] fecha=' + fechaCierreVal);
+                        console.log('[CierreCaja] denominaciones=' + JSON.stringify(denominaciones));
+
+                        $.ajax({
+                            url: cierreActionUrl,
+                            type: 'POST',
+                            data: {
+                                fecha: fechaCierreVal,
+                                detalleDenominaciones: JSON.stringify(denominaciones),
+                                metodosPago: JSON.stringify(metodosPago)
+                            },
+                            success: function(resp) {
+                                console.log('[CierreCaja] Respuesta:', resp);
+                                if (resp.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Cierre de Caja Exitoso',
+                                        html: 'El cierre de caja ha sido guardado correctamente.<br/>Diferencia final: <strong>' + MONEDA_SIMBOLO + resp.diferencia + '</strong>',
+                                        showCancelButton: true,
+                                        confirmButtonText: '<i class="bi bi-printer me-1"></i> Imprimir Ticket',
+                                        cancelButtonText: 'Cerrar'
+                                    }).then(function(result) {
+                                        if (result.isConfirmed && resp.cierreId) {
+                                            window.open(imprimirActionUrl + '/' + resp.cierreId, '_blank');
+                                        }
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire('Error al Cerrar Caja', resp.message, 'error');
+                                    if (btnGuardar) {
+                                        btnGuardar.disabled = false;
+                                        btnGuardar.innerHTML = '<i class="bi bi-save me-2 fs-5"></i>GUARDAR';
+                                    }
+                                }
+                            },
+                            error: function(xhr, status, err) {
+                                console.error('[CierreCaja] AJAX error:', status, err, xhr.responseText);
+                                Swal.fire('Error del Servidor', 'Ocurrió un error inesperado al procesar el arqueo de caja.', 'error');
+                                if (btnGuardar) {
+                                    btnGuardar.disabled = false;
+                                    btnGuardar.innerHTML = '<i class="bi bi-save me-2 fs-5"></i>GUARDAR';
+                                }
+                            }
+                        });
+                    });
+                    console.log('[CierreCaja] Handler submit registrado OK');
+                }
+            } else {
+                var detalle = '@Html.Raw(cierre?.DetalleDenominaciones ?? "[]")';
+                try {
+                    var historico = JSON.parse(detalle);
+                    if (historico && Array.isArray(historico)) {
+                        for (var i = 0; i < historico.length; i++) {
+                            var input = document.querySelector('.denom-count[data-id="' + historico[i].DenominacionId + '"]');
+                            if (input) {
+                                input.value = historico[i].Cantidad;
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error("[CierreCaja] Error parsing historico", e);
+                }
+                calcularConteo();
+            }
+        });
+    </script>
+}

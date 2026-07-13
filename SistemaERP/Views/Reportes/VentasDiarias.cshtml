@@ -1,0 +1,676 @@
+@model SistemaERP.Controllers.ReportesController.VentasDiariasReportViewModel
+@using SistemaERP.Models.Entities
+@{
+    ViewData["Title"] = "Reporte de Ventas Diarias";
+    var simb = (ViewBag.MonedaSimbolo as string) ?? "$";
+    var isInitial = (bool)(ViewBag.InitialLoad ?? true);
+    
+    // Obtener todas las ventas en una sola lista plana para la tabla principal
+    var todasLasVentas = Model.VentasPorDespachador
+        .SelectMany(g => g.Ventas.Select(v => new { Despachador = g.Despachador, Venta = v }))
+        .OrderBy(x => x.Venta.Fecha)
+        .ToList();
+}
+
+<!-- Estilos On-Screen y Print CSS de Alta Fidelidad -->
+<style>
+
+    .filter-box {
+        background-color: #f2f2f2;
+        border: 1px solid #ccc;
+        padding: 12px 20px;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+        font-weight: bold;
+        color: #000;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-radius: 4px;
+        margin-top: 15px;
+    }
+    .filter-box label {
+        margin-bottom: 0;
+    }
+    .filter-box input[type="date"] {
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        font-weight: normal;
+        border-radius: 3px;
+    }
+    .btn-action {
+        border: 0;
+        padding: 6px 14px;
+        font-weight: bold;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        border-radius: 3px;
+        text-transform: uppercase;
+        color: #fff;
+        text-decoration: none;
+    }
+    .btn-buscar {
+        background-color: #005a9e;
+    }
+    .btn-buscar:hover {
+        background-color: #004578;
+    }
+    .btn-imprimir {
+        background-color: #5b5b5b;
+    }
+    .btn-imprimir:hover {
+        background-color: #444;
+    }
+    .btn-pdf {
+        background-color: #a80000;
+    }
+    .btn-pdf:hover {
+        background-color: #800000;
+    }
+    .btn-excel {
+        background-color: #107c41;
+    }
+    .btn-excel:hover {
+        background-color: #0b5930;
+    }
+
+    /* Tabla principal tipo Mockup */
+    .table-mockup {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, Helvetica, sans-serif;
+        margin-top: 25px;
+    }
+    .table-mockup thead th {
+        background-color: #c0c0c0;
+        color: #000;
+        font-weight: bold;
+        font-size: 13px;
+        padding: 10px 12px;
+        border: 1px solid #808080;
+        text-align: left;
+    }
+    .table-mockup thead tr:first-child th:first-child {
+        border-top-left-radius: 8px;
+    }
+    .table-mockup thead tr:first-child th:last-child {
+        border-top-right-radius: 8px;
+    }
+    .table-mockup tbody td {
+        padding: 10px 12px;
+        font-size: 13px;
+        color: #000;
+        border-bottom: 1px dotted #808080;
+    }
+    .table-mockup tbody tr.sale-row:hover {
+        background-color: #f7f7f7;
+    }
+    .table-mockup tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    /* Cajón de totales con bordes redondeados */
+    .totals-pill-container {
+        border: 1px solid #000;
+        border-radius: 12px;
+        padding: 6px 20px;
+        font-weight: bold;
+        font-size: 14px;
+        background-color: #fff;
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        margin-bottom: 4px;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .tales-line {
+        padding: 6px 20px;
+        font-weight: bold;
+        font-size: 14px;
+        background-color: #fff;
+        display: flex;
+        justify-content: space-between;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* Detalle de Productos */
+    .detail-container {
+        padding-left: 20px;
+        border-left: 2px solid #808080;
+        margin: 5px 0;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .table-detail-mockup {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    .table-detail-mockup th {
+        font-weight: bold;
+        font-size: 11px;
+        border-bottom: 1px solid #000;
+        padding: 4px;
+        text-align: left;
+    }
+    .table-detail-mockup td {
+        font-size: 11px;
+        padding: 4px;
+        border-bottom: 1px dotted #ccc;
+    }
+    .table-detail-mockup tr.total-row td {
+        border-top: 2px double #000;
+        border-bottom: 0;
+        font-weight: bold;
+        background-color: #fff;
+    }
+
+    /* Tablas de Resumen tradicionales */
+    .card-resumen-mockup {
+        border: 1px solid #000;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 25px;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .card-resumen-mockup .header {
+        background-color: #fff;
+        border-bottom: 1px solid #000;
+        padding: 8px;
+        font-weight: bold;
+        text-align: center;
+        font-size: 13px;
+    }
+    .table-resumen-mockup {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .table-resumen-mockup th {
+        background-color: #fff;
+        border-bottom: 1px solid #000;
+        font-weight: bold;
+        font-size: 12px;
+        padding: 6px;
+        text-align: left;
+    }
+    .table-resumen-mockup td {
+        border: 1px solid #000;
+        padding: 6px;
+        font-size: 12px;
+    }
+    .table-resumen-mockup tr.totals-row td {
+        font-weight: bold;
+        background-color: #fff;
+        border-top: 2px double #000;
+    }
+
+    /* Configuración por defecto para impresión */
+    .print-only {
+        display: none;
+    }
+
+    /* Reglas de impresión CSS */
+    @@media print {
+        .no-print, 
+        #sidebar-wrapper, 
+        .main-header,
+        header, 
+        footer, 
+        nav, 
+        .navbar,
+        .offcanvas {
+            display: none !important;
+        }
+        body, .container, main, #content, #wrapper, #page-content-wrapper {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #fff !important;
+            border: 0 !important;
+        }
+        .print-only {
+            display: block !important;
+        }
+    }
+</style>
+
+<!-- ========================================== -->
+<!-- ESTRUCTURA EN PANTALLA (WEB)               -->
+<!-- ========================================== -->
+<div class="no-print p-3 animate__animated animate__fadeIn">
+    <!-- Título -->
+        <h3 class="fw-bold mb-0 text-uppercase" style="font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 18px; letter-spacing: 0.5px;">VENTAS DEL DIA</h3>
+
+    <!-- Caja de Filtros -->
+    <div class="filter-box">
+        <form method="get" class="d-flex align-items-center gap-2 flex-wrap m-0 w-100">
+            <div class="d-flex align-items-center gap-2">
+                DESDE EL: 
+                <input type="date" name="desde" id="desdeInput" value="@ViewBag.Desde" />
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                HASTA EL: 
+                <input type="date" name="hasta" id="hastaInput" value="@ViewBag.Hasta" />
+            </div>
+            
+            <button class="btn-action btn-buscar" type="submit">
+                <i class="bi bi-search"></i> BUSCAR
+            </button>
+
+            <!-- Checkboxes MultiPago y Detalle por producto -->
+            <div class="d-flex align-items-center gap-1 ms-3">
+                <input type="checkbox" name="multiPago" id="multiPagoCheckbox" value="true" @(Model.MultiPago ? "checked" : "") onchange="this.form.submit()" />
+                <label for="multiPagoCheckbox" style="font-weight: bold; color: #000; cursor: pointer; user-select: none;">MultiPago</label>
+            </div>
+            <div class="d-flex align-items-center gap-1 ms-2">
+                <input type="checkbox" name="detalleProducto" id="detalleProductoCheckbox" value="true" @(Model.DetalleProducto ? "checked" : "") onchange="this.form.submit()" />
+                <label for="detalleProductoCheckbox" style="font-weight: bold; color: #000; cursor: pointer; user-select: none;">Detalle por producto</label>
+            </div>
+            
+            @if (!isInitial)
+            {
+                <button class="btn-action btn-imprimir" type="button" onclick="window.print()">
+                    <i class="bi bi-printer"></i> IMPRIMIR
+                </button>
+                <button class="btn-action btn-pdf" type="button" onclick="window.print()">
+                    <i class="bi bi-file-earmark-pdf"></i> EXPORTAR A PDF
+                </button>
+                <a class="btn-action btn-excel" id="exportExcelBtn" href="#" onclick="exportExcel(event)">
+                    <i class="bi bi-file-earmark-excel"></i> EXPORTAR A EXCEL
+                </a>
+            }
+        </form>
+    </div>
+
+    @if (!isInitial)
+    {
+        <!-- Tabla Principal de Ventas -->
+        <table class="table-mockup">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Docc.#</th>
+                    <th style="width: 20%;">Fecha</th>
+                    <th style="width: 35%;">Cliente</th>
+                    <th style="width: 15%;">Tipo Pago</th>
+                    <th style="width: 15%; text-align: right;">Total pagado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!todasLasVentas.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted border-bottom">
+                            No se encontraron ventas en el rango seleccionado.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in todasLasVentas)
+                    {
+                        <!-- Fila Principal (Click para expandir si se solicita detalle) -->
+                        <tr class="sale-row @(Model.DetalleProducto ? "cursor-pointer" : "")" @(Model.DetalleProducto ? Html.Raw($"onclick=\"toggleDetail('{item.Venta.Id}')\"") : null)>
+                            <td class="fw-bold text-primary">
+                                @if (Model.DetalleProducto)
+                                {
+                                    <i id="icon-@item.Venta.Id" class="bi bi-chevron-right me-1 small"></i>
+                                }
+                                @item.Venta.NumDoc
+                            </td>
+                            <td>@item.Venta.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@item.Venta.Cliente</td>
+                            <td>@item.Venta.TipoPago</td>
+                            <td style="text-align: right; font-weight: bold;">@item.Venta.TotalPagado.ToString("N2")</td>
+                        </tr>
+
+                        if (Model.DetalleProducto)
+                        {
+                            <!-- Detalle de Productos -->
+                            <tr id="detail-@item.Venta.Id" class="d-none">
+                                <td colspan="5" class="bg-white" style="padding: 10px 12px 10px 30px;">
+                                    <div class="detail-container">
+                                        <div class="fw-bold small mb-2">
+                                            Docc.#: @item.Venta.NumDoc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Cliente: @item.Venta.Cliente
+                                        </div>
+                                        <table class="table-detail-mockup">
+                                            <thead>
+                                                <tr>
+                                                    <th>Producto</th>
+                                                    <th class="text-end" style="width: 12%;">SubTotal</th>
+                                                    <th class="text-end" style="width: 12%;">Descuento</th>
+                                                    <th class="text-end" style="width: 12%;">Iva</th>
+                                                    <th class="text-end" style="width: 14%;">Total a pagar</th>
+                                                    <th class="text-end" style="width: 12%;">Ganancia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var prod in item.Venta.DetalleProductos)
+                                                {
+                                                    <tr>
+                                                        <td>@prod.Producto</td>
+                                                        <td class="text-end">@((prod.Subtotal ?? 0).ToString("N2"))</td>
+                                                        <td class="text-end">@((prod.Descuento ?? 0).ToString("N2"))</td>
+                                                        <td class="text-end">@((prod.IVA ?? 0).ToString("N2"))</td>
+                                                        <td class="text-end fw-semibold">@((prod.Total_Pagar ?? 0).ToString("N2"))</td>
+                                                        <td class="text-end text-success">@((prod.Ganancia ?? 0).ToString("N2"))</td>
+                                                    </tr>
+                                                }
+                                                <tr class="total-row">
+                                                    <td>Total venta#: @item.Venta.NumDoc</td>
+                                                    <td class="text-end">@(item.Venta.DetalleProductos.Sum(p => p.Subtotal ?? 0).ToString("N2"))</td>
+                                                    <td class="text-end">@(item.Venta.DetalleProductos.Sum(p => p.Descuento ?? 0).ToString("N2"))</td>
+                                                    <td class="text-end">@(item.Venta.DetalleProductos.Sum(p => p.IVA ?? 0).ToString("N2"))</td>
+                                                    <td class="text-end">@item.Venta.TotalPagado.ToString("N2")</td>
+                                                    <td class="text-end text-success">@item.Venta.Ganancia.ToString("N2")</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    
+                    <!-- Totales de la Fecha (Estilo Pill Box con borde negro) -->
+                    <tr>
+                        <td colspan="5" class="p-2 border-0">
+                            <div class="totals-pill-container">
+                                <span>Totales :@Model.Desde.ToString("dd/MM/yyyy")</span>
+                                <span>@Model.TotalVentas.ToString("N2")</span>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Totales por cada Despachador (Label tales : ...) -->
+                    @foreach (var d in Model.ResumenPorDespachador)
+                    {
+                        <tr>
+                            <td colspan="5" class="p-0 border-0">
+                                <div class="tales-line">
+                                    <span>tales : @d.Despachador</span>
+                                    <span>@d.SeVendio.ToString("N2")</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <!-- Resúmenes en Pantalla (Tablas del final) -->
+        <div class="row mt-5">
+            <div class="col-12 col-md-6">
+                <div class="card-resumen-mockup">
+                    <div class="header">Resumen de ventas por día.</div>
+                    <table class="table-resumen-mockup">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th class="text-end" style="width: 35%;">Se Vendio</th>
+                                <th class="text-end" style="width: 35%;">Ganancia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var day in Model.ResumenPorDia)
+                            {
+                                <tr>
+                                    <td>@day.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td class="text-end">@day.SeVendio.ToString("N2")</td>
+                                    <td class="text-end">@day.Ganancia.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr class="totals-row">
+                                <td>Totales:</td>
+                                <td class="text-end">@Model.TotalVentas.ToString("N2")</td>
+                                <td class="text-end">@Model.TotalGanancia.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="card-resumen-mockup">
+                    <div class="header">Resumen de ventas por despachador.</div>
+                    <table class="table-resumen-mockup">
+                        <thead>
+                            <tr>
+                                <th>Despachador</th>
+                                <th class="text-end" style="width: 35%;">Se Vendio</th>
+                                <th class="text-end" style="width: 35%;">Ganancia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in Model.ResumenPorDespachador)
+                            {
+                                <tr>
+                                    <td class="text-uppercase">@d.Despachador</td>
+                                    <td class="text-end">@d.SeVendio.ToString("N2")</td>
+                                    <td class="text-end">@d.Ganancia.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr class="totals-row">
+                                <td>Totales:</td>
+                                <td class="text-end">@Model.TotalVentas.ToString("N2")</td>
+                                <td class="text-end">@Model.TotalGanancia.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- ========================================== -->
+<!-- ESTRUCTURA EXCLUSIVA PARA IMPRESIÓN (PRINT) -->
+<!-- ========================================== -->
+@if (!isInitial)
+{
+    <div id="report-print-container" class="print-only">
+        <div style="font-family: Arial, Helvetica, sans-serif;">
+            <!-- Encabezado de la Empresa -->
+            <div class="text-center mb-4" style="text-align: center;">
+                <h4 class="fw-bold mb-0 text-uppercase" style="margin: 0; font-weight: bold;">@ViewBag.Parametros.NombreEmpresa</h4>
+                <div class="small text-uppercase text-secondary" style="font-size: 12px;">@ViewBag.Parametros.Direccion</div>
+                <div class="small text-muted mt-1" style="font-size: 11px;">
+                    Impreso: @DateTime.Now.ToString("yyyy-MM-dd : HH:mm:ss")
+                </div>
+                
+                <h3 class="fw-bold mt-4 mb-1" style="margin-top: 20px; font-weight: bold;">Reporte de ventas del día</h3>
+                <div class="small text-secondary" style="font-size: 12px;">
+                    Desde: @Model.Desde.ToString("dd/MM/yyyy") &nbsp;&nbsp; Hasta: @Model.Hasta.ToString("dd/MM/yyyy")
+                </div>
+            </div>
+
+            <!-- Grupos de Despachador -->
+            @foreach (var grupo in Model.VentasPorDespachador)
+            {
+                <div class="despachador-print-section mt-4" style="page-break-inside: avoid; margin-top: 25px;">
+                    <div class="fw-bold border-bottom pb-1 text-uppercase mb-3" style="font-weight: bold; border-bottom: 1px solid #000; font-size: 14px; text-transform: uppercase; margin-bottom: 10px; color: #005a9e;">
+                        @grupo.Despachador
+                    </div>
+                    
+                    @if (Model.DetalleProducto)
+                    {
+                        @foreach (var v in grupo.Ventas)
+                        {
+                            <div class="print-document-block mb-4" style="page-break-inside: avoid; margin-bottom: 20px;">
+                                <div class="d-flex justify-content-between fw-bold mb-1" style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; margin-bottom: 3px;">
+                                    <span>Docc.#: @v.NumDoc</span>
+                                    <span>Cliente: @v.Cliente</span>
+                                </div>
+                                
+                                <table class="table-print-detail w-100 mb-2" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid #000; background-color: #f2f2f2;">
+                                            <th style="text-align: left; padding: 4px; border: 1px solid #000;">Producto</th>
+                                            <th style="text-align: right; padding: 4px; border: 1px solid #000; width: 10%;">SubTotal</th>
+                                            <th style="text-align: right; padding: 4px; border: 1px solid #000; width: 10%;">Descuento</th>
+                                            <th style="text-align: right; padding: 4px; border: 1px solid #000; width: 10%;">Iva</th>
+                                            <th style="text-align: right; padding: 4px; border: 1px solid #000; width: 12%;">Total a pagar</th>
+                                            <th style="text-align: right; padding: 4px; border: 1px solid #000; width: 10%;">Ganancia</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var p in v.DetalleProductos)
+                                        {
+                                            <tr>
+                                                <td style="padding: 4px; border: 1px solid #000;">@p.Producto</td>
+                                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@((p.Subtotal ?? 0).ToString("N2"))</td>
+                                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@((p.Descuento ?? 0).ToString("N2"))</td>
+                                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@((p.IVA ?? 0).ToString("N2"))</td>
+                                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@((p.Total_Pagar ?? 0).ToString("N2"))</td>
+                                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@((p.Ganancia ?? 0).ToString("N2"))</td>
+                                            </tr>
+                                        }
+                                        <tr style="font-weight: bold; border-top: 2px double #000; background-color: #f9f9f9;">
+                                            <td style="padding: 4px; border: 1px solid #000;">Total venta#: @v.NumDoc</td>
+                                            <td style="text-align: right; padding: 4px; border: 1px solid #000;">@(v.DetalleProductos.Sum(p => p.Subtotal ?? 0).ToString("N2"))</td>
+                                            <td style="text-align: right; padding: 4px; border: 1px solid #000;">@(v.DetalleProductos.Sum(p => p.Descuento ?? 0).ToString("N2"))</td>
+                                            <td style="text-align: right; padding: 4px; border: 1px solid #000;">@(v.DetalleProductos.Sum(p => p.IVA ?? 0).ToString("N2"))</td>
+                                            <td style="text-align: right; padding: 4px; border: 1px solid #000;">@v.TotalPagado.ToString("N2")</td>
+                                            <td style="text-align: right; padding: 4px; border: 1px solid #000;">@v.Ganancia.ToString("N2")</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <!-- Clean flat list report layout as seen in Image 2 -->
+                        <table class="table-print-detail w-100 mb-4" style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #000; background-color: #f2f2f2;">
+                                    <th style="text-align: left; padding: 6px; border: 1px solid #000; width: 15%;">Docc.#</th>
+                                    <th style="text-align: left; padding: 6px; border: 1px solid #000; width: 20%;">Fecha</th>
+                                    <th style="text-align: left; padding: 6px; border: 1px solid #000; width: 35%;">Cliente</th>
+                                    <th style="text-align: left; padding: 6px; border: 1px solid #000; width: 15%;">Tipo Pago</th>
+                                    <th style="text-align: right; padding: 6px; border: 1px solid #000; width: 15%;">Total pagado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var v in grupo.Ventas)
+                                {
+                                    <tr>
+                                        <td style="padding: 6px; border: 1px solid #000; font-weight: bold; color: #005a9e;">@v.NumDoc</td>
+                                        <td style="padding: 6px; border: 1px solid #000;">@v.Fecha.ToString("dd/MM/yyyy")</td>
+                                        <td style="padding: 6px; border: 1px solid #000;">@v.Cliente</td>
+                                        <td style="padding: 6px; border: 1px solid #000;">@v.TipoPago</td>
+                                        <td style="text-align: right; padding: 6px; border: 1px solid #000; font-weight: bold;">@v.TotalPagado.ToString("N2")</td>
+                                    </tr>
+                                }
+                                <tr style="font-weight: bold; background-color: #f9f9f9; border-top: 2px double #000;">
+                                    <td colspan="4" style="padding: 6px; border: 1px solid #000; text-align: right;">Totales : @Model.Desde.ToString("dd/MM/yyyy")</td>
+                                    <td style="text-align: right; padding: 6px; border: 1px solid #000;">@grupo.TotalCobrado.ToString("N2")</td>
+                                </tr>
+                                <tr style="font-weight: bold; background-color: #f9f9f9;">
+                                    <td colspan="4" style="padding: 6px; border: 1px solid #000; text-align: right;">Totales : @grupo.Despachador</td>
+                                    <td style="text-align: right; padding: 6px; border: 1px solid #000;">@grupo.TotalCobrado.ToString("N2")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            }
+
+            <!-- Resúmenes de Impresión (Páginas Finales) -->
+            <div style="page-break-inside: avoid; margin-top: 40px; display: flex; gap: 20px;">
+                <div style="flex: 1; border: 1px solid #000; border-radius: 4px; overflow: hidden;">
+                    <div style="background-color: #f2f2f2; border-bottom: 1px solid #000; padding: 6px; font-weight: bold; text-align: center; font-size: 11px;">
+                        Resumen de ventas por día.
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                        <thead>
+                            <tr style="background-color: #fafafa; border-bottom: 1px solid #000;">
+                                <th style="padding: 4px; text-align: left;">Fecha</th>
+                                <th style="padding: 4px; text-align: right;">Se Vendio</th>
+                                <th style="padding: 4px; text-align: right;">Ganancia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var day in Model.ResumenPorDia)
+                            {
+                                <tr>
+                                    <td style="padding: 4px; border: 1px solid #000;">@day.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td style="text-align: right; padding: 4px; border: 1px solid #000;">@day.SeVendio.ToString("N2")</td>
+                                    <td style="text-align: right; padding: 4px; border: 1px solid #000;">@day.Ganancia.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr style="font-weight: bold; background-color: #f2f2f2; border-top: 2px double #000;">
+                                <td style="padding: 4px; border: 1px solid #000;">Totales:</td>
+                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@Model.TotalVentas.ToString("N2")</td>
+                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@Model.TotalGanancia.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="flex: 1; border: 1px solid #000; border-radius: 4px; overflow: hidden;">
+                    <div style="background-color: #f2f2f2; border-bottom: 1px solid #000; padding: 6px; font-weight: bold; text-align: center; font-size: 11px;">
+                        Resumen de ventas por despachador.
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                        <thead>
+                            <tr style="background-color: #fafafa; border-bottom: 1px solid #000;">
+                                <th style="padding: 4px; text-align: left;">Despachador</th>
+                                <th style="padding: 4px; text-align: right;">Se Vendio</th>
+                                <th style="padding: 4px; text-align: right;">Ganancia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in Model.ResumenPorDespachador)
+                            {
+                                <tr>
+                                    <td style="padding: 4px; border: 1px solid #000; text-transform: uppercase;">@d.Despachador</td>
+                                    <td style="text-align: right; padding: 4px; border: 1px solid #000;">@d.SeVendio.ToString("N2")</td>
+                                    <td style="text-align: right; padding: 4px; border: 1px solid #000;">@d.Ganancia.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr style="font-weight: bold; background-color: #f2f2f2; border-top: 2px double #000;">
+                                <td style="padding: 4px; border: 1px solid #000;">Totales:</td>
+                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@Model.TotalVentas.ToString("N2")</td>
+                                <td style="text-align: right; padding: 4px; border: 1px solid #000;">@Model.TotalGanancia.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Script de Interacción Dinámica -->
+<script>
+    function toggleDetail(id) {
+        var row = document.getElementById("detail-" + id);
+        var icon = document.getElementById("icon-" + id);
+        
+        if (row.classList.contains("d-none")) {
+            row.classList.remove("d-none");
+            icon.classList.replace("bi-chevron-right", "bi-chevron-down");
+        } else {
+            row.classList.add("d-none");
+            icon.classList.replace("bi-chevron-down", "bi-chevron-right");
+        }
+    }
+
+    function exportExcel(event) {
+        event.preventDefault();
+        var desde = document.getElementById("desdeInput").value;
+        var hasta = document.getElementById("hastaInput").value;
+        var multiPago = document.getElementById("multiPagoCheckbox").checked;
+        var detalleProducto = document.getElementById("detalleProductoCheckbox").checked;
+        if (desde && hasta) {
+            window.location.href = "/Reportes/VentasDiariasExcel?desde=" + desde + "&hasta=" + hasta + "&multiPago=" + multiPago + "&detalleProducto=" + detalleProducto;
+        } else {
+            alert("Por favor seleccione un rango de fechas.");
+        }
+    }
+</script>

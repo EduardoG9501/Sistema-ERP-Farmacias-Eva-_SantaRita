@@ -1,0 +1,61 @@
+@model IEnumerable<SistemaERP.Models.Entities.Producto>
+
+@{
+    ViewData["Title"] = "Productos Vencidos";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-danger">Productos Vencidos</h2>
+        <p class="text-muted">Listado de productos cuya fecha de vencimiento ha expirado.</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-premium shadow-sm" type="button" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimir Reporte
+        </button>
+    </div>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp border border-danger-subtle">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 py-3">Cód. Barra</th>
+                    <th class="border-0 py-3">Nombre Producto</th>
+                    <th class="border-0 py-3">Lote</th>
+                    <th class="border-0 py-3 text-center">Fecha Vencimiento</th>
+                    <th class="border-0 py-3 text-end">Disponible</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.CodigoBarra</td>
+                            <td class="fw-bold">@item.Nombre</td>
+                            <td>@(item.Lote ?? "N/A")</td>
+                            <td class="text-center text-danger fw-bold">
+                                @item.Vencimiento?.ToString("dd/MM/yyyy")
+                            </td>
+                            <td class="text-end fw-bold">
+                                @item.Disponible
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-check-circle fs-1 d-block mb-2 text-success opacity-50"></i>
+                            No hay productos vencidos registrados en este momento.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

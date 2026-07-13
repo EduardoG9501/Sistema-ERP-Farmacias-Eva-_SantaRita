@@ -1,0 +1,131 @@
+@model SistemaERP.Models.Entities.VentaOperacion
+
+@{
+    ViewData["Title"] = "Detalle de Venta";
+    var detalles = ViewBag.Detalles as List<SistemaERP.Models.Entities.Venta_Producto>;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Detalle de Ticket</h2>
+        <p class="text-muted">Órden #: @Model.NumDoc | Cliente: @ViewBag.Cliente</p>
+    </div>
+    <div class="col-auto">
+        <button onclick="transmitirSRI(@Model.Id)" class="btn btn-outline-indigo border shadow-sm">
+            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Transmitir al SRI
+        </button>
+        <button onclick="window.print()" class="btn btn-light border shadow-sm ms-2">
+            <i class="bi bi-printer me-1"></i> Imprimir Ticket
+        </button>
+        <a asp-action="Index" class="btn btn-premium shadow-sm ms-2">
+            Volver
+        </a>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-12">
+        <div class="premium-card mb-4 bg-light">
+            <div class="row">
+                <div class="col-md-3 border-end">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Fecha y Hora</label>
+                    <span class="text-dark fw-bold">@Model.FechaHora_Registro?.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="col-md-3 border-end">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Número Documento</label>
+                    <span class="text-primary fw-bold">@Model.NumDoc</span>
+                </div>
+                <div class="col-md-3 border-end">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Tipo de Pago</label>
+                    <span class="badge bg-indigo rounded-pill">EFECTIVO</span>
+                </div>
+                <div class="col-md-3">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Estado de Venta</label>
+                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> PROCESADA</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="premium-card p-0 overflow-hidden">
+            <div class="p-4">
+                <h5 class="fw-bold mb-3">Productos Vendidos</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="text-xs text-uppercase py-3">Producto</th>
+                                <th class="text-xs text-uppercase py-3 text-center">Cantidad</th>
+                                <th class="text-xs text-uppercase py-3 text-end">Precio</th>
+                                <th class="text-xs text-uppercase py-3 text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (detalles != null)
+                            {
+                                foreach (var item in detalles)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="fw-bold d-block">@item.Producto</span>
+                                            <span class="text-xs text-muted">ID: @item.Id_Producto</span>
+                                        </td>
+                                        <td class="text-center">@item.Cantidad</td>
+                                        <td class="text-end">@ViewBag.MonedaSimbolo@item.PVP?.ToString("N2")</td>
+                                        <td class="text-end fw-bold">@ViewBag.MonedaSimbolo@item.Total_Pagar?.ToString("N2")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                        <tfoot class="bg-indigo-soft">
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold py-3 text-indigo">TOTAL PAGADO:</td>
+                                <td class="text-end fw-bold py-3 text-indigo fs-4">@ViewBag.MonedaSimbolo@(detalles?.Sum(d => d.Total_Pagar ?? 0).ToString("N2"))</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        function transmitirSRI(ventaId) {
+            Swal.fire({
+                title: "Transmitir al SRI",
+                text: "�Deseas generar la factura electr�nica y enviarla al SRI?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "#1e3a8a",
+                cancelButtonColor: "#6c757d",
+                confirmButtonText: "S�, transmitir",
+                cancelButtonText: "Cancelar",
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch(`/Facturacion/TransmitirSRI?id=${ventaId}`, {
+                        method: "POST"
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            throw new Error(data.message)
+                        }
+                        return data;
+                    })
+                    .catch(error => {
+                        Swal.showValidationMessage(`Error: ${error}`);
+                    });
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "SRI Procesado",
+                        text: result.value.message,
+                        icon: "success"
+                    });
+                }
+            });
+        }
+    </script>
+}

@@ -1,0 +1,283 @@
+@model SistemaERP.Models.Entities.Producto
+@{
+    Layout = "_LayoutPublico";
+    var sysParams = ViewBag.SysParams as SistemaERP.Models.Entities.ParametrosSistema;
+    var especificaciones = ViewBag.Especificaciones as List<Tuple<string, string>>;
+    var fotosAdicionales = ViewBag.FotosAdicionales as List<string>;
+    var similares = ViewBag.Similares as List<SistemaERP.Models.Entities.Producto>;
+    var presentaciones = ViewBag.Presentaciones as Dictionary<long, string>;
+    var marcas = ViewBag.Marcas as Dictionary<long, string>;
+
+    // Resolver teléfono
+    string rawPhone = sysParams?.CatalogoWhatsApp ?? ViewBag.EmpresaCentral?.Telefono ?? "";
+    string waPhone = new string(rawPhone.Where(char.IsDigit).ToArray());
+    if (waPhone.StartsWith("09") && waPhone.Length == 10) waPhone = "593" + waPhone.Substring(1);
+}
+
+<div class="container my-5 animate__animated animate__fadeIn">
+    
+    <!-- Volver al catálogo -->
+    <a href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias })" class="text-decoration-none text-muted fw-bold small mb-4 d-inline-block">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Catálogo
+    </a>
+
+    <div class="row g-5">
+        
+        <!-- Columna Izquierda: Imágenes del Producto -->
+        <div class="col-md-6">
+            <div class="bg-white p-3 border rounded shadow-xs" style="border-radius:20px;">
+                @if (fotosAdicionales != null && fotosAdicionales.Any())
+                {
+                    @if (fotosAdicionales.Count > 1)
+                    {
+                        <!-- Carrusel de Bootstrap -->
+                        <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
+                            <div class="carousel-indicators">
+                                @for (int idx = 0; idx < fotosAdicionales.Count; idx++)
+                                {
+                                    <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="@idx" class="@(idx == 0 ? "active" : "")" aria-current="@(idx == 0 ? "true" : "false")"></button>
+                                }
+                            </div>
+                            <div class="carousel-inner rounded" style="aspect-ratio: 1/1; background-color:#f1f5f9;">
+                                @for (int idx = 0; idx < fotosAdicionales.Count; idx++)
+                                {
+                                    <div class="carousel-item h-100 @(idx == 0 ? "active" : "")">
+                                        <img src="@fotosAdicionales[idx]" class="d-block w-100 h-100" style="object-fit: cover;" alt="Imagen @idx" />
+                                    </div>
+                                }
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true" style="filter: invert(1); overflow:hidden;"></span>
+                                <span class="visually-hidden">Anterior</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true" style="filter: invert(1); overflow:hidden;"></span>
+                                <span class="visually-hidden">Siguiente</span>
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Una sola imagen -->
+                        <div class="rounded overflow-hidden" style="aspect-ratio: 1/1; background-color:#f1f5f9;">
+                            <img src="@fotosAdicionales[0]" class="w-100 h-100" style="object-fit: cover;" alt="@Model.Nombre" />
+                        </div>
+                    }
+                }
+                else
+                {
+                    <!-- Placeholder si no hay imagen -->
+                    <div class="rounded bg-light d-flex flex-column align-items-center justify-content-center text-muted opacity-50" style="aspect-ratio: 1/1;">
+                        <i class="bi bi-box-seam fs-1 mb-2"></i>
+                        <span class="text-sm">Imagen No Disponible</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Información Principal -->
+        <div class="col-md-6 d-flex flex-column justify-content-center">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="badge-category">@ViewBag.CategoriaNombre</span>
+                <span class="badge-brand">@ViewBag.MarcaNombre</span>
+            </div>
+            
+            <h2 class="fw-bold text-dark mb-2 font-display fs-3">@Model.Nombre</h2>
+            
+            <p class="text-sm text-muted mb-4">Código de Producto: <strong class="text-dark">@Model.CodigoBarra</strong></p>
+
+            <hr class="my-4 opacity-10" />
+
+            <!-- Precio -->
+            @if (sysParams != null && sysParams.CatalogoMostrarPrecios)
+            {
+                <div class="mb-4">
+                    @{
+                        bool tieneDescuento = Model.Descuento.HasValue && Model.Descuento.Value > 0 &&
+                                             (!Model.Descuento_Desde.HasValue || Model.Descuento_Desde.Value <= DateTime.Today) &&
+                                             (!Model.Descuento_Hasta.HasValue || Model.Descuento_Hasta.Value >= DateTime.Today);
+                        
+                        decimal precioOriginal = Model.PVP ?? 0;
+                        decimal precioFinal = precioOriginal;
+                        if (tieneDescuento)
+                        {
+                            precioFinal = precioOriginal - (precioOriginal * (Model.Descuento.Value / 100));
+                        }
+                    }
+                    @if (tieneDescuento)
+                    {
+                        <div class="text-xs text-muted mb-1">Precio de lista: <span class="text-decoration-line-through">@ViewBag.MonedaSimbolo@precioOriginal.ToString("N2")</span></div>
+                        <span class="display-6 fw-bold text-danger">@ViewBag.MonedaSimbolo@precioFinal.ToString("N2")</span>
+                        <span class="badge bg-danger text-white text-xs py-1 px-2 ms-2" style="border-radius:6px; vertical-align:middle;">-@Model.Descuento.Value.ToString("0")% DE DESCUENTO</span>
+                    }
+                    else
+                    {
+                        <div class="text-xs text-muted mb-1">Precio de venta público:</div>
+                        <span class="display-6 fw-bold text-indigo" style="color:var(--primary-color);">@ViewBag.MonedaSimbolo@precioOriginal.ToString("N2")</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-light border-0 p-3 mb-4" style="border-radius:10px;">
+                    <i class="bi bi-info-circle me-1 text-indigo"></i>
+                    <span class="text-xs text-muted">Consulte los precios de venta directamente a nuestro asesor comercial.</span>
+                </div>
+            }
+
+            <!-- Botones de compra directa -->
+            @{
+                string msgText = $"Hola, estoy interesado en el producto: {Model.Nombre} (Código: {Model.CodigoBarra})";
+                if (sysParams != null && sysParams.CatalogoMostrarPrecios && Model.PVP.HasValue)
+                {
+                    msgText += $" con precio de {ViewBag.MonedaSimbolo}{Model.PVP.Value.ToString("N2")}";
+                }
+                string waLink = $"https://wa.me/{waPhone}?text={Uri.EscapeDataString(msgText)}";
+            }
+            
+            <div class="d-flex flex-column flex-sm-row gap-3 mt-2">
+                <a href="@waLink" target="_blank" class="btn btn-whatsapp py-3 px-4 flex-grow-1 d-flex align-items-center justify-content-center gap-2">
+                    <i class="bi bi-whatsapp fs-5"></i> Pedir por WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestañas de Detalle (Especificaciones, Complementos, Similares) -->
+    <div class="row mt-5 pt-3">
+        <div class="col-12">
+            <!-- Navegación de Pestañas -->
+            <ul class="nav nav-tabs custom-tabs border-bottom" id="detailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="espec-tab" data-bs-toggle="tab" data-bs-target="#espec-panel" type="button" role="tab">
+                        Detalle del Producto
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="similares-tab" data-bs-toggle="tab" data-bs-target="#similares-panel" type="button" role="tab">
+                        Productos Similares
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Contenido de Pestañas -->
+            <div class="tab-content bg-white p-4 border border-top-0 rounded-bottom shadow-xs">
+                <!-- 1. Detalle del Producto (Ficha Técnica) -->
+                <div class="tab-pane fade show active" id="espec-panel" role="tabpanel">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-3 font-display text-uppercase text-xs tracking-wider" style="color:var(--dark-color);">Especificaciones Generales</h6>
+                            <table class="table table-sm text-sm">
+                                <tbody>
+                                    @if (!string.IsNullOrEmpty(Model.RegistroSanitario))
+                                    {
+                                        <tr>
+                                            <td class="text-muted border-0 py-2" style="width: 35%;">Registro Sanitario:</td>
+                                            <td class="fw-bold border-0 py-2">@Model.RegistroSanitario</td>
+                                        </tr>
+                                    }
+                                    @if (Model.Contiene.HasValue && Model.Contiene.Value > 1)
+                                    {
+                                        <tr>
+                                            <td class="text-muted border-0 py-2">Unidades x Paquete:</td>
+                                            <td class="fw-bold border-0 py-2">@Model.Contiene.Value uds.</td>
+                                        </tr>
+                                    }
+                                    @if (Model.Vencimiento.HasValue)
+                                    {
+                                        <tr>
+                                            <td class="text-muted border-0 py-2">Vence el:</td>
+                                            <td class="fw-bold border-0 py-2">@Model.Vencimiento.Value.ToString("dd/MM/yyyy")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Campos Personalizados -->
+                        @if (especificaciones != null && especificaciones.Any())
+                        {
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3 font-display text-uppercase text-xs tracking-wider" style="color:var(--dark-color);">Detalles Técnicos</h6>
+                                <table class="table table-sm text-sm">
+                                    <tbody>
+                                        @foreach (var spec in especificaciones)
+                                        {
+                                            <tr>
+                                                <td class="text-muted border-0 py-2" style="width: 45%;">@spec.Item1:</td>
+                                                <td class="fw-bold border-0 py-2">@spec.Item2</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                <!-- 2. Productos Similares -->
+                <div class="tab-pane fade" id="similares-panel" role="tabpanel">
+                    @if (similares != null && similares.Any())
+                    {
+                        <div class="row g-4">
+                            @foreach (var sim in similares)
+                            {
+                                var cat = (sim.Id_Presentacion.HasValue && presentaciones.ContainsKey(sim.Id_Presentacion.Value)) ? presentaciones[sim.Id_Presentacion.Value] : null;
+                                var mar = (sim.Id_Proveedor.HasValue && marcas.ContainsKey(sim.Id_Proveedor.Value)) ? marcas[sim.Id_Proveedor.Value] : null;
+                                
+                                <div class="col-sm-6 col-md-3">
+                                    <div class="product-card shadow-xs">
+                                        <div class="product-img-wrapper">
+                                            @if (!string.IsNullOrEmpty(sim.Foto))
+                                            {
+                                                <img src="@sim.Foto" alt="@sim.Nombre" class="product-img" />
+                                            }
+                                            else
+                                            {
+                                                <div class="position-absolute inset-0 d-flex flex-column align-items-center justify-content-center bg-light text-muted opacity-50">
+                                                    <i class="bi bi-box-seam fs-2 mb-1"></i>
+                                                    <span class="text-xs">Sin Foto</span>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="p-3 d-flex flex-column flex-grow-1">
+                                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                                @if (cat != null)
+                                                {
+                                                    <span class="badge-category" style="font-size:0.65rem; padding: 0.2rem 0.5rem;">@cat</span>
+                                                }
+                                            </div>
+                                            <h6 class="fw-bold text-dark mb-2 text-xs font-display" style="line-height:1.4; height: 34px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                                @sim.Nombre
+                                            </h6>
+                                            
+                                            @if (sysParams != null && sysParams.CatalogoMostrarPrecios)
+                                            {
+                                                <span class="fw-bold text-indigo text-sm mb-3 d-block mt-auto" style="color:var(--primary-color);">@ViewBag.MonedaSimbolo@sim.PVP?.ToString("N2")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-xs text-muted fst-italic mb-3 d-block mt-auto">Consultar precio</span>
+                                            }
+                                            
+                                            <a href="@Url.Action("Detalle", "CatalogoPublico", new { alias = ViewBag.Alias, id = sim.Id })" class="btn btn-detail w-100 py-1.5 text-xs">
+                                                Ver Producto
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-info-circle fs-3 d-block mb-2 opacity-50"></i>
+                            <span class="text-sm">No hay productos similares en la misma categoría.</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

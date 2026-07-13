@@ -1,0 +1,1140 @@
+@model SistemaERP.Models.Entities.CargoCompra
+
+@{
+    ViewData["Title"] = "Registrar Compra - POS Style";
+    var productos = ViewBag.Productos as List<SistemaERP.Models.Entities.Producto>;
+    var bodegas = ViewBag.Bodegas as List<SistemaERP.Models.Entities.Bodega>;
+    var presentaciones = ViewBag.Presentaciones as List<SistemaERP.Models.Entities.Presentacion>;
+    var borradorId = ViewBag.BorradorId as int?;
+    var borradorDetalle = ViewBag.BorradorDetalle as List<SistemaERP.Models.Entities.CargoCompra_Producto>;
+    var compraBase = ViewBag.Compra as SistemaERP.Models.Entities.CargoCompra;
+    bool esBorrador = borradorId.HasValue;
+}
+
+<style>
+    :root {
+        --pos-indigo: #4f46e5;
+        --pos-indigo-hover: #4338ca;
+        --pos-indigo-light: #e0e7ff;
+        --pos-bg: #f8fafc;
+        --pos-card-bg: #ffffff;
+        --pos-border: #e2e8f0;
+        --pos-text: #1e293b;
+        --pos-text-muted: #64748b;
+    }
+
+    .btn-indigo {
+        background-color: var(--pos-indigo) !important;
+        border-color: var(--pos-indigo) !important;
+        color: #ffffff !important;
+    }
+    .btn-indigo:hover {
+        background-color: var(--pos-indigo-hover) !important;
+        border-color: var(--pos-indigo-hover) !important;
+        color: #ffffff !important;
+    }
+    .btn-outline-indigo {
+        color: var(--pos-indigo) !important;
+        border-color: var(--pos-indigo) !important;
+        background-color: transparent !important;
+    }
+    .btn-outline-indigo:hover {
+        background-color: var(--pos-indigo) !important;
+        color: #ffffff !important;
+    }
+
+    html, body {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #wrapper, 
+    #page-content-wrapper {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #page-content-wrapper main, 
+    main {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Ocultar barra superior y lateral del sistema para simular pantalla completa estilo POS */
+    .main-header { display: none !important; }
+    #sidebar-wrapper { display: none !important; }
+    #page-content-wrapper { margin-left: 0 !important; width: 100% !important; }
+    #page-content-wrapper main { background-color: var(--pos-bg) !important; }
+
+    /* Contenedor Principal POS */
+    .pos-container {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        height: 0;
+        width: 100%;
+        overflow: hidden;
+        font-family: 'Inter', sans-serif;
+        color: var(--pos-text);
+        background-color: var(--pos-bg);
+    }
+
+    /* Encabezado */
+    .pos-header {
+        height: 60px;
+        background: linear-gradient(135deg, #1e1b4b, #312e81);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 100;
+        flex-shrink: 0;
+    }
+
+    .pos-logo {
+        font-weight: 800;
+        font-size: 1.15rem;
+        letter-spacing: 0.5px;
+    }
+
+    .pos-header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    /* Workspace principal */
+    .pos-workspace {
+        display: flex;
+        flex-grow: 1;
+        height: 0;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* Panel Izquierdo: Catálogo y Buscador (40% ancho) */
+    .pos-catalog-panel {
+        width: 38%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: #f1f5f9;
+        border-right: 1px solid var(--pos-border);
+        overflow: hidden;
+    }
+
+    .catalog-search-bar {
+        padding: 0.75rem;
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--pos-border);
+        flex-shrink: 0;
+    }
+
+    .category-tabs {
+        display: flex;
+        gap: 0.4rem;
+        padding: 0.5rem 0.75rem;
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--pos-border);
+        overflow-x: auto;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .category-tabs::-webkit-scrollbar { height: 4px; }
+    .category-tabs::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .category-tab {
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--pos-text-muted);
+        background-color: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .category-tab.active {
+        background-color: var(--pos-indigo);
+        color: #ffffff;
+        border-color: var(--pos-indigo);
+    }
+
+    .product-grid {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 0.75rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
+        align-content: start;
+    }
+
+    /* Modos de visualización adicionales */
+    .product-grid.layout-grid {
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .product-grid.layout-lineas {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+    }
+
+    .product-card {
+        background-color: #ffffff;
+        border: 1px solid var(--pos-border);
+        border-radius: 10px;
+        padding: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        border-color: #cbd5e1;
+    }
+
+    .product-card-name {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--pos-text);
+        margin-bottom: 0.4rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 2.2rem;
+    }
+
+    .product-card-info {
+        font-size: 0.7rem;
+        color: var(--pos-text-muted);
+        margin-top: auto;
+    }
+
+    .product-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        padding-top: 0.4rem;
+        border-top: 1px dashed #f1f5f9;
+    }
+
+    /* Panel Derecho: Carrito y Totales (62% ancho) */
+    .pos-cart-panel {
+        width: 62%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: #ffffff;
+        overflow: hidden;
+    }
+
+    /* Formulario de Cabecera Compra */
+    .cart-document-info {
+        padding: 0.85rem;
+        background-color: #ffffff;
+        border-bottom: 2px solid var(--pos-border);
+        flex-shrink: 0;
+    }
+
+    /* Contenedor Scrollable del Carrito */
+    .cart-items-wrapper {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0;
+        background-color: #f8fafc;
+    }
+
+    /* Barra de Totales y Botones de Acción */
+    .cart-footer {
+        padding: 1rem;
+        background-color: #ffffff;
+        border-top: 2px solid var(--pos-border);
+        flex-shrink: 0;
+    }
+
+    .totals-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        background-color: #f5f3ff;
+        border: 1px solid #ddd6fe;
+        border-radius: 10px;
+        padding: 0.85rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .total-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .total-box-label {
+        font-size: 0.68rem;
+        font-weight: 800;
+        color: var(--pos-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .total-box-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--pos-text);
+    }
+
+    .total-box-value.grand-total {
+        font-size: 1.4rem;
+        font-weight: 900;
+        color: var(--pos-indigo);
+    }
+</style>
+
+<div class="pos-container">
+    @* Encabezado *@
+    <header class="pos-header">
+        <div class="pos-header-left">
+            <span class="pos-logo"><i class="bi bi-cart-plus me-2 text-indigo-soft"></i>MÓDULO DE COMPRAS (POS STYLE)</span>
+            <span class="badge bg-indigo-soft text-indigo ms-2" style="font-size:0.75rem;">@(esBorrador ? "BORRADOR" : "NUEVA COMPRA")</span>
+        </div>
+        <div class="pos-header-right">
+            <a href="@Url.Action("Index")" class="btn btn-outline-light btn-sm px-3 fw-bold border-0"><i class="bi bi-box-arrow-left me-1"></i> SALIR</a>
+        </div>
+    </header>
+
+    @* Workspace Principal *@
+    <div class="pos-workspace">
+        @* Panel Izquierdo: Buscador y Grilla de Productos *@
+        <div class="pos-catalog-panel">
+            <div class="catalog-search-bar d-flex align-items-center gap-2">
+                <div class="input-group flex-grow-1">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="txtBuscarProductoTrigger" class="form-control bg-light border-0 shadow-none" placeholder="Escribe código de barra o busca..." autocomplete="off">
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-indigo px-2 active" id="btnLayoutTarjetas" onclick="setCatalogLayout('tarjetas')" title="Vista Tarjetas"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-indigo px-2" id="btnLayoutLineas" onclick="setCatalogLayout('lineas')" title="Vista Líneas"><i class="bi bi-list-ul"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-indigo px-2" id="btnLayoutGrid" onclick="setCatalogLayout('grid')" title="Vista Grid"><i class="bi bi-grid-fill"></i></button>
+                </div>
+            </div>
+
+            @* Categorías / Presentaciones *@
+            <div class="category-tabs">
+                <div class="category-tab active" data-id="0" onclick="selectCategory(0)">TODOS</div>
+                @foreach (var pres in presentaciones ?? new())
+                {
+                    <div class="category-tab" data-id="@pres.Id" onclick="selectCategory(@pres.Id)">@pres.Nombre.ToUpper()</div>
+                }
+            </div>
+
+            @* Grilla de Productos *@
+            <div class="product-grid" id="productGrid">
+                <!-- Se renderiza vía JS -->
+            </div>
+        </div>
+
+        @* Panel Derecho: Documento y Detalle de Carrito *@
+        <div class="pos-cart-panel">
+            @* Cabecera del Documento *@
+            <div class="cart-document-info">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted mb-1">Nº FACTURA</label>
+                        <input type="text" id="txtFactura" class="form-control form-control-sm text-start fw-bold px-2" placeholder="001-001-000000001" value="@(compraBase?.Factura ?? "")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted mb-1">PROVEEDOR</label>
+                        <select id="ddlProveedor" class="form-select form-select-sm">
+                            <option value="">-- Seleccione --</option>
+                            @foreach(var item in (ViewBag.Proveedores as SelectList)) {
+                                <option value="@item.Value" selected="@(compraBase?.Id_Proveedor?.ToString() == item.Value ? "selected" : null)">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">FECHA DOC.</label>
+                        <input type="date" id="txtFecha" class="form-control form-control-sm" value="@(compraBase?.Fecha_Documento?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"))">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">MÉTODO PAGO</label>
+                        <select id="ddlMetodoPago" class="form-select form-select-sm" onchange="toggleCreditDays()">
+                            <option value="EFECTIVO">Al Contado</option>
+                            <option value="CREDITO" selected="@(compraBase?.Dias_Pago > 0 ? "selected" : null)">Crédito</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-none" id="creditDaysContainer">
+                        <label class="form-label small fw-bold text-muted mb-1">DÍAS CRÉDITO</label>
+                        <input type="number" id="txtDiasCredito" class="form-control form-control-sm text-center fw-bold" value="@(compraBase?.Dias_Pago ?? 30)" min="1">
+                    </div>
+                    <div class="col-12 mt-2">
+                        <input type="text" id="txtObservacion" class="form-control form-control-sm" placeholder="Observaciones de la compra..." value="@(compraBase?.Observacion ?? "")">
+                    </div>
+                </div>
+            </div>
+
+            @* Carrito de Productos (POS style table row layout) *@
+            <div class="cart-items-wrapper">
+                <div class="table-responsive bg-white" style="flex-grow: 1; height: 0; overflow-y: auto; width: 100%;">
+                    <table class="table table-hover align-middle mb-0" id="tblCartItems" style="font-size:0.85rem;">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th class="text-center" style="width: 80px;">Cant.</th>
+                                <th>Producto</th>
+                                <th class="text-end" style="width: 110px;">Costo Compra</th>
+                                <th class="text-center" style="width: 80px;">Bonif.</th>
+                                <th class="text-end" style="width: 90px;">Desc.</th>
+                                <th class="text-center" style="width: 80px;">IVA</th>
+                                <th class="text-end" style="width: 120px;">Total</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartItemsContainer">
+                            <!-- Se renderiza vía JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @* Barra de Totales y Acciones *@
+            <div class="cart-footer">
+                <div class="totals-grid">
+                    <div class="total-box">
+                        <span class="total-box-label">Subtotal</span>
+                        <span id="lblSubtotal" class="total-box-value">0.0000</span>
+                        <span class="total-box-label mt-1">Descuento</span>
+                        <span id="lblDescuento" class="total-box-value text-danger">0.0000</span>
+                    </div>
+                    <div class="total-box">
+                        <span class="total-box-label">Subtotal 15%</span>
+                        <span id="lblSub12" class="total-box-value">0.0000</span>
+                        <span class="total-box-label mt-1">Subtotal 0%</span>
+                        <span id="lblSub0" class="total-box-value">0.0000</span>
+                    </div>
+                    <div class="total-box">
+                        <span class="total-box-label">Subtotal Sin Impuesto</span>
+                        <span id="lblSubSinImpuesto" class="total-box-value">0.0000</span>
+                        <span class="total-box-label mt-1">IVA (15.00%)</span>
+                        <span id="lblIva" class="total-box-value text-success">0.0000</span>
+                    </div>
+                    <div class="total-box border-start border-2 border-indigo border-opacity-25 ps-3 justify-content-center">
+                        <span class="total-box-label">TOTAL A PAGAR</span>
+                        <span id="lblTotal" class="total-box-value grand-total">0.0000</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small fw-bold"><i class="bi bi-keyboard me-1"></i> F1: Buscar · F7: Finalizar Compra · Doble click sobre ítem edita en popup</span>
+                    <div class="d-flex gap-2">
+                        <button id="btnDraft" class="btn btn-outline-indigo fw-bold px-4"><i class="bi bi-save me-1"></i> GUARDAR BORRADOR</button>
+                        <button id="btnFinalizar" class="btn btn-indigo fw-bold px-4"><i class="bi bi-check2-all me-1"></i> FINALIZAR COMPRA</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configuración / Formulario de Ingreso de Producto -->
+<div class="modal fade" id="modalProductConfig" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:14px;">
+            <div class="modal-header bg-indigo text-white py-3">
+                <h5 class="modal-title fw-bold" id="modalProductConfigTitle"><i class="bi bi-gear-fill me-2"></i>Detalle de Compra del Artículo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formProductConfig" onsubmit="event.preventDefault(); applyProductConfig();">
+                    <input type="hidden" id="cfgIdProducto" />
+                    <input type="hidden" id="cfgEditIndex" value="-1" />
+                    
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <label class="form-label fw-bold m-0" id="cfgNombreProducto" style="color:var(--pos-indigo); font-size:1rem;">-</label>
+                        <div class="text-muted small mt-1" id="cfgContieneLabel"></div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">CANTIDAD</label>
+                            <input type="number" id="cfgCantidad" class="form-control text-center fw-bold" min="1" value="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1" style="color: #047857;">BONIFICACIÓN</label>
+                            <input type="number" id="cfgBonificacion" class="form-control text-center fw-semibold" style="border-color: #10b981; color: #047857;" min="0" value="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">COSTO UNIT. COMPRA</label>
+                            <div class="input-group">
+                                <span class="input-group-text px-2">@(ViewBag.MonedaSimbolo ?? "$")</span>
+                                <input type="number" step="0.0001" id="cfgCosto" class="form-control text-end fw-semibold" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1" style="color: #b91c1c;">DESCUENTO</label>
+                            <div class="input-group">
+                                <span class="input-group-text px-2 text-danger">-</span>
+                                <input type="number" step="0.01" id="cfgDescuento" class="form-control text-end fw-semibold text-danger" min="0" value="0.00">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">TASA IVA</label>
+                            <select id="cfgIva" class="form-select">
+                                <option value="0">0%</option>
+                                <option value="12">12%</option>
+                                <option value="15">15%</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">PVP (VENTA)</label>
+                            <div class="input-group">
+                                <span class="input-group-text px-2">@(ViewBag.MonedaSimbolo ?? "$")</span>
+                                <input type="number" step="0.0001" id="cfgPvp" class="form-control text-end fw-semibold" min="0">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">LOTE</label>
+                            <input type="text" id="cfgLote" class="form-control text-center" placeholder="ND">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">VENCIMIENTO</label>
+                            <input type="date" id="cfgVence" class="form-control text-center" style="font-size: 0.9rem;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1">BODEGA DESTINO</label>
+                            <select id="cfgBodega" class="form-select">
+                                @foreach (var b in bodegas ?? new()) {
+                                    <option value="@b.Id">@b.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-12" id="smartUnitPanelModal">
+                            <label class="form-label small fw-bold text-muted mb-1">TIPO UNIDAD</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="cfgUnitType" id="cfgUnitU" value="U" checked>
+                                <label class="btn btn-outline-indigo py-2 fw-semibold" for="cfgUnitU" style="font-size:0.8rem;">Unidad</label>
+                                
+                                <input type="radio" class="btn-check" name="cfgUnitType" id="cfgUnitC" value="C">
+                                <label class="btn btn-outline-indigo py-2 fw-semibold" for="cfgUnitC" style="font-size:0.8rem;">Caja (<span id="cfgSpanContiene">0</span>)</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-indigo px-4 fw-bold shadow-sm text-white" onclick="applyProductConfig()">
+                    <i class="bi bi-check-circle me-1"></i> ACEPTAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let detalle = [];
+        let selectedCategoryVal = 0;
+        let activeCatalogLayout = 'tarjetas'; // layout configurations
+        let modalConfigInstance = null;
+
+        let productosList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            (productos ?? new()).Select(p => new {
+                id = p.Id,
+                nombre = p.Nombre ?? "",
+                codigoBarra = p.CodigoBarra ?? "",
+                pvf = p.PVF ?? 0,
+                pvp = p.PVP ?? 0,
+                iva = p.IVA ?? 0,
+                contiene = p.Contiene ?? 1,
+                disponible = p.Disponible ?? 0,
+                idPresentacion = p.Id_Presentacion ?? 0
+            })
+        ));
+
+        let bodegasList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            (bodegas ?? new()).Select(b => new {
+                id = b.Id,
+                nombre = b.Nombre ?? ""
+            })
+        ));
+
+        // Bodega principal por defecto
+        const defaultBodegaId = bodegasList[0]?.id || 1;
+
+        $(document).ready(function() {
+            modalConfigInstance = new bootstrap.Modal(document.getElementById('modalProductConfig'));
+
+            // Teclas de Atajos
+            $(document).keydown(function(e) {
+                if (e.which === 112) { // F1
+                    e.preventDefault();
+                    $("#txtBuscarProductoTrigger").focus().select();
+                }
+                if (e.which === 118) { // F7
+                    e.preventDefault();
+                    $("#btnFinalizar").click();
+                }
+            });
+
+            // Buscador con escáner de código de barra
+            $("#txtBuscarProductoTrigger").on('input', function() {
+                let query = $(this).val().trim();
+                let p = productosList.find(x => x.codigoBarra.trim() === query);
+                if (p) {
+                    $(this).val(''); // Limpiar escáner de barra de inmediato
+                    openAddProductModal(p.id); // Abrir popup de inmediato
+                    return;
+                }
+                renderCatalogGrid();
+            });
+
+            // Cargar datos del catálogo inicial
+            renderCatalogGrid();
+            toggleCreditDays();
+
+            // Cargar borrador si existe
+            @if (esBorrador && borradorDetalle != null) {
+                foreach (var d in borradorDetalle) {
+                    var prod = productos?.FirstOrDefault(p => p.Id.ToString() == d.Id_Producto);
+                    var ivaRate = prod?.IVA ?? 0;
+                    <text>
+                    detalle.push({
+                        idProducto: @d.Id_Producto,
+                        nombreProducto: "@Html.Raw(d.Producto)",
+                        cantidad: @(d.Cantidad ?? 0),
+                        bonificacion: @(d.Bonificacion ?? 0),
+                        costo: @((d.PVF ?? 0).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)),
+                        subtotal: @((d.Subtotal ?? 0).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)),
+                        iva: @((d.IVA ?? 0).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)),
+                        total: @((d.TotalPagar ?? 0).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)),
+                        lote: "@Html.Raw(d.Lote)",
+                        vence: "@(d.Vencimiento?.ToString("yyyy-MM-dd"))",
+                        esCaja: @(d.EsCaja == true ? "true" : "false"),
+                        contiene: @(d.Contiene ?? 1),
+                        ivaRate: @(ivaRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)),
+                        idBodega: @(d.Id_Bodega ?? 0),
+                        pvp: @((d.PUR ?? prod?.PVP ?? 0).ToString("F4", System.Globalization.CultureInfo.InvariantCulture))
+                    });
+                    </text>
+                }
+                <text>
+                renderTable();
+                </text>
+            }
+
+            $("#btnDraft").click(function() { save(true); });
+            $("#btnFinalizar").click(function() { 
+                Swal.fire({
+                    title: '¿Confirmar Compra?',
+                    text: "Se procesará el ingreso de la mercadería.",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, registrar',
+                    cancelButtonText: 'Cancelar'
+                }).then((r) => { if (r.isConfirmed) save(false); });
+            });
+
+            // Formatear Factura
+            $("#txtFactura").on('input', function() {
+                let val = $(this).val().replace(/\D/g, '').substring(0, 15);
+                let formatted = "";
+                if (val.length > 0) formatted += val.substring(0, 3);
+                if (val.length > 3) formatted += "-" + val.substring(3, 6);
+                if (val.length > 6) formatted += "-" + val.substring(6, 15);
+                $(this).val(formatted);
+            });
+
+            // Cambiar comportamiento del tipo de unidad al marcar las cajas
+            $(document).on('change', "input[name='cfgUnitType']", function() {
+                let id = parseInt($("#cfgIdProducto").val());
+                if (!id) return;
+                let p = productosList.find(x => x.id === id);
+                if (!p) return;
+                
+                let contiene = p.contiene || 1;
+                let baseCosto = p.pvf || 0;
+                let esCaja = $("input[name='cfgUnitType']:checked").val() === 'C';
+                
+                if (esCaja) {
+                    $("#cfgCosto").val(baseCosto.toFixed(4));
+                } else {
+                    let costUnit = contiene > 1 ? (baseCosto / contiene) : baseCosto;
+                    $("#cfgCosto").val(costUnit.toFixed(4));
+                }
+            });
+        });
+
+        // Configuración de layouts del catálogo
+        function setCatalogLayout(layout) {
+            activeCatalogLayout = layout;
+            $(".catalog-search-bar button").removeClass("active");
+            if (layout === 'tarjetas') $("#btnLayoutTarjetas").addClass("active");
+            if (layout === 'lineas') $("#btnLayoutLineas").addClass("active");
+            if (layout === 'grid') $("#btnLayoutGrid").addClass("active");
+
+            // Modificar clases de grilla
+            let container = $("#productGrid");
+            container.removeClass("layout-grid layout-lineas");
+            if (layout === 'grid') container.addClass("layout-grid");
+            if (layout === 'lineas') container.addClass("layout-lineas");
+
+            renderCatalogGrid();
+        }
+
+        // Filtrar y renderizar catálogo
+        function selectCategory(id) {
+            selectedCategoryVal = id;
+            $(".category-tab").removeClass("active");
+            $(`.category-tab[data-id="${id}"]`).addClass("active");
+            renderCatalogGrid();
+        }
+
+        function renderCatalogGrid() {
+            let query = $("#txtBuscarProductoTrigger").val().toLowerCase().trim();
+            let container = $("#productGrid");
+            container.empty();
+
+            let words = query.split(/\s+/);
+            let filtered = productosList.filter(p => {
+                let matchCat = selectedCategoryVal === 0 || p.idPresentacion === selectedCategoryVal;
+                let matchText = words.every(w => p.nombre.toLowerCase().includes(w) || p.codigoBarra.includes(w));
+                return matchCat && matchText;
+            });
+
+            if (filtered.length === 0) {
+                container.html(`<div class="col-12 text-center text-muted py-4 small">No se encontraron productos</div>`);
+                return;
+            }
+
+            // Renderizado en base a la configuración seleccionada
+            if (activeCatalogLayout === 'lineas') {
+                let h = `<div class="w-100 bg-white border rounded-3 p-1">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Cód. Barra</th>
+                                        <th>Descripción</th>
+                                        <th class="text-center">Stock</th>
+                                        <th class="text-end">Costo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                filtered.forEach(p => {
+                    h += `<tr style="cursor:pointer;" onclick="openAddProductModal(${p.id})">
+                            <td class="text-muted fw-bold">${escapeHtml(p.codigoBarra)}</td>
+                            <td class="fw-bold text-dark">${escapeHtml(p.nombre)}</td>
+                            <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success">${p.disponible}</span></td>
+                            <td class="text-end fw-bold">${MONEDA_SIMBOLO}${p.pvf.toFixed(2)}</td>
+                          </tr>`;
+                });
+                h += `</tbody></table></div>`;
+                container.html(h);
+            }
+            else if (activeCatalogLayout === 'grid') {
+                filtered.forEach(p => {
+                    container.append(`
+                        <div class="product-card p-2 text-center" onclick="openAddProductModal(${p.id})">
+                            <div class="product-card-name text-truncate mb-1" style="font-size:0.75rem; height:auto; font-weight:700;" title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</div>
+                            <span class="badge bg-indigo bg-opacity-10 text-indigo fw-bold mb-1" style="font-size:0.68rem;">Stock: ${p.disponible}</span>
+                            <div class="fw-bold text-dark" style="font-size:0.7rem;">${MONEDA_SIMBOLO}${p.pvf.toFixed(2)}</div>
+                        </div>
+                    `);
+                });
+            }
+            else {
+                // Tarjetas
+                filtered.forEach(p => {
+                    container.append(`
+                        <div class="product-card" onclick="openAddProductModal(${p.id})">
+                            <div class="product-card-name">${escapeHtml(p.nombre)}</div>
+                            <div class="product-card-info">
+                                <div>Stock: <strong>${p.disponible}</strong></div>
+                                <div>Costo: <strong>${MONEDA_SIMBOLO}${p.pvf.toFixed(2)}</strong></div>
+                            </div>
+                            <div class="product-card-footer">
+                                <span class="badge bg-indigo-soft text-indigo" style="font-size:0.65rem;">Cód: ${p.codigoBarra.substring(0,6)}</span>
+                                <button class="btn btn-sm btn-indigo rounded-circle p-0 d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
+                                    <i class="bi bi-plus text-white"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                });
+            }
+        }
+
+        // --- Manejo del Popup Modal (Añadir / Editar) ---
+        function openAddProductModal(id) {
+            let p = productosList.find(x => x.id === id);
+            if (!p) return;
+
+            // Resetear Modal para nueva adición
+            $("#cfgEditIndex").val("-1");
+            $("#cfgIdProducto").val(p.id);
+            $("#cfgNombreProducto").text(p.nombre);
+            $("#cfgCantidad").val("1");
+            $("#cfgBonificacion").val("0");
+            $("#cfgCosto").val(p.pvf.toFixed(4));
+            $("#cfgDescuento").val("0.00");
+            $("#cfgIva").val(p.iva.toString());
+            $("#cfgPvp").val(p.pvp.toFixed(4));
+            $("#cfgLote").val("");
+            $("#cfgVence").val("");
+            $("#cfgBodega").val(defaultBodegaId);
+
+            // Presentación
+            let contiene = p.contiene || 1;
+            if (contiene > 1) {
+                $("#smartUnitPanelModal").removeClass("d-none");
+                $("#cfgSpanContiene").text(contiene);
+                $("#cfgContieneLabel").text(`* Caja contiene ${contiene} unidades.`);
+                $("#cfgUnitU").prop("checked", true);
+            } else {
+                $("#smartUnitPanelModal").addClass("d-none");
+                $("#cfgContieneLabel").text("");
+            }
+
+            modalConfigInstance.show();
+            setTimeout(() => { $("#cfgCantidad").focus().select(); }, 400);
+        }
+
+        function openEditProductModal(idx) {
+            let item = detalle[idx];
+            if (!item) return;
+
+            let p = productosList.find(x => x.id === item.idProducto);
+
+            $("#cfgEditIndex").val(idx);
+            $("#cfgIdProducto").val(item.idProducto);
+            $("#cfgNombreProducto").text(item.nombreProducto);
+            $("#cfgCantidad").val(item.cantidad);
+            $("#cfgBonificacion").val(item.bonificacion || 0);
+            $("#cfgCosto").val(item.costo.toFixed(4));
+            $("#cfgDescuento").val(item.descuento.toFixed(2));
+            $("#cfgIva").val(item.ivaRate.toString());
+            $("#cfgPvp").val(item.pvp.toFixed(4));
+            $("#cfgLote").val(item.lote || "");
+            $("#cfgVence").val(item.vence || "");
+            $("#cfgBodega").val(item.idBodega);
+
+            let contiene = item.contiene || 1;
+            if (contiene > 1) {
+                $("#smartUnitPanelModal").removeClass("d-none");
+                $("#cfgSpanContiene").text(contiene);
+                $("#cfgContieneLabel").text(`* Caja contiene ${contiene} unidades.`);
+                if (item.esCaja) {
+                    $("#cfgUnitC").prop("checked", true);
+                } else {
+                    $("#cfgUnitU").prop("checked", true);
+                }
+            } else {
+                $("#smartUnitPanelModal").addClass("d-none");
+                $("#cfgContieneLabel").text("");
+            }
+
+            modalConfigInstance.show();
+            setTimeout(() => { $("#cfgCantidad").focus().select(); }, 400);
+        }
+
+        function applyProductConfig() {
+            let id = parseInt($("#cfgIdProducto").val());
+            let editIdx = parseInt($("#cfgEditIndex").val());
+            let p = productosList.find(x => x.id === id);
+            if (!p) return;
+
+            let cant = parseInt($("#cfgCantidad").val()) || 1;
+            let bon = parseInt($("#cfgBonificacion").val()) || 0;
+            let cost = parseFloat($("#cfgCosto").val()) || 0;
+            let desc = parseFloat($("#cfgDescuento").val()) || 0;
+            let ivaRate = parseFloat($("#cfgIva").val()) || 0;
+            let pvp = parseFloat($("#cfgPvp").val()) || 0;
+            let lote = $("#cfgLote").val().trim() || "ND";
+            let vence = $("#cfgVence").val();
+            let bodegaId = parseInt($("#cfgBodega").val()) || defaultBodegaId;
+            let esCaja = p.contiene > 1 && ($("input[name='cfgUnitType']:checked").val() === 'C');
+
+            let sub = cant * cost;
+            let subConDesc = sub - desc;
+            if (subConDesc < 0) subConDesc = 0;
+            let ivaVal = subConDesc * (ivaRate / 100);
+            let tot = subConDesc + ivaVal;
+
+            let rowData = {
+                idProducto: id,
+                nombreProducto: p.nombre,
+                cantidad: cant,
+                bonificacion: bon,
+                costo: cost,
+                subtotal: sub,
+                descuento: desc,
+                iva: ivaVal,
+                total: tot,
+                lote: lote,
+                vence: vence,
+                esCaja: esCaja,
+                contiene: p.contiene || 1,
+                ivaRate: ivaRate,
+                idBodega: bodegaId,
+                pvp: pvp
+            };
+
+            if (editIdx >= 0) {
+                // Editar línea existente
+                detalle[editIdx] = rowData;
+                toastr.success(`Actualizado: ${p.nombre}`);
+            } else {
+                // Buscar si ya existe la misma combinación de producto + lote + vence + bodega + unidad (caja o unidad)
+                let existingIdx = detalle.findIndex(x => 
+                    x.idProducto === id && 
+                    x.lote === lote && 
+                    x.vence === vence && 
+                    x.idBodega === bodegaId && 
+                    x.esCaja === esCaja
+                );
+
+                if (existingIdx >= 0) {
+                    // Sumar cantidad y bonificación, actualizar costo/pvp y acumular descuento
+                    detalle[existingIdx].cantidad += cant;
+                    detalle[existingIdx].bonificacion += bon;
+                    detalle[existingIdx].descuento += desc;
+                    detalle[existingIdx].costo = cost; // actualizar con el último costo ingresado
+                    detalle[existingIdx].pvp = pvp; // actualizar con el último pvp ingresado
+
+                    // Recalcular subtotal, iva y total para la línea existente
+                    let newSub = detalle[existingIdx].cantidad * detalle[existingIdx].costo;
+                    let newSubConDesc = newSub - detalle[existingIdx].descuento;
+                    if (newSubConDesc < 0) newSubConDesc = 0;
+                    let newIvaVal = newSubConDesc * (detalle[existingIdx].ivaRate / 100);
+
+                    detalle[existingIdx].subtotal = newSub;
+                    detalle[existingIdx].iva = newIvaVal;
+                    detalle[existingIdx].total = newSubConDesc + newIvaVal;
+
+                    toastr.success(`Cantidad acumulada para: ${p.nombre}`);
+                } else {
+                    // Agregar línea nueva
+                    detalle.push(rowData);
+                    toastr.success(`Agregado: ${p.nombre}`);
+                }
+            }
+
+            modalConfigInstance.hide();
+            renderTable();
+        }
+
+        function toggleCreditDays() {
+            let met = $("#ddlMetodoPago").val();
+            if (met === 'CREDITO') {
+                $("#creditDaysContainer").removeClass('d-none').hide().fadeIn();
+            } else {
+                $("#creditDaysContainer").fadeOut(function() { $(this).addClass('d-none'); });
+            }
+        }
+
+        function calculateGlobalTotals() {
+            let subtotalGlobal = 0;
+            let descuentoGlobal = 0;
+            let sub12 = 0;
+            let sub0 = 0;
+            let subSinImpuesto = 0;
+            let ivaGlobal = 0;
+            let totalGlobal = 0;
+            
+            detalle.forEach((x) => {
+                subtotalGlobal += x.subtotal;
+                descuentoGlobal += (x.descuento || 0);
+                ivaGlobal += x.iva;
+                totalGlobal += x.total;
+                
+                let lineSubtotal = x.subtotal - (x.descuento || 0);
+                if (lineSubtotal < 0) lineSubtotal = 0;
+                
+                if (x.ivaRate === 15) {
+                    sub12 += lineSubtotal;
+                } else if (x.ivaRate === 0 || x.ivaRate === 0.0) {
+                    sub0 += lineSubtotal;
+                }
+                subSinImpuesto += lineSubtotal;
+            });
+            
+            $("#lblSubtotal").text(subtotalGlobal.toFixed(4));
+            $("#lblDescuento").text(descuentoGlobal.toFixed(4));
+            $("#lblSub12").text(sub12.toFixed(4));
+            $("#lblSub0").text(sub0.toFixed(4));
+            $("#lblSubSinImpuesto").text(subSinImpuesto.toFixed(4));
+            $("#lblIva").text(ivaGlobal.toFixed(4));
+            $("#lblTotal").text(totalGlobal.toFixed(4));
+        }
+
+        function renderTable() {
+            let h = "";
+            if (detalle.length === 0) {
+                h = `<tr><td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-cart-x fs-1 d-block mb-2 text-slate-300"></i>
+                        El detalle de compra está vacío. Añade productos o escanea el código de barra.
+                     </td></tr>`;
+                $("#cartItemsContainer").html(h);
+                calculateGlobalTotals();
+                return;
+            }
+
+            detalle.forEach((x, i) => {
+                let contiene = x.contiene || 1;
+                let cantDisplay = "";
+                if (contiene > 1) {
+                    if (x.esCaja) {
+                        cantDisplay = `<span class="badge bg-indigo text-white ms-1">CAJA</span>`;
+                    } else {
+                        let cajas = Math.floor(x.cantidad / contiene);
+                        let fracs = x.cantidad % contiene;
+                        cantDisplay = `<span class="badge bg-light text-secondary border ms-1">${cajas}F${fracs}</span>`;
+                    }
+                }
+
+                let bod = bodegasList.find(b => b.id === x.idBodega);
+                let bodegaLabel = bod ? `<span class="badge bg-light text-muted border" style="font-size:0.7rem;">${escapeHtml(bod.nombre)}</span>` : "";
+
+                h += `
+                <tr style="cursor:pointer;" class="cart-table-row" ondblclick="openEditProductModal(${i})" title="Doble click para editar">
+                    <td class="text-center fw-bold text-dark">${x.cantidad}</td>
+                    <td>
+                        <div class="fw-bold">${escapeHtml(x.nombreProducto)} ${cantDisplay}</div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            ${bodegaLabel}
+                            ${x.lote && x.lote !== "ND" ? `<span class="badge bg-success bg-opacity-10 text-success" style="font-size:0.7rem;">Lote: ${escapeHtml(x.lote)}</span>` : ""}
+                        </div>
+                    </td>
+                    <td class="text-end fw-semibold">${MONEDA_SIMBOLO}${x.costo.toFixed(4)}</td>
+                    <td class="text-center text-success fw-bold">${x.bonificacion || 0}</td>
+                    <td class="text-end text-danger">${x.descuento > 0 ? `-${MONEDA_SIMBOLO}${x.descuento.toFixed(2)}` : "-"}</td>
+                    <td class="text-center">${x.ivaRate}%</td>
+                    <td class="text-end fw-extrabold text-indigo">${MONEDA_SIMBOLO}${x.total.toFixed(4)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 fs-5" onclick="remove(${i}); event.stopPropagation();">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            $("#cartItemsContainer").html(h);
+            calculateGlobalTotals();
+        }
+
+        function remove(i) { detalle.splice(i, 1); renderTable(); }
+
+        function save(isDraft) {
+            let factura = $("#txtFactura").val().trim();
+            let idProveedor = $("#ddlProveedor").val();
+            let fecha = $("#txtFecha").val();
+
+            if (!idProveedor) {
+                Swal.fire('Atención', 'Debe seleccionar un proveedor.', 'warning');
+                return;
+            }
+
+            if (!factura) {
+                Swal.fire('Atención', 'Debe ingresar el número de factura.', 'warning');
+                return;
+            }
+
+            let regexFactura = /^\d{3}-\d{3}-\d{9}$/;
+            if (!regexFactura.test(factura)) {
+                Swal.fire('Formato Inválido', 'El número de factura debe tener el formato ecuatoriano (Ej: 001-001-000000001).', 'warning');
+                return;
+            }
+
+            if (!fecha) {
+                Swal.fire('Atención', 'Debe ingresar la fecha de la factura.', 'warning');
+                return;
+            }
+
+            if (detalle.length === 0) { 
+                Swal.fire('Error', 'Debe agregar al menos un producto al detalle.', 'error'); 
+                return; 
+            }
+
+            let metodoPago = $("#ddlMetodoPago").val();
+            let diasCredito = parseInt($("#txtDiasCredito").val()) || 0;
+
+            let data = {
+                borradorId: @(borradorId.HasValue ? borradorId.Value.ToString() : "null"),
+                factura: factura,
+                idProveedor: parseInt(idProveedor) || 0,
+                fechaDocumento: fecha,
+                observacion: $("#txtObservacion").val(),
+                idBodega: detalle[0].idBodega,
+                ivaTotal: parseFloat($("#lblIva").text().replace(/[^0-9.-]/g, '')),
+                descuentoTotal: parseFloat($("#lblDescuento").text().replace(/[^0-9.-]/g, '')),
+                metodoPago: metodoPago,
+                diasCredito: metodoPago === "CREDITO" ? diasCredito : 0,
+                detalles: detalle.map(x => ({
+                    idProducto: x.idProducto,
+                    nombreProducto: x.nombreProducto,
+                    cantidad: x.cantidad,
+                    bonificacion: x.bonificacion || 0,
+                    precioCosto: x.costo,
+                    subtotal: x.subtotal,
+                    descuento: x.descuento || 0,
+                    iva: x.iva,
+                    total: x.total,
+                    lote: x.lote,
+                    fechaVencimiento: x.vence || null,
+                    esCaja: x.esCaja,
+                    idBodega: x.idBodega,
+                    pvp: x.pvp
+                }))
+            };
+
+            let url = isDraft ? '@Url.Action("GuardarBorrador", "Compras")' : '@Url.Action("GuardarCompra", "Compras")';
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire('Éxito', res.message, 'success').then(() => { location.href = '@Url.Action("Index")'; });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+                }
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+}

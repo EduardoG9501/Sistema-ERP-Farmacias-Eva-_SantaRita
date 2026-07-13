@@ -1,0 +1,78 @@
+@model SistemaERP.Models.Entities.Banco
+
+@{
+    ViewData["Title"] = (Model?.Id > 0) ? "Editar Banco" : "Nuevo Banco";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">@(Model?.Id > 0 ? "Editar Institución" : "Registrar Nuevo Banco")</h2>
+        <p class="text-muted">Complete la información requerida para el banco.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-md-8 col-lg-6">
+        <div class="premium-card">
+            <form asp-action="@(Model?.Id > 0 ? "Edit" : "Create")">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+
+                <div class="mb-4">
+                    <label asp-for="Nombre" class="form-label fw-semibold">Nombre del Banco</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-bank"></i></span>
+                        <input asp-for="Nombre" class="form-control border-start-0 ps-0" placeholder="Ej. Banco del Pacífico" required />
+                    </div>
+                    <span asp-validation-for="Nombre" class="text-danger small"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Telefono" class="form-label fw-semibold">Teléfono</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-telephone"></i></span>
+                            <input asp-for="Telefono" class="form-control border-start-0 ps-0" placeholder="Ej. 04-2000000" />
+                        </div>
+                        <span asp-validation-for="Telefono" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Correo" class="form-label fw-semibold">Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                            <input asp-for="Correo" type="email" class="form-control border-start-0 ps-0" placeholder="contacto@banco.com" />
+                        </div>
+                        <span asp-validation-for="Correo" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Direccion" class="form-label fw-semibold">Dirección</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-geo-alt"></i></span>
+                        <input asp-for="Direccion" class="form-control border-start-0 ps-0" placeholder="Av. Principal Nro 123" />
+                    </div>
+                    <span asp-validation-for="Direccion" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Cambios
+                    </button>
+                    <a asp-action="Index" class="btn btn-light border flex-grow-1">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,344 @@
+@model SistemaERP.Models.Entities.Producto
+
+@{
+    ViewData["Title"] = (Model?.Id > 0) ? "Editar Producto" : "Nuevo Producto";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">@(Model?.Id > 0 ? "Editar Producto" : "Registrar Producto")</h2>
+        <p class="text-muted">Gestión de datos técnicos, costos y precios de venta.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-10">
+        <div class="premium-card">
+            <form asp-action="@(Model?.Id > 0 ? "Edit" : "Create")" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="Disponible" />
+                    <input type="hidden" asp-for="Lote" />
+                    <input type="hidden" asp-for="Vencimiento" />
+                }
+
+                <div class="row">
+                    <div class="col-md-8 mb-4">
+                        <label asp-for="Nombre" class="form-label fw-semibold">Nombre del Producto</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-box-seam"></i></span>
+                            <input asp-for="Nombre" class="form-control border-start-0 ps-0" placeholder="Ej. Aspirina 100mg" required />
+                        </div>
+                        <span asp-validation-for="Nombre" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="CodigoBarra" class="form-label fw-semibold">Código de Barras</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-upc-scan"></i></span>
+                            <input asp-for="CodigoBarra" class="form-control border-start-0 ps-0" placeholder="786XXXXXXXXXX" />
+                        </div>
+                        <span asp-validation-for="CodigoBarra" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Id_Presentacion" class="form-label fw-semibold">Presentación / Categoría</label>
+                        <select asp-for="Id_Presentacion" class="form-select" asp-items="ViewBag.Presentaciones">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                        <span asp-validation-for="Id_Presentacion" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Id_Proveedor" class="form-label fw-semibold">Proveedor Principal</label>
+                        <select asp-for="Id_Proveedor" class="form-select" asp-items="ViewBag.Proveedores">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                        <span asp-validation-for="Id_Proveedor" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="RegistroSanitario" class="form-label fw-semibold">Registro Sanitario</label>
+                        <input asp-for="RegistroSanitario" class="form-control" placeholder="Ej. 1234-56-78" />
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-50" />
+
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="PVF" class="form-label fw-semibold">Costo (PVF)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@ViewBag.MonedaSimbolo</span>
+                            <input asp-for="PVF" class="form-control" type="number" step="0.0001" placeholder="0.0000" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="PVP" class="form-label fw-semibold">Precio Venta (PVP)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@ViewBag.MonedaSimbolo</span>
+                            <input asp-for="PVP" class="form-control" type="number" step="0.0001" placeholder="0.0000" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 mb-4">
+                        <label asp-for="IVA" class="form-label fw-semibold">IVA (%)</label>
+                        <input asp-for="IVA" class="form-control" type="number" step="0.01" value="@(Model.IVA ?? ViewBag.DefaultIva)" />
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Pvp_Iva" class="form-label fw-semibold d-block">¿PVP Incluye IVA?</label>
+                        <div class="form-check form-switch custom-switch pt-2">
+                            <input class="form-check-input" type="checkbox" asp-for="Pvp_Iva">
+                            <label class="form-check-label text-muted" for="Pvp_Iva">Si / No</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="Contiene" class="form-label fw-semibold">Uni. x Paquete</label>
+                        <input asp-for="Contiene" class="form-control" type="number" placeholder="1" />
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="Estado" class="form-label fw-semibold">Estado del Producto</label>
+                        <select asp-for="Estado" class="form-select">
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+
+                @await Html.PartialAsync("_CamposPersonalizados", Tuple.Create(ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>, ViewBag.CustomFieldValues as Dictionary<string, object>))
+
+                <hr class="my-4 opacity-50" />
+
+                @using System.Text.Json
+                @{
+                    var fotosAdicionales = new List<string>();
+                    if (Model != null && !string.IsNullOrEmpty(Model.DatosAdicionales))
+                    {
+                        try
+                        {
+                            var doc = JsonDocument.Parse(Model.DatosAdicionales);
+                            if (doc.RootElement.TryGetProperty("FotosAdicionales", out var prop) && prop.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var item in prop.EnumerateArray())
+                                {
+                                    if (item.ValueKind == JsonValueKind.String)
+                                        fotosAdicionales.Add(item.GetString()!);
+                                }
+                            }
+                        }
+                        catch {}
+                    }
+                    
+                    // Asegurarnos de que la foto principal esté en la lista si no está vacía
+                    if (Model != null && !string.IsNullOrEmpty(Model.Foto) && !fotosAdicionales.Contains(Model.Foto))
+                    {
+                        fotosAdicionales.Insert(0, Model.Foto);
+                    }
+                }
+
+                <!-- Sección de Imágenes del Producto -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-bold"><i class="bi bi-images text-indigo me-2"></i>Imágenes del Producto</label>
+                        <p class="text-xs text-muted mb-3">Administra las fotos actuales o sube nuevas imágenes para el catálogo. Marca la opción <strong>Principal</strong> en la foto que desees como portada.</p>
+                        
+                        <!-- Inputs ocultos para comunicación con el backend -->
+                        <input type="hidden" name="FotoPrincipalExistente" id="FotoPrincipalExistente" value="@(Model?.Foto ?? "")" />
+                        <input type="hidden" name="FotosEliminadas" id="FotosEliminadas" value="" />
+                        <input type="hidden" name="FotoPrincipalIndex" id="FotoPrincipalIndex" value="-1" />
+
+                        <!-- Subir nuevas imágenes -->
+                        <div class="input-group mb-3 shadow-sm" style="max-width: 500px;">
+                            <span class="input-group-text bg-white"><i class="bi bi-cloud-upload text-muted"></i></span>
+                            <input type="file" id="FotoFiles" name="FotoFiles" accept="image/*" multiple class="form-control" />
+                        </div>
+
+                        <!-- Galería de imágenes actuales y nuevas previsualizaciones -->
+                        <div class="d-flex flex-wrap gap-3 mt-3" id="imagesGalleryContainer">
+                            
+                            <!-- Imágenes existentes -->
+                            @if (fotosAdicionales.Any())
+                            {
+                                @for (int i = 0; i < fotosAdicionales.Count; i++)
+                                {
+                                    var path = fotosAdicionales[i];
+                                    var esPrincipal = path == Model?.Foto;
+                                    
+                                    <div class="position-relative border rounded p-1 bg-white shadow-sm existing-img-card" data-path="@path" style="width: 140px; height: 140px;">
+                                        <img src="@path" class="w-100 h-100 rounded" style="object-fit: cover;" />
+                                        
+                                        <!-- Botón de eliminación -->
+                                        <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center btn-eliminar-foto" data-path="@path" style="width:20px; height:20px; font-size:0.6rem;" title="Eliminar imagen">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+
+                                        <!-- Radio button para principal -->
+                                        <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-center text-white py-1" style="font-size:0.65rem; border-radius: 0 0 4px 4px;">
+                                            <input type="radio" name="principal_radio_group" id="radio_existing_@i" class="form-check-input me-1" value="@path" @(esPrincipal ? "checked" : "") />
+                                            <label class="form-check-label fw-bold cursor-pointer" for="radio_existing_@i">Principal</label>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div id="noImagesPlaceholder" class="text-center py-4 px-3 border rounded border-dashed text-muted opacity-75 d-flex flex-column align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                                    <i class="bi bi-image-fill fs-2 mb-1"></i>
+                                    <span style="font-size:0.65rem;">Sin imágenes cargadas</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Producto
+                    </button>
+                    <a asp-action="Index" class="btn btn-light border flex-grow-1">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        let deletedPaths = [];
+        
+        // Manejador para eliminar fotos existentes
+        document.querySelectorAll('.btn-eliminar-foto').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const path = this.getAttribute('data-path');
+                deletedPaths.push(path);
+                document.getElementById('FotosEliminadas').value = deletedPaths.join(',');
+                
+                // Remover el contenedor visualmente
+                const card = this.closest('.existing-img-card');
+                
+                // Si la que borramos era la principal, seleccionar otra
+                const radio = card.querySelector('input[type="radio"]');
+                if (radio && radio.checked) {
+                    card.remove();
+                    // Buscar otro radio disponible
+                    const firstAvailableRadio = document.querySelector('input[name="principal_radio_group"]');
+                    if (firstAvailableRadio) {
+                        firstAvailableRadio.checked = true;
+                        firstAvailableRadio.dispatchEvent(new Event('change'));
+                    } else {
+                        document.getElementById('FotoPrincipalExistente').value = '';
+                    }
+                } else {
+                    card.remove();
+                }
+
+                // Si ya no quedan imágenes, mostrar placeholder
+                const remainingCards = document.querySelectorAll('.existing-img-card, .new-img-card');
+                if (remainingCards.length === 0) {
+                    const gallery = document.getElementById('imagesGalleryContainer');
+                    gallery.innerHTML = `
+                        <div id="noImagesPlaceholder" class="text-center py-4 px-3 border rounded border-dashed text-muted opacity-75 d-flex flex-column align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                            <i class="bi bi-image-fill fs-2 mb-1"></i>
+                            <span style="font-size:0.65rem;">Sin imágenes cargadas</span>
+                        </div>
+                    `;
+                }
+            });
+        });
+
+        // Manejador para cambiar la imagen principal (entre existentes)
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.name === 'principal_radio_group') {
+                const val = e.target.value;
+                if (val.startsWith('/uploads/')) {
+                    // Es una foto existente
+                    document.getElementById('FotoPrincipalExistente').value = val;
+                    document.getElementById('FotoPrincipalIndex').value = '-1';
+                } else {
+                    // Es una foto nueva (su valor es el índice en FotoFiles)
+                    document.getElementById('FotoPrincipalExistente').value = '';
+                    document.getElementById('FotoPrincipalIndex').value = val;
+                }
+            }
+        });
+
+        // Previsualización de nuevas imágenes
+        document.getElementById('FotoFiles').addEventListener('change', function(event) {
+            const files = event.target.files;
+            
+            // Remover placeholder si existe
+            const placeholder = document.getElementById('noImagesPlaceholder');
+            if (placeholder) placeholder.remove();
+            
+            // Limpiar previsualizaciones de nuevas imágenes cargadas anteriormente
+            document.querySelectorAll('.new-img-card').forEach(c => c.remove());
+            
+            const gallery = document.getElementById('imagesGalleryContainer');
+
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'position-relative border rounded p-1 bg-white shadow-sm new-img-card';
+                    col.style.width = '140px';
+                    col.style.height = '140px';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-100 h-100 rounded';
+                    img.style.objectFit = 'cover';
+                    
+                    const radioWrapper = document.createElement('div');
+                    radioWrapper.className = 'position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-center text-white py-1';
+                    radioWrapper.style.fontSize = '0.65rem';
+                    radioWrapper.style.borderRadius = '0 0 4px 4px';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'principal_radio_group';
+                    radio.id = `radio_new_${index}`;
+                    radio.className = 'form-check-input me-1';
+                    radio.value = index; // valor es el índice
+                    
+                    // Si no hay fotos existentes y es el primer archivo nuevo, marcarlo principal
+                    const existingCards = document.querySelectorAll('.existing-img-card');
+                    if (existingCards.length === 0 && index === 0) {
+                        radio.checked = true;
+                        document.getElementById('FotoPrincipalExistente').value = '';
+                        document.getElementById('FotoPrincipalIndex').value = '0';
+                    }
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `radio_new_${index}`;
+                    label.innerText = 'Principal';
+                    label.className = 'form-check-label fw-bold cursor-pointer';
+                    
+                    radioWrapper.appendChild(radio);
+                    radioWrapper.appendChild(label);
+                    
+                    col.appendChild(img);
+                    col.appendChild(radioWrapper);
+                    gallery.appendChild(col);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        });
+    </script>
+}

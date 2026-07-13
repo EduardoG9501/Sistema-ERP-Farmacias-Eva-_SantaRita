@@ -1,0 +1,188 @@
+@{
+    ViewData["Title"] = "Ajustes de Inventario";
+    var ingresos = ViewBag.Ingresos as List<SistemaERP.Models.Entities.CargoAjuste>;
+    var egresos = ViewBag.Egresos as List<SistemaERP.Models.Entities.DescargoAjuste>;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Ajustes de Inventario</h2>
+        <p class="text-muted">Gestione ingresos y egresos manuales de stock.</p>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <a href="@Url.Action("DescargarPlantilla", "ImportacionMasiva", new { catalogo = "ajustes" })" class="btn btn-outline-primary shadow-sm" title="Descargar Plantilla Excel de Ajustes">
+            <i class="bi bi-download me-1"></i> Plantilla Excel
+        </a>
+        <button type="button" class="btn btn-outline-success shadow-sm" onclick="abrirModalImportacion('ajustes')" title="Cargar Ajustes desde Excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Subir Ajustes
+        </button>
+        <a asp-action="Create" class="btn btn-premium shadow-sm">
+            <i class="bi bi-arrow-left-right me-1"></i> Nuevo Ajuste
+        </a>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    @* Listado de Ingresos *@
+    <div class="col-lg-6">
+        <div class="premium-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold m-0 text-success"><i class="bi bi-plus-square-fill me-2"></i>Últimos Ingresos</h5>
+                <div class="d-flex gap-1">
+                    <button type="button" onclick="exportIngresosExcel()" class="btn btn-sm btn-outline-success border-0" title="Exportar a Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </button>
+                    <button type="button" onclick="printIngresos()" class="btn btn-sm btn-outline-info border-0" title="Imprimir PDF">
+                        <i class="bi bi-printer text-info"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-xs text-uppercase py-2">Fecha</th>
+                            <th class="text-xs text-uppercase py-2">Motivo</th>
+                            <th class="text-xs text-uppercase py-2 text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in ingresos ?? new())
+                        {
+                            <tr>
+                                <td class="text-xs">@item.FechaHora_Registro?.ToString("dd/MM/yy HH:mm")</td>
+                                <td class="text-sm">@item.Observacion</td>
+                                <td class="text-end">
+                                    <a asp-action="TicketIngreso" asp-route-id="@item.Id" target="_blank" class="btn btn-sm btn-light text-dark border-0 me-1" title="Imprimir Ticket">
+                                        <i class="bi bi-receipt"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-light text-primary border-0" onclick="showDetail(@item.Id, 'INGRESO')"><i class="bi bi-eye"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @* Listado de Egresos *@
+    <div class="col-lg-6">
+        <div class="premium-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold m-0 text-danger"><i class="bi bi-dash-square-fill me-2"></i>Últimos Egresos</h5>
+                <div class="d-flex gap-1">
+                    <button type="button" onclick="exportEgresosExcel()" class="btn btn-sm btn-outline-success border-0" title="Exportar a Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </button>
+                    <button type="button" onclick="printEgresos()" class="btn btn-sm btn-outline-info border-0" title="Imprimir PDF">
+                        <i class="bi bi-printer text-info"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-xs text-uppercase py-2">Fecha</th>
+                            <th class="text-xs text-uppercase py-2">Motivo</th>
+                            <th class="text-xs text-uppercase py-2 text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in egresos ?? new())
+                        {
+                            <tr>
+                                <td class="text-xs">@item.FechaHora_Registro?.ToString("dd/MM/yy HH:mm")</td>
+                                <td class="text-sm">@item.Observacion</td>
+                                <td class="text-end">
+                                    <a asp-action="TicketEgreso" asp-route-id="@item.Id" target="_blank" class="btn btn-sm btn-light text-dark border-0 me-1" title="Imprimir Ticket">
+                                        <i class="bi bi-receipt"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-light text-primary border-0" onclick="showDetail(@item.Id, 'EGRESO')"><i class="bi bi-eye"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Modal de Detalles *@
+<div class="modal fade" id="modalDetail" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="detailTitle">Detalle del Ajuste</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tblItems">
+                        <thead class="text-xs text-uppercase text-muted">
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Lote</th>
+                                <th class="text-center">Vence</th>
+                                <th class="text-end">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody class="align-middle"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ImportacionMasivaModal")
+
+@section Scripts {
+    <script>
+        function exportIngresosExcel() {
+            window.open('@Url.Action("ExportarIngresosExcel", "Ajustes")', '_blank');
+        }
+
+        function exportEgresosExcel() {
+            window.open('@Url.Action("ExportarEgresosExcel", "Ajustes")', '_blank');
+        }
+
+        function printIngresos() {
+            window.open('@Url.Action("IngresosPrint", "Ajustes")', '_blank');
+        }
+
+        function printEgresos() {
+            window.open('@Url.Action("EgresosPrint", "Ajustes")', '_blank');
+        }
+
+        function showDetail(id, tipo) {
+            let url = tipo === 'INGRESO' ? '@Url.Action("GetDetalleIngreso")' : '@Url.Action("GetDetalleEgreso")';
+            $("#detailTitle").text(`Detalle de ${tipo} #${id}`);
+            $("#tblItems tbody").html('<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando...</td></tr>');
+            
+            let modal = new bootstrap.Modal(document.getElementById('modalDetail'));
+            modal.show();
+
+            $.get(url, { id: id }, function(data) {
+                let h = "";
+                if (!data || data.length === 0) {
+                    h = '<tr><td colspan="4" class="text-center text-muted">No hay detalles para este ajuste.</td></tr>';
+                } else {
+                    data.forEach(x => {
+                        let venceDate = x.fechaVence || x.fechaVencimiento;
+                        let vence = venceDate ? new Date(venceDate).toLocaleDateString() : 'N/A';
+                        h += `<tr>
+                            <td class="fw-bold">${x.producto}</td>
+                            <td class="text-center"><span class="badge bg-light text-dark border">${x.lote || 'N/A'}</span></td>
+                            <td class="text-center text-muted small">${vence}</td>
+                            <td class="text-end fw-bold text-indigo">${x.cantidad}</td>
+                        </tr>`;
+                    });
+                }
+                $("#tblItems tbody").html(h);
+            });
+        }
+    </script>
+}

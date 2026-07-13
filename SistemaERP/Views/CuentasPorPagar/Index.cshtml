@@ -1,0 +1,775 @@
+@{
+    ViewData["Title"] = "Historial de Facturas - Cuentas por Pagar (CxP)";
+    var proveedores = ViewBag.ProveedoresList as List<SistemaERP.Models.Entities.Proveedor> ?? new List<SistemaERP.Models.Entities.Proveedor>();
+    var bancos = ViewBag.BancosList as List<SistemaERP.Models.Entities.Banco> ?? new List<SistemaERP.Models.Entities.Banco>();
+}
+
+<div class="container-fluid py-4" style="background: #f8fafc; min-height: calc(100vh - 100px);">
+    <!-- Cabecera de Página -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-slate-800 m-0"><i class="bi bi-wallet2 text-success me-2"></i> Historial de Facturas (Cuentas por Pagar)</h1>
+            <p class="text-muted small m-0">Monitorea y registra los pagos a proveedores de las facturas ingresadas a crédito.</p>
+        </div>
+        <button class="btn btn-outline-primary btn-sm rounded-3" onclick="loadCuentas()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Datos
+        </button>
+    </div>
+
+    <!-- Indicadores / KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden border-start border-4 border-primary">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 me-3">
+                        <i class="bi bi-receipt fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-bold d-block text-uppercase tracking-wider">Total Cuentas Registradas</span>
+                        <h3 class="fw-extrabold text-slate-800 m-0 mt-1" id="kpiTotalCartera">@ViewBag.MonedaSimbolo0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden border-start border-4 border-success">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 text-success rounded-4 p-3 me-3">
+                        <i class="bi bi-cash-stack fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-bold d-block text-uppercase tracking-wider">Total Abonado</span>
+                        <h3 class="fw-extrabold text-slate-800 m-0 mt-1" id="kpiTotalCobrado">@ViewBag.MonedaSimbolo0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden border-start border-4 border-warning">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-4 p-3 me-3">
+                        <i class="bi bi-clock-history fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-bold d-block text-uppercase tracking-wider">Saldo Neto Pendiente</span>
+                        <h3 class="fw-extrabold text-slate-800 m-0 mt-1" id="kpiTotalSaldo">@ViewBag.MonedaSimbolo0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Filtros (Buscar Factura) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white border-0 pt-3 pb-0 ps-3">
+            <h6 class="fw-bold text-slate-800 m-0"><i class="bi bi-search me-2 text-primary"></i> BUSCAR FACTURA</h6>
+        </div>
+        <div class="card-body p-3 bg-white rounded-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-calendar-event me-1"></i> F. EMISIÓN DESDE</label>
+                    <input type="date" id="filterFechaDesde" class="form-control rounded-3">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-calendar-event me-1"></i> AL</label>
+                    <input type="date" id="filterFechaHasta" class="form-control rounded-3">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-truck me-1"></i> PROVEEDOR</label>
+                    <select id="filterProveedor" class="form-select rounded-3">
+                        <option value="">Todos</option>
+                        @foreach (var p in proveedores)
+                        {
+                            <option value="@p.Nombre">@p.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-file-earmark-text me-1"></i> Nº FACTURA</label>
+                    <input type="text" id="filterFactura" class="form-control rounded-3" placeholder="000-000-000000000">
+                </div>
+                <div class="col-md-6 d-flex align-items-center gap-4 py-2">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="filterEstadoRadio" id="radioPendientes" value="POR PAGAR" checked onchange="loadCuentas()">
+                        <label class="form-check-label fw-bold text-primary" for="radioPendientes"><i class="bi bi-clock me-1"></i> PENDIENTES</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="filterEstadoRadio" id="radioPagadas" value="PAGADA" onchange="loadCuentas()">
+                        <label class="form-check-label fw-bold text-success" for="radioPagadas"><i class="bi bi-check-circle me-1"></i> PAGADAS</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="filterEstadoRadio" id="radioTodas" value="" onchange="loadCuentas()">
+                        <label class="form-check-label fw-bold text-secondary" for="radioTodas">TODAS</label>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex justify-content-end gap-2">
+                    <button class="btn btn-secondary btn-sm rounded-3 px-4 py-2" onclick="clearFilters()">
+                        <i class="bi bi-trash me-1"></i> CANCELAR
+                    </button>
+                    <button class="btn btn-primary btn-sm rounded-3 px-4 py-2" onclick="loadCuentas()">
+                        <i class="bi bi-search me-1"></i> BUSCAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Cuentas por Pagar -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="cuentasTable">
+                    <thead class="bg-light border-bottom text-slate-700">
+                        <tr>
+                            <th class="ps-4" style="font-size: 0.8rem; letter-spacing: 0.5px;">Factura</th>
+                            <th style="font-size: 0.8rem; letter-spacing: 0.5px;">PROVEEDOR</th>
+                            <th style="font-size: 0.8rem; letter-spacing: 0.5px;">F.Emision</th>
+                            <th style="font-size: 0.8rem; letter-spacing: 0.5px;">Vence</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Subtotal</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Descuent</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">SUBT %</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Sub. 0</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">SubtotalSinImpu</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Iva</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">TotalPagar</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">NotaCredito</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Ret.Renta</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Ret.Iva</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Total</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Abono</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">Saldo</th>
+                            <th class="text-center" style="font-size: 0.8rem; letter-spacing: 0.5px;">Estado</th>
+                            <th class="text-center pe-4" style="font-size: 0.8rem; letter-spacing: 0.5px; width: 160px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuentasTableBody">
+                        <tr>
+                            <td colspan="19" class="text-center py-5 text-muted">Cargando facturas por pagar...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Abono (Bootstrap 5) -->
+<div class="modal fade" id="modalAbono" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom bg-light py-3">
+                <h5 class="modal-title fw-bold text-slate-800"><i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Pago / Abono</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="abonoForm">
+                    <input type="hidden" id="abonoCompraId" />
+                    
+                    <div class="p-3 bg-light rounded-4 border mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold">PROVEEDOR:</span>
+                            <span class="fw-bold text-slate-800 text-end" id="abonoProveedorName">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold">FACTURA:</span>
+                            <span class="badge bg-secondary rounded-pill" id="abonoFacturaNum">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-warning-emphasis small fw-bold">SALDO PENDIENTE:</span>
+                            <span class="fw-bold text-danger fs-5" id="abonoSaldoPendiente">@ViewBag.MonedaSimbolo0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted"><i class="bi bi-currency-dollar me-1"></i> MONTO A PAGAR</label>
+                        <input type="number" id="abonoMonto" class="form-control form-control-lg text-center fw-bold" placeholder="0.00" min="0.01" step="0.01" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted"><i class="bi bi-wallet2 me-1"></i> MÉTODO DE PAGO</label>
+                        <select id="abonoTipoPago" class="form-select" onchange="toggleBancoField()" required>
+                            <option value="1">Efectivo</option>
+                            <option value="2">Tarjeta de Crédito</option>
+                            <option value="3">Transferencia Bancaria</option>
+                            <option value="4">Depósito Bancario</option>
+                        </select>
+                    </div>
+
+                    <!-- Campos Condicionales de Banco y Referencia -->
+                    <div class="row g-2 mb-3 d-none" id="bancoDetailsRow">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted"><i class="bi bi-bank me-1"></i> BANCO</label>
+                            <select id="abonoBanco" class="form-select">
+                                <option value="">-- Seleccionar --</option>
+                                @foreach (var b in bancos)
+                                {
+                                    <option value="@b.Id">@b.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted"><i class="bi bi-info-circle me-1"></i> COMPROBANTE</label>
+                            <input type="text" id="abonoReferencia" class="form-control" placeholder="Nro. Referencia">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="adquirenteDetailsRow">
+                        <label class="form-label small fw-bold text-muted"><i class="bi bi-credit-card-2-front me-1"></i> ADQUIRENTE / OPERADOR</label>
+                        <input type="text" id="abonoAdquirente" class="form-control" placeholder="Ej: Tarjeta Guayaquil">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success rounded-3 px-4" onclick="submitAbono()">
+                    <i class="bi bi-check-circle me-1"></i> Registrar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Historial de Abonos (Bootstrap 5) -->
+<div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom bg-light py-3">
+                <h5 class="modal-title fw-bold text-slate-800"><i class="bi bi-clock-history text-primary me-2"></i> Historial de Pagos / Abonos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light bg-opacity-25" style="max-height: 480px; overflow-y: auto;">
+                <div class="p-3 bg-white rounded-4 border mb-4">
+                    <div class="row text-center">
+                        <div class="col-4 border-end">
+                            <span class="text-muted small fw-bold d-block text-uppercase">Factura</span>
+                            <span class="fw-bold text-primary fs-5" id="historialFacturaNum">-</span>
+                        </div>
+                        <div class="col-4 border-end">
+                            <span class="text-muted small fw-bold d-block text-uppercase">Total Factura</span>
+                            <span class="fw-bold text-slate-800 fs-5" id="historialTotalMonto">@ViewBag.MonedaSimbolo0.00</span>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small fw-bold d-block text-uppercase">Saldo Pendiente</span>
+                            <span class="fw-bold text-danger fs-5" id="historialSaldoPendiente">@ViewBag.MonedaSimbolo0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline" id="abonosTimeline">
+                    <!-- Abonos Timeline list will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Estilos Premium para la línea de tiempo */
+    .timeline {
+        position: relative;
+        padding-left: 3rem;
+        margin-top: 1rem;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 1.25rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -2.35rem;
+        top: 0.25rem;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #10b981;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 3px #10b98140;
+        z-index: 1;
+    }
+    .timeline-item.warning::before {
+        background: #f59e0b;
+        box-shadow: 0 0 0 3px #f59e0b40;
+    }
+    .bg-indigo-soft {
+        background-color: #f5f3ff;
+        color: #4f46e5;
+    }
+    .text-warning-emphasis {
+        color: #854d0e;
+    }
+    .accordion-chevron {
+        transition: transform 0.25s ease;
+    }
+    .accordion-chevron.open {
+        transform: rotate(180deg);
+    }
+</style>
+
+@section Scripts {
+    <script>
+        let cuentasList = [];
+        let modalAbonoInstance = null;
+        let modalHistorialInstance = null;
+
+        $(document).ready(function() {
+            modalAbonoInstance = new bootstrap.Modal(document.getElementById('modalAbono'));
+            modalHistorialInstance = new bootstrap.Modal(document.getElementById('modalHistorial'));
+            
+            // Set defaults dates (last month)
+            let today = new Date();
+            let lastMonth = new Date();
+            lastMonth.setMonth(today.getMonth() - 1);
+            
+            $('#filterFechaHasta').val(today.toISOString().split('T')[0]);
+            $('#filterFechaDesde').val(lastMonth.toISOString().split('T')[0]);
+
+            loadCuentas();
+        });
+
+        function loadCuentas() {
+            const prov = $('#filterProveedor').val();
+            const fac = $('#filterFactura').val().trim();
+            const est = $('input[name="filterEstadoRadio"]:checked').val();
+            const desde = $('#filterFechaDesde').val();
+            const hasta = $('#filterFechaHasta').val();
+
+            $.ajax({
+                url: '@Url.Action("GetCuentas", "CuentasPorPagar")',
+                type: 'GET',
+                data: { proveedor: prov, factura: fac, estado: est, fechaDesde: desde, fechaHasta: hasta },
+                success: function(res) {
+                    cuentasList = res;
+                    renderTable();
+                    renderKPIs();
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'No se pudieron obtener las cuentas por pagar.', 'error');
+                }
+            });
+        }
+
+        function renderTable() {
+            const tbody = $('#cuentasTableBody');
+            tbody.empty();
+
+            if (cuentasList.length === 0) {
+                tbody.append('<tr><td colspan="19" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-slate-300"></i> No se encontraron cuentas por pagar en el rango de filtros</td></tr>');
+                return;
+            }
+
+            cuentasList.forEach(c => {
+                const isVencida = new Date(c.fechaVencimiento) < new Date() && c.estado === 'POR PAGAR';
+                const statusBadge = c.estado === 'PAGADA' 
+                    ? '<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold" style="font-size:0.75rem;"><i class="bi bi-check-circle-fill me-1"></i> PAGADA</span>'
+                    : '<span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2 fw-bold" style="font-size:0.75rem;"><i class="bi bi-clock-history me-1"></i> POR PAGAR</span>';
+
+                const desc = 0.00; 
+                const subt_porc = c.monto_Fact - (c.iva || c.monto_Fact * 0.15); 
+                const subt_0 = 0.00;
+                const subt_sin_imp = c.monto_Fact - (c.iva || c.monto_Fact * 0.15);
+                const ret_renta = 0.00;
+                const ret_iva = 0.00;
+                const nota_credito = 0.00;
+
+                tbody.append(`
+                    <tr class="${isVencida ? 'table-danger bg-opacity-10' : ''}">
+                        <td class="ps-4">
+                            <span class="badge bg-indigo-soft text-indigo rounded-pill bg-opacity-75" 
+                                  style="cursor: pointer; padding: 0.4rem 0.8rem; font-weight: 700; display: inline-flex; align-items: center;"
+                                  onclick="toggleAccordion(${c.id_Compra})"
+                                  title="Haga clic para expandir desglose">
+                                <i class="bi bi-file-earmark-text me-1"></i>${escapeHtml(c.factura || 'COMPRA-' + c.id_Compra)}
+                                <i class="bi bi-chevron-down ms-2 transition-all accordion-chevron" id="chevron-${c.id_Compra}"></i>
+                            </span>
+                        </td>
+                        <td class="fw-bold text-slate-800">${escapeHtml(c.proveedorNombre)}</td>
+                        <td>${c.fechaEmision}</td>
+                        <td class="${isVencida ? 'text-danger fw-bold' : ''}">
+                            ${c.fechaVencimiento} 
+                            ${isVencida ? '<br><span style="font-size:0.68rem;" class="badge bg-danger rounded-pill"><i class="bi bi-exclamation-triangle"></i> VENCIDO</span>' : ''}
+                        </td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${c.monto_Fact.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${desc.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${subt_porc.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${subt_0.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${subt_sin_imp.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${c.iva ? c.iva.toFixed(2) : (c.monto_Fact * 0.15).toFixed(2)}</td>
+                        <td class="text-end fw-semibold">${MONEDA_SIMBOLO}${c.monto_TotalPagar.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${nota_credito.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${ret_renta.toFixed(2)}</td>
+                        <td class="text-end">${MONEDA_SIMBOLO}${ret_iva.toFixed(2)}</td>
+                        <td class="text-end fw-semibold">${MONEDA_SIMBOLO}${c.monto_TotalPagar.toFixed(2)}</td>
+                        <td class="text-end text-success">${MONEDA_SIMBOLO}${c.monto_Abonado.toFixed(2)}</td>
+                        <td class="text-end fw-bold text-danger">${MONEDA_SIMBOLO}${c.monto_Saldo.toFixed(2)}</td>
+                        <td class="text-center">${statusBadge}</td>
+                        <td class="text-center pe-4">
+                            <div class="btn-group gap-1">
+                                ${c.estado === 'POR PAGAR' ? `
+                                    <button class="btn btn-success btn-sm rounded-3 py-1 px-2" onclick="openAbonoModal(${c.id_Compra}, '${escapeJs(c.proveedorNombre)}', '${escapeJs(c.factura || 'COMPRA-' + c.id_Compra)}', ${c.monto_Saldo})">
+                                        <i class="bi bi-cash"></i> Abonar
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-outline-primary btn-sm rounded-3 py-1 px-2" onclick="openHistorialModal(${c.id_Compra}, '${escapeJs(c.factura || 'COMPRA-' + c.id_Compra)}', ${c.monto_Fact}, ${c.monto_Saldo})">
+                                    <i class="bi bi-clock-history"></i> Historial
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="detail-row-${c.id_Compra}" class="detail-row d-none bg-light bg-opacity-50">
+                        <td colspan="19" class="p-3" style="border-left: 4px solid #10b981 !important;">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border: 1px solid #a7f3d0 !important;">
+                                <div class="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center text-white" style="background-color: #065f46 !important; color: white !important;">
+                                    <span style="font-size: 0.8rem;"><i class="bi bi-receipt-cutoff me-1"></i> DETALLE DE COMPRA (DOCUMENTO: ${escapeHtml(c.factura || 'COMPRA-' + c.id_Compra)})</span>
+                                    <span class="badge bg-white text-success fw-bold" style="color: #047857 !important; background-color: #d1fae5 !important; font-size: 0.78rem;">Total Compra: ${MONEDA_SIMBOLO}${c.monto_TotalPagar.toFixed(2)}</span>
+                                </div>
+                                <div class="card-body p-0 bg-white">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0" id="tblVentaItems_${c.id_Compra}">
+                                            <thead class="text-white text-uppercase text-nowrap" style="background-color: #059669 !important; font-size: 0.75rem; letter-spacing: 0.5px;">
+                                                <tr>
+                                                    <th class="ps-3 py-2">Código Barra</th>
+                                                    <th class="py-2">Producto</th>
+                                                    <th class="text-center py-2">Presentación</th>
+                                                    <th class="text-center py-2">Cantidad</th>
+                                                    <th class="text-center py-2">Bonif.</th>
+                                                    <th class="text-end py-2">P. Compra</th>
+                                                    <th class="text-end py-2">Subtotal</th>
+                                                    <th class="text-end py-2">IVA</th>
+                                                    <th class="text-end py-2">Descuento</th>
+                                                    <th class="text-end py-2">Total a Pagar</th>
+                                                    <th class="ps-3 text-nowrap py-2">Vence</th>
+                                                    <th class="pe-3 text-nowrap py-2">Lote</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td colspan="12" class="text-center py-4 text-muted">
+                                                        <div class="spinner-border spinner-border-sm text-success me-2"></div>Cargando artículos...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <!-- Panel de Totales de Pie (Dashboard Style) -->
+                                    <div class="row g-0 border-top mt-0 py-3 px-3 bg-light rounded-bottom-4" style="background: #f8fafc !important;">
+                                        <div class="col-md-3 border-end pe-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">SUBTOTAL:</span>
+                                                <span class="fw-bold text-danger" style="font-size: 0.95rem;" id="summarySubtotal_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">DESCUENTO:</span>
+                                                <span class="fw-bold text-danger" style="font-size: 0.95rem;" id="summaryDescuento_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 border-end px-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;" id="lblSummarySubIva_${c.id_Compra}">SUBTOTAL 15%:</span>
+                                                <span class="fw-bold text-primary" style="font-size: 0.95rem;" id="summarySubtotalGravado_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">SUBTOTAL 0%:</span>
+                                                <span class="fw-bold text-primary" style="font-size: 0.95rem;" id="summarySubtotalExento_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 border-end px-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">SUBTOTAL SIN IMPUESTO:</span>
+                                                <span class="fw-bold text-primary" style="font-size: 0.95rem;" id="summarySubtotalSinImpuesto_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;" id="lblSummaryIva_${c.id_Compra}">IVA 15%:</span>
+                                                <span class="fw-bold text-success" style="font-size: 0.95rem;" id="summaryIva_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 ps-3 d-flex flex-column justify-content-center align-items-end">
+                                            <span class="text-uppercase fw-bold text-slate-800 mb-1" style="font-size: 0.8rem; letter-spacing: 0.5px;">TOTAL A PAGAR:</span>
+                                            <span class="fw-extrabold text-success fs-4" id="summaryTotal_${c.id_Compra}">@ViewBag.MonedaSimbolo0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function renderKPIs() {
+            let totalCartera = 0;
+            let totalAbonado = 0;
+            let totalSaldo = 0;
+
+            cuentasList.forEach(c => {
+                totalCartera += c.monto_TotalPagar;
+                totalAbonado += c.monto_Abonado;
+                totalSaldo += c.monto_Saldo;
+            });
+
+            $('#kpiTotalCartera').text(`${MONEDA_SIMBOLO}${totalCartera.toFixed(2)}`);
+            $('#kpiTotalCobrado').text(`${MONEDA_SIMBOLO}${totalAbonado.toFixed(2)}`);
+            $('#kpiTotalSaldo').text(`${MONEDA_SIMBOLO}${totalSaldo.toFixed(2)}`);
+        }
+
+        function clearFilters() {
+            $('#filterProveedor').val('');
+            $('#filterFactura').val('');
+            $('#radioPendientes').prop('checked', true);
+            
+            let today = new Date();
+            let lastMonth = new Date();
+            lastMonth.setMonth(today.getMonth() - 1);
+            $('#filterFechaHasta').val(today.toISOString().split('T')[0]);
+            $('#filterFechaDesde').val(lastMonth.toISOString().split('T')[0]);
+
+            loadCuentas();
+        }
+
+        function openAbonoModal(compraId, proveedorName, facturaNum, saldo) {
+            $('#abonoCompraId').val(compraId);
+            $('#abonoProveedorName').text(proveedorName);
+            $('#abonoFacturaNum').text(facturaNum);
+            $('#abonoSaldoPendiente').text(`${MONEDA_SIMBOLO}${saldo.toFixed(2)}`);
+            $('#abonoMonto').val('');
+            $('#abonoTipoPago').val('1');
+            $('#abonoBanco').val('');
+            $('#abonoReferencia').val('');
+            $('#abonoAdquirente').val('');
+            
+            toggleBancoField();
+            modalAbonoInstance.show();
+        }
+
+        function toggleBancoField() {
+            const tp = $('#abonoTipoPago').val();
+            const row = $('#bancoDetailsRow');
+            const adq = $('#adquirenteDetailsRow');
+
+            if (tp === '3' || tp === '4') { // Transferencia o Depósito
+                row.removeClass('d-none');
+                adq.addClass('d-none');
+            } else if (tp === '2') { // Tarjeta
+                row.addClass('d-none');
+                adq.removeClass('d-none');
+            } else { // Efectivo
+                row.addClass('d-none');
+                adq.addClass('d-none');
+            }
+        }
+
+        function submitAbono() {
+            const compraId = $('#abonoCompraId').val();
+            const monto = parseFloat($('#abonoMonto').val());
+            const tipo = parseInt($('#abonoTipoPago').val());
+            const ref = $('#abonoReferencia').val().trim();
+            const bancoId = $('#abonoBanco').val() ? parseInt($('#abonoBanco').val()) : null;
+            const adq = $('#abonoAdquirente').val().trim();
+
+            const saldo = parseFloat($('#abonoSaldoPendiente').text().replace(/[^0-9.-]/g, ''));
+
+            if (isNaN(monto) || monto <= 0) {
+                Swal.fire('Error', 'Por favor ingresa un monto válido a pagar.', 'warning');
+                return;
+            }
+
+            if (monto > saldo + 0.005) {
+                Swal.fire('Error', `El monto ingresado (${MONEDA_SIMBOLO}${monto.toFixed(2)}) supera el saldo de la deuda (${MONEDA_SIMBOLO}${saldo.toFixed(2)}).`, 'warning');
+                return;
+            }
+
+            Swal.fire({ title: 'Registrando pago...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+            let reqData = {
+                idCompra: parseInt(compraId),
+                monto: monto,
+                tipoPago: tipo,
+                referencia: ref,
+                idBanco: bancoId,
+                adquirente: adq
+            };
+
+            $.ajax({
+                url: '@Url.Action("RegistrarAbono", "CuentasPorPagar")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(reqData),
+                success: function(res) {
+                    if (res.success) {
+                        modalAbonoInstance.hide();
+                        Swal.fire('¡Éxito!', res.message, 'success');
+                        loadCuentas();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'Error en el servidor al registrar el pago.', 'error');
+                }
+            });
+        }
+
+        function openHistorialModal(compraId, facturaNum, total, saldo) {
+            $('#historialFacturaNum').text(facturaNum);
+            $('#historialTotalMonto').text(`${MONEDA_SIMBOLO}${total.toFixed(2)}`);
+            $('#historialSaldoPendiente').text(`${MONEDA_SIMBOLO}${saldo.toFixed(2)}`);
+
+            const timeline = $('#abonosTimeline');
+            timeline.empty().append('<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando abonos...</div>');
+
+            modalHistorialInstance.show();
+
+            $.ajax({
+                url: '@Url.Action("GetAbonos", "CuentasPorPagar")',
+                type: 'GET',
+                data: { compraId: compraId },
+                success: function(res) {
+                    timeline.empty();
+
+                    if (res.length === 0) {
+                        timeline.append('<div class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> No se han registrado abonos para esta compra todavía.</div>');
+                        return;
+                    }
+
+                    res.forEach(a => {
+                        timeline.append(`
+                            <div class="timeline-item">
+                                <div class="bg-white p-3 border rounded-4 shadow-sm">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-success fs-5">+${MONEDA_SIMBOLO}${a.monto_Efectivo.toFixed(2)}</span>
+                                        <span class="text-muted small fw-semibold"><i class="bi bi-clock me-1"></i> ${a.fechaPago}</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <span class="d-block"><strong>Método:</strong> ${escapeHtml(a.metodo)}</span>
+                                        ${a.num_Doc ? `<span class="d-block"><strong>Referencia:</strong> ${escapeHtml(a.num_Doc)}</span>` : ''}
+                                        ${a.bancoNombre !== 'N/A' ? `<span class="d-block"><strong>Banco:</strong> ${escapeHtml(a.bancoNombre)}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    });
+                },
+                error: function() {
+                    timeline.empty().append('<div class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar pagos.</div>');
+                }
+            });
+        }
+
+        function toggleAccordion(compraId) {
+            let detailRow = $(`#detail-row-${compraId}`);
+            let chevron = $(`#chevron-${compraId}`);
+            
+            if (detailRow.hasClass('d-none')) {
+                $('.detail-row').addClass('d-none');
+                $('.accordion-chevron').removeClass('open');
+                
+                detailRow.removeClass('d-none');
+                chevron.addClass('open');
+                
+                let tbody = $(`#tblVentaItems_${compraId} tbody`);
+                tbody.empty().append('<tr><td colspan="12" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-success me-2"></div>Cargando artículos...</td></tr>');
+                
+                $.ajax({
+                    url: '@Url.Action("GetCompraDetalle", "CuentasPorPagar")',
+                    type: 'GET',
+                    data: { compraId: compraId },
+                    success: function(res) {
+                        tbody.empty();
+                        if (res.length === 0) {
+                            tbody.append('<tr><td colspan="12" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> No se encontraron detalles para este documento.</td></tr>');
+                            return;
+                        }
+
+                        let subtotalSum = 0;
+                        let descuentoSum = 0;
+                        let subtotalGravado = 0;
+                        let subtotalExento = 0;
+                        let subtotalSinImpuesto = 0;
+                        let ivaSum = 0;
+                        let totalSum = 0;
+                        let activeIvaRate = 15; 
+
+                        res.forEach(d => {
+                            descuentoSum += d.descuento;
+                            subtotalSinImpuesto += d.subtotal;
+                            ivaSum += d.iva;
+                            totalSum += d.total;
+
+                            if (d.iva > 0) {
+                                subtotalGravado += d.subtotal;
+                                if (d.subtotal > 0) {
+                                    let calculatedRate = Math.round((d.iva / d.subtotal) * 100);
+                                    if (calculatedRate > 0) {
+                                        activeIvaRate = calculatedRate;
+                                    }
+                                }
+                            } else {
+                                subtotalExento += d.subtotal;
+                            }
+
+                            let formattedVence = d.vence ? new Date(d.vence).toISOString().split('T')[0] : 'N/A';
+
+                            tbody.append(`
+                                <tr>
+                                    <td class="ps-3 text-nowrap"><span class="badge bg-light text-secondary border px-2 py-1">${escapeHtml(d.codigoBarra)}</span></td>
+                                    <td>
+                                        <div class="fw-bold text-slate-800">${escapeHtml(d.producto)}</div>
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-indigo bg-opacity-10 text-indigo border px-2 py-1" style="font-size: 0.72rem;">${escapeHtml(d.presentacion)}</span></td>
+                                    <td class="text-center fw-bold">${d.cantidad}</td>
+                                    <td class="text-center text-muted">${d.bonif}</td>
+                                    <td class="text-end fw-semibold">${MONEDA_SIMBOLO}${d.pvp.toFixed(2)}</td>
+                                    <td class="text-end">${MONEDA_SIMBOLO}${d.subtotal.toFixed(2)}</td>
+                                    <td class="text-end text-success">${MONEDA_SIMBOLO}${d.iva.toFixed(2)}</td>
+                                    <td class="text-end text-danger">-${MONEDA_SIMBOLO}${d.descuento.toFixed(2)}</td>
+                                    <td class="text-end fw-bold text-indigo">${MONEDA_SIMBOLO}${d.total.toFixed(2)}</td>
+                                    <td class="ps-3 text-nowrap">${formattedVence}</td>
+                                    <td class="pe-3 text-nowrap">${escapeHtml(d.lote)}</td>
+                                </tr>
+                            `);
+                        });
+
+                        subtotalSum = subtotalSinImpuesto + descuentoSum;
+
+                        $(`#lblSummarySubIva_${compraId}`).text(`SUBTOTAL ${activeIvaRate}%:`);
+                        $(`#lblSummaryIva_${compraId}`).text(`IVA ${activeIvaRate}%:`);
+
+                        $(`#summarySubtotal_${compraId}`).text(`${MONEDA_SIMBOLO}${subtotalSum.toFixed(2)}`);
+                        $(`#summaryDescuento_${compraId}`).text(`${MONEDA_SIMBOLO}${descuentoSum.toFixed(2)}`);
+                        $(`#summarySubtotalGravado_${compraId}`).text(`${MONEDA_SIMBOLO}${subtotalGravado.toFixed(2)}`);
+                        $(`#summarySubtotalExento_${compraId}`).text(`${MONEDA_SIMBOLO}${subtotalExento.toFixed(2)}`);
+                        $(`#summarySubtotalSinImpuesto_${compraId}`).text(`${MONEDA_SIMBOLO}${subtotalSinImpuesto.toFixed(2)}`);
+                        $(`#summaryIva_${compraId}`).text(`${MONEDA_SIMBOLO}${ivaSum.toFixed(2)}`);
+                        $(`#summaryTotal_${compraId}`).text(`${MONEDA_SIMBOLO}${totalSum.toFixed(2)}`);
+                    },
+                    error: function() {
+                        tbody.empty().append('<tr><td colspan="12" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar los artículos.</td></tr>');
+                    }
+                });
+            } else {
+                detailRow.addClass('d-none');
+                chevron.removeClass('open');
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function escapeJs(str) {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+    </script>
+}

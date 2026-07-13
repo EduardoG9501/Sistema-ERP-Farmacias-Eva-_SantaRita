@@ -1,0 +1,91 @@
+@model SistemaERP.Models.Entities.CargoCompra
+
+@{
+    ViewData["Title"] = "Detalle de Compra";
+    var detalles = ViewBag.Detalles as List<SistemaERP.Models.Entities.CargoCompra_Producto>;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Detalle de Compra</h2>
+        <p class="text-muted">Factura #@Model.Factura | Proveedor: @ViewBag.Proveedor</p>
+    </div>
+    <div class="col-auto">
+        <button onclick="window.print()" class="btn btn-light border shadow-sm me-2">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+        <a asp-action="Index" class="btn btn-premium shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Listado
+        </a>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-12">
+        <div class="premium-card mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Fecha de Registro</label>
+                    <span class="text-dark fw-medium">@Model.FechaHora_Reg?.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="col-md-3">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Número de Factura</label>
+                    <span class="text-primary fw-bold">@Model.Factura</span>
+                </div>
+                <div class="col-md-3">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Estado</label>
+                    <span class="badge @(Model.Estado == "Pagado" ? "bg-success" : "bg-warning") rounded-pill">@Model.Estado</span>
+                </div>
+                <div class="col-md-3">
+                    <label class="text-xs text-uppercase text-muted fw-bold d-block">Observación</label>
+                    <span class="text-dark">@(string.IsNullOrEmpty(Model.Observacion) ? "Ninguna" : Model.Observacion)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="premium-card p-0 overflow-hidden">
+            <div class="p-4">
+                <h5 class="fw-bold mb-3">Productos Comprados</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="text-xs text-uppercase py-3">Producto</th>
+                                <th class="text-xs text-uppercase py-3 text-center">Cantidad</th>
+                                <th class="text-xs text-uppercase py-3 text-end">Costo Unit.</th>
+                                <th class="text-xs text-uppercase py-3 text-end">Lote / Vence</th>
+                                <th class="text-xs text-uppercase py-3 text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (detalles != null)
+                            {
+                                foreach (var item in detalles)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="fw-bold d-block">@item.Producto</span>
+                                            <span class="text-xs text-muted">ID: @item.Id_Producto</span>
+                                        </td>
+                                        <td class="text-center">@item.Cantidad</td>
+<td class="text-end">@ViewBag.MonedaSimbolo@item.PVF?.ToString("N2")</td>
+
+
+
+                                        <td class="text-end fw-bold">@ViewBag.MonedaSimbolo@item.TotalPagar?.ToString("N2")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                        <tfoot class="bg-indigo-soft">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold py-3 text-indigo">TOTAL COMPRA:</td>
+                                <td class="text-end fw-bold py-3 text-indigo fs-5">@ViewBag.MonedaSimbolo@(detalles?.Sum(d => d.TotalPagar ?? 0).ToString("N2"))</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

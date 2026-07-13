@@ -1,0 +1,32 @@
+@{
+    Layout = "_LayoutPublico";
+}
+
+<div class="container my-5 py-5 animate__animated animate__fadeIn">
+    <div class="row justify-content-center text-center">
+        <div class="col-lg-6">
+            <div class="bg-white p-5 border rounded shadow-sm" style="border-radius: 20px; border: 1px solid var(--card-border) !important;">
+                <div class="bg-indigo-soft rounded-circle d-inline-flex align-items-center justify-content-center p-4 mb-4" style="width:100px; height:100px; background-color: rgba(79, 70, 229, 0.08);">
+                    <i class="bi bi-globe-americas text-indigo fs-1" style="color:#4f46e5;"></i>
+                </div>
+                
+                <h3 class="fw-bold mb-3 font-display">Catálogo Digital Temporalmente No Disponible</h3>
+                
+                <p class="text-muted mb-4 small px-3">
+                    El sitio web de catálogo de productos para la empresa <strong>@(ViewBag.EmpresaCentral?.Nombre ?? ViewBag.Alias)</strong> no se encuentra activo en este momento.
+                </p>
+                
+                <p class="text-xs text-muted mb-4">
+                    Si eres el administrador, puedes habilitarlo ingresando al ERP en la sección de <strong>Parámetros del Sistema -> Catálogo Público Web</strong>.
+                </p>
+                
+                @if (ViewBag.EmpresaCentral != null && !string.IsNullOrEmpty(ViewBag.EmpresaCentral.Telefono))
+                {
+                    <a href="tel:@ViewBag.EmpresaCentral.Telefono" class="btn btn-premium px-4 shadow-sm" style="border-radius:10px; font-weight:600; background-color:#4f46e5; border:none; color:white; padding:0.6rem 1.5rem;">
+                        <i class="bi bi-telephone-fill me-1"></i> Llamar a la Empresa
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,85 @@
+@model SistemaERP.Controllers.ReportesController.VentasMensualesReportViewModel
+@{
+    Layout = null;
+    var simb = (ViewBag.MonedaSimbolo as string) ?? "$";
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <style>
+        table {
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 5px;
+            font-size: 11px;
+        }
+        th {
+            background-color: #d9d9d9;
+            font-weight: bold;
+        }
+        .header-section {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .subtitle {
+            font-size: 11px;
+            color: #595959;
+        }
+        .double-border {
+            border-top: 3px double #000000;
+            border-bottom: 3px double #000000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="title">@ViewBag.Parametros.NombreEmpresa</div>
+        <div class="subtitle">@ViewBag.Parametros.Direccion</div>
+        <div class="subtitle">Reporte de ventas mensuales</div>
+        <div class="subtitle">Desde: @Model.Desde.ToString("dd/MM/yyyy") - Hasta: @Model.Hasta.ToString("dd/MM/yyyy")</div>
+        <div class="subtitle" style="font-size: 9px; color: #7f7f7f;">Exportado: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>FECHA</th>
+                <th style="text-align: right; width: 40%;">TOTAL A PAGAR</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.GruposMensuales.Any())
+            {
+                <tr>
+                    <td colspan="2" style="text-align: center;">No se encontraron ventas en el rango seleccionado.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model.GruposMensuales)
+                {
+                    <tr>
+                        <td>@item.MesAnio</td>
+                        <td style="text-align: right;">@item.TotalCobrado.ToString("N2")</td>
+                    </tr>
+                }
+                <tr class="double-border">
+                    <td>Totales:</td>
+                    <td style="text-align: right;">@Model.TotalVentas.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>

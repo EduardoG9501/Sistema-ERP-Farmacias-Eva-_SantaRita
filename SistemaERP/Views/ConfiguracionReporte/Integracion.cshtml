@@ -1,0 +1,62 @@
+@model SistemaERP.Models.Entities.ParametrosSistema
+
+@{
+    ViewData["Title"] = "Integración Contable";
+    var cuentas = ViewBag.Cuentas as List<SistemaERP.Models.Entities.CuentaContable> ?? new List<SistemaERP.Models.Entities.CuentaContable>();
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-arrow-left-right me-2"></i>Integración Contable</h2>
+        <p class="text-muted">Conecte las operaciones de Ventas (Cuentas por Cobrar) y Compras (Cuentas por Pagar) con su Catálogo de Cuentas Contables.</p>
+    </div>
+</div>
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="premium-card p-4">
+            <form asp-action="Integracion" method="post">
+                @Html.AntiForgeryToken()
+                
+                <div class="mb-4">
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Ventas y Cuentas por Cobrar</h5>
+                    <div class="mb-3">
+                        <label for="cuentaVentasId" class="form-label fw-bold small">Cuenta Contable de Ingresos por Ventas</label>
+                        <select name="cuentaVentasId" class="form-select" id="cuentaVentasId">
+                            <option value="">-- Sin asignar --</option>
+                            @foreach (var c in cuentas)
+                            {
+                                <option value="@c.Id" selected="@(c.Id == Model.CuentaContableVentasId)">@c.Codigo - @c.Nombre (@c.Tipo)</option>
+                            }
+                        </select>
+                        <div class="form-text text-muted small mt-1">
+                            El total sumado de todas las ventas del día se reportará en esta cuenta del Estado de Resultados.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Compras y Cuentas por Pagar</h5>
+                    <div class="mb-3">
+                        <label for="cuentaCostosId" class="form-label fw-bold small">Cuenta Contable de Costos por Compras</label>
+                        <select name="cuentaCostosId" class="form-select" id="cuentaCostosId">
+                            <option value="">-- Sin asignar --</option>
+                            @foreach (var c in cuentas)
+                            {
+                                <option value="@c.Id" selected="@(c.Id == Model.CuentaContableCostosId)">@c.Codigo - @c.Nombre (@c.Tipo)</option>
+                            }
+                        </select>
+                        <div class="form-text text-muted small mt-1">
+                            El total sumado de todas las compras (costo de ventas) del periodo se reportará en esta cuenta del Estado de Resultados.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                    <a asp-controller="ConfiguracionReporte" asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-premium shadow-sm">Guardar Configuración</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,259 @@
+@using Microsoft.EntityFrameworkCore
+@inject SistemaERP.Models.ScmContext ScmDb
+@model Tuple<List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>, Dictionary<string, object>>
+@{
+    var campos = Model.Item1;
+    var valores = Model.Item2;
+}
+
+@if (campos != null && campos.Any())
+{
+    <style>
+        .custom-fields-section {
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            margin-top: 30px;
+            padding-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .custom-fields-title {
+            grid-column: span 2;
+            font-size: 14px;
+            font-weight: 700;
+            color: #60a5fa;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dynamic-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .dynamic-form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dynamic-form-group input, 
+        .dynamic-form-group select {
+            width: 100%;
+            background: rgba(10, 15, 30, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            color: #f8fafc;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .dynamic-form-group input:focus, 
+        .dynamic-form-group select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+        }
+
+        .info-tooltip {
+            cursor: help;
+            color: #60a5fa;
+            font-size: 12px;
+        }
+    </style>
+
+    <div class="custom-fields-section">
+        <div class="custom-fields-title">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Campos Adicionales</span>
+        </div>
+
+        @foreach (var campo in campos.Where(c => c.VisibleEnFormulario))
+        {
+            var valueKey = campo.NombreCampo;
+            var valExist = valores.TryGetValue(valueKey, out var rawVal);
+            var valorStr = valExist ? rawVal?.ToString() : (campo.ValorDefault ?? "");
+
+            <div class="dynamic-form-group">
+                <label for="custom_field_@campo.NombreCampo">
+                    <span>@campo.Etiqueta</span>
+                    @if (campo.Requerido)
+                    {
+                        <span style="color: #ef4444;" title="Obligatorio">*</span>
+                    }
+                    @if (!string.IsNullOrEmpty(campo.Tooltip))
+                    {
+                        <i class="fa-solid fa-circle-info info-tooltip" title="@campo.Tooltip"></i>
+                    }
+                </label>
+
+                @if (campo.TipoDato.Equals("Texto", StringComparison.OrdinalIgnoreCase))
+                {
+                    <input type="text" 
+                           id="custom_field_@campo.NombreCampo" 
+                           name="custom_fields[@campo.NombreCampo]" 
+                           value="@valorStr"
+                           placeholder="@campo.Placeholder"
+                           @(campo.Requerido ? "required" : "")
+                           @(campo.MaxLongitud.HasValue ? $"maxlength={campo.MaxLongitud.Value}" : "") />
+                }
+                else if (campo.TipoDato.Equals("Numero", StringComparison.OrdinalIgnoreCase))
+                {
+                    <input type="number" 
+                           step="any"
+                           id="custom_field_@campo.NombreCampo" 
+                           name="custom_fields[@campo.NombreCampo]" 
+                           value="@valorStr"
+                           placeholder="@campo.Placeholder"
+                           @(campo.Requerido ? "required" : "") />
+                }
+                else if (campo.TipoDato.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Si el valor es fecha válida, formatearla para input date (yyyy-MM-dd)
+                    var fechaFormateada = "";
+                    if (DateTime.TryParse(valorStr, out DateTime dt))
+                    {
+                        fechaFormateada = dt.ToString("yyyy-MM-dd");
+                    }
+                    else
+                    {
+                        fechaFormateada = valorStr;
+                    }
+
+                    <input type="date" 
+                           id="custom_field_@campo.NombreCampo" 
+                           name="custom_fields[@campo.NombreCampo]" 
+                           value="@fechaFormateada"
+                           @(campo.Requerido ? "required" : "") />
+                }
+                else if (campo.TipoDato.Equals("Booleano", StringComparison.OrdinalIgnoreCase))
+                {
+                    var isChecked = valorStr.Equals("true", StringComparison.OrdinalIgnoreCase) || valorStr.Equals("1");
+                    
+                    <select id="custom_field_@campo.NombreCampo" name="custom_fields[@campo.NombreCampo]">
+                        <option value="false" selected="@(!isChecked)">No</option>
+                        <option value="true" selected="@(isChecked)">Sí</option>
+                    </select>
+                }
+                else if (campo.TipoDato.Equals("Lista", StringComparison.OrdinalIgnoreCase))
+                {
+                    var opciones = new List<string>();
+                    bool esTabla = false;
+                    string tablaNombre = "";
+
+                    if (!string.IsNullOrEmpty(campo.OpcionesLista) && campo.OpcionesLista.Trim().StartsWith("{"))
+                    {
+                        try
+                        {
+                            using (var doc = System.Text.Json.JsonDocument.Parse(campo.OpcionesLista))
+                            {
+                                if (doc.RootElement.TryGetProperty("EsTabla", out var esTablaProp) && esTablaProp.GetBoolean())
+                                {
+                                    esTabla = true;
+                                    if (doc.RootElement.TryGetProperty("TablaNombre", out var tablaProp))
+                                    {
+                                        tablaNombre = tablaProp.GetString() ?? "";
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (esTabla && !string.IsNullOrEmpty(tablaNombre))
+                    {
+                        try
+                        {
+                            var conn = ScmDb.Database.GetDbConnection();
+                            var state = conn.State;
+                            if (state != System.Data.ConnectionState.Open)
+                            {
+                                ScmDb.Database.OpenConnection();
+                            }
+                            
+                            using (var command = conn.CreateCommand())
+                            {
+                                // Consultar esquema de la tabla de forma segura para buscar columna descriptiva
+                                command.CommandText = $"SELECT TOP 1 * FROM [{tablaNombre}]";
+                                string columnaSeleccionada = null;
+                                using (var reader = command.ExecuteReader())
+                                {
+                                    var schemaTable = reader.GetSchemaTable();
+                                    if (schemaTable != null)
+                                    {
+                                        var columns = new List<string>();
+                                        foreach (System.Data.DataRow row in schemaTable.Rows)
+                                        {
+                                            columns.Add(row["ColumnName"].ToString());
+                                        }
+                                        
+                                        if (columns.Contains("Nombre", StringComparer.OrdinalIgnoreCase))
+                                            columnaSeleccionada = "Nombre";
+                                        else if (columns.Contains("Descripcion", StringComparer.OrdinalIgnoreCase))
+                                            columnaSeleccionada = "Descripcion";
+                                        else if (columns.Contains("Valor", StringComparer.OrdinalIgnoreCase))
+                                            columnaSeleccionada = "Valor";
+                                        else if (columns.Contains("NombreCampo", StringComparer.OrdinalIgnoreCase))
+                                            columnaSeleccionada = "NombreCampo";
+                                        else if (columns.Count > 1)
+                                            columnaSeleccionada = columns[1];
+                                        else if (columns.Count > 0)
+                                            columnaSeleccionada = columns[0];
+                                    }
+                                }
+                                
+                                if (!string.IsNullOrEmpty(columnaSeleccionada))
+                                {
+                                    using (var selectCmd = conn.CreateCommand())
+                                    {
+                                        selectCmd.CommandText = $"SELECT [{columnaSeleccionada}] FROM [{tablaNombre}] ORDER BY [{columnaSeleccionada}]";
+                                        using (var reader = selectCmd.ExecuteReader())
+                                        {
+                                            while (reader.Read())
+                                            {
+                                                var val = reader.GetValue(0);
+                                                if (val != null && val != DBNull.Value)
+                                                {
+                                                    opciones.Add(val.ToString());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            opciones.Add($"[Error al cargar tabla {tablaNombre}]");
+                        }
+                    }
+                    else
+                    {
+                        opciones = (campo.OpcionesLista ?? "")
+                            .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(o => o.Trim())
+                            .ToList();
+                    }
+
+                    <select id="custom_field_@campo.NombreCampo" name="custom_fields[@campo.NombreCampo]" @(campo.Requerido ? "required" : "")>
+                        <option value="">-- Seleccione Opción --</option>
+                        @foreach (var opcion in opciones)
+                        {
+                            <option value="@opcion" selected="@(string.Equals(opcion, valorStr, StringComparison.OrdinalIgnoreCase))">@opcion</option>
+                        }
+                    </select>
+                }
+            </div>
+        }
+    </div>
+}

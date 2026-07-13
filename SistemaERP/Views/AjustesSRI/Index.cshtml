@@ -1,0 +1,376 @@
+@model SistemaERP.Models.Entities.ConfiguracionSRI
+
+@{
+    ViewData["Title"] = "Parámetros SRI - Comprobantes Electrónicos";
+}
+
+<div class="row animate__animated animate__fadeIn mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1"><i class="bi bi-shield-lock-fill me-2 text-primary"></i>Parámetros SRI - Comprobantes Electrónicos</h2>
+        <p class="text-muted">Configura todos los parámetros necesarios para la emisión de comprobantes electrónicos.</p>
+    </div>
+</div>
+
+<form asp-action="Guardar" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-4">
+
+        <!-- ══════ COLUMNA IZQUIERDA ══════ -->
+        <div class="col-lg-8">
+
+            <!-- DATOS DEL CONTRIBUYENTE -->
+            <div class="premium-card mb-4">
+                <h5 class="fw-bold mb-4 pb-2 border-bottom">
+                    <i class="bi bi-person-badge text-primary me-2"></i>Datos del Contribuyente
+                </h5>
+                <div class="row g-3">
+
+                    <!-- Fila 1: Ambiente / Tipo Emisión / Tipo Comprobante -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Ambiente</label>
+                        <select asp-for="Entorno" class="form-select border-0 bg-light py-2">
+                            <option value="PRUEBAS">1 - Pruebas</option>
+                            <option value="PRODUCCION">2 - Producción</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Tipo Emisión</label>
+                        <input type="text" value="1 - Normal" class="form-control border-0 bg-light py-2" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Tipo Comprobante Fact.</label>
+                        <input type="text" value="01 - Factura" class="form-control border-0 bg-light py-2" readonly />
+                    </div>
+
+                    <!-- Fila 2: Agente Retención -->
+                    <div class="col-12">
+                        <div class="bg-light rounded p-3">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3 d-flex align-items-center" style="padding-top:28px">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" asp-for="AgenteRetencion" id="chkRetencion">
+                                        <label class="form-check-label fw-bold small" for="chkRetencion">Agente Retención</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">Nro. Resolución</label>
+                                    <input type="text" asp-for="NumeroResolucion" class="form-control border-0 bg-white py-2" placeholder="Nro." />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">Contribuyente Especial Nro.</label>
+                                    <input type="text" asp-for="ContribuyenteEspecialNro" class="form-control border-0 bg-white py-2" placeholder="Nro." />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">Tipo Comp. Retención</label>
+                                    <input type="text" asp-for="TipoComprobanteRetencion" class="form-control border-0 bg-white py-2" placeholder="07" />
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">Cód. Doc. Sustento</label>
+                                    <input type="text" asp-for="CodDocSustento" class="form-control border-0 bg-white py-2" placeholder="42" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 3: RUC / Razón Social -->
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold small text-muted text-uppercase">RUC del Emisor</label>
+                        <input type="text" asp-for="RUC_Emisor" class="form-control border-0 bg-light py-2" maxlength="13" />
+                        <small class="text-muted">13 dígitos exactos</small>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Razón Social</label>
+                        <input type="text" asp-for="RazonSocial" class="form-control border-0 bg-light py-2" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Nombre Comercial</label>
+                        <input type="text" asp-for="NombreComercial" class="form-control border-0 bg-light py-2" />
+                    </div>
+
+                    <!-- Fila 4: Estab / Pto / Código Numérico -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Cód. Establecimiento</label>
+                        <input type="text" asp-for="Establecimiento" class="form-control border-0 bg-light py-2" placeholder="001" maxlength="3" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Cód. Punto Emisión</label>
+                        <input type="text" asp-for="PuntoEmision" class="form-control border-0 bg-light py-2" placeholder="001" maxlength="3" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Código Numérico</label>
+                        <input type="text" asp-for="CodigoNumerico" class="form-control border-0 bg-light py-2" placeholder="12345678" maxlength="8" />
+                        <small class="text-muted">8 dígitos clave de acceso</small>
+                    </div>
+
+                    <!-- Fila 5: Direcciones -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Dirección Matriz</label>
+                        <input type="text" asp-for="DireccionMatriz" class="form-control border-0 bg-light py-2" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Dir. Establecimiento</label>
+                        <input type="text" asp-for="DireccionEstablecimiento" class="form-control border-0 bg-light py-2" />
+                    </div>
+
+                    <!-- Fila 6: Obligado / Régimen / Activo -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Régimen</label>
+                        <select asp-for="Regimen" class="form-select border-0 bg-light py-2">
+                            <option value="RIMPE">RIMPE</option>
+                            <option value="GENERAL">General</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center" style="padding-top:28px">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="ObligadoContabilidad" id="chkContabilidad">
+                            <label class="form-check-label fw-bold small" for="chkContabilidad">Obligado Contabilidad</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Monto Mínimo Consumidor Final</label>
+                        <input type="number" step="0.01" asp-for="MontoMinimoConsumidorFinal" class="form-control border-0 bg-light py-2" placeholder="50.00" />
+                    </div>
+
+                    <!-- Fila 7: URL SRI Local / Activaciones -->
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold small text-muted text-uppercase">URL SRI Local</label>
+                        <input type="text" asp-for="UrlSriLocal" class="form-control border-0 bg-light py-2"
+                               placeholder="http://localhost/wsSRI/Services/SRI.asmx" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Impresora de Tickets</label>
+                        <input type="text" asp-for="ImpresoraTickets" class="form-control border-0 bg-light py-2" placeholder="EPSON" />
+                    </div>
+
+                    <!-- Fila 8: Switches de activación -->
+                    <div class="col-12">
+                        <div class="rounded border p-3 d-flex gap-5 align-items-center" style="background:#f8f9ff">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" asp-for="ActivarServicioSRI" id="chkActivar">
+                                <label class="form-check-label fw-bold small text-success" for="chkActivar">
+                                    <i class="bi bi-toggle-on me-1"></i>Activar Servicio SRI
+                                </label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" asp-for="ActivarEnvioDesdeVentas" id="chkEnvioVentas">
+                                <label class="form-check-label fw-bold small text-primary" for="chkEnvioVentas">
+                                    <i class="bi bi-send me-1"></i>Activar Envío al SRI desde Ventas
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clave Maestra POS -->
+                    <div class="col-12">
+                        <div class="rounded border border-warning p-3" style="background:#fffbeb">
+                            <h6 class="fw-bold mb-2 text-warning"><i class="bi bi-shield-lock me-2"></i>Clave Maestra POS — Autorización de Precios</h6>
+                            <p class="small text-muted mb-2">Esta clave se solicita cuando el cajero intenta vender un producto por debajo del costo (PVF). Cámbiela regularmente.</p>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold small text-muted text-uppercase d-flex align-items-center gap-2">
+                                    Clave Maestra
+                                    @if (!string.IsNullOrWhiteSpace(Model.ClaveMaestra)) {
+                                        <span class="badge bg-success rounded-pill" style="font-size:0.65rem"><i class="bi bi-check-circle-fill me-1"></i>Guardada</span>
+                                    }
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" asp-for="ClaveMaestra" class="form-control border-0 bg-white py-2" id="pwdMaestra"
+                                           placeholder="@(string.IsNullOrWhiteSpace(Model.ClaveMaestra) ? "Nueva clave maestra" : "Dejar vacío para mantener la clave actual")" />
+                                    <button class="btn btn-light border" type="button" onclick="togglePwd('pwdMaestra',this)"><i class="bi bi-eye"></i></button>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(Model.ClaveMaestra)) {
+                                    <small class="text-success"><i class="bi bi-shield-check me-1"></i>Clave configurada — déjelo vacío para no cambiarla.</small>
+                                } else {
+                                    <small class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Sin clave configurada — no se podrán autorizar precios bajo costo.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- FIRMA DIGITAL -->
+            <div class="premium-card mb-4">
+                <h5 class="fw-bold mb-4 pb-2 border-bottom">
+                    <i class="bi bi-key-fill text-warning me-2"></i>Firma Digital (Certificado .pfx)
+                </h5>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Ruta del Certificado (.pfx)</label>
+                        <input type="text" asp-for="PathFileCertificado" class="form-control border-0 bg-light py-2"
+                               placeholder="C:\ServicioSRI\FirmaElectronica\certificado.pfx" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase d-flex align-items-center gap-2">
+                            Contraseña del Certificado
+                            @if (!string.IsNullOrWhiteSpace(Model.PasswordCertificado)) {
+                                <span class="badge bg-success rounded-pill" style="font-size:0.65rem"><i class="bi bi-check-circle-fill me-1"></i>Guardada</span>
+                            }
+                        </label>
+                        <div class="input-group">
+                            <input type="password" asp-for="PasswordCertificado" class="form-control border-0 bg-light py-2" id="pwdCert"
+                                   placeholder="@(string.IsNullOrWhiteSpace(Model.PasswordCertificado) ? "Contraseña del .pfx" : "Dejar vacío para mantener la contraseña actual")" />
+                            <button class="btn btn-light border-0" type="button" onclick="togglePwd('pwdCert',this)"><i class="bi bi-eye"></i></button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.PasswordCertificado)) {
+                            <small class="text-success"><i class="bi bi-lock-fill me-1"></i>Contraseña guardada — déjelo vacío para no cambiarla.</small>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Ruta carpeta XMLs</label>
+                        <input type="text" asp-for="PathFileSaveXml" class="form-control border-0 bg-light py-2"
+                               placeholder="C:\ServicioSRI\XML\" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- CORREO SMTP -->
+            <div class="premium-card mb-4">
+                <h5 class="fw-bold mb-4 pb-2 border-bottom">
+                    <i class="bi bi-envelope-at-fill text-info me-2"></i>Datos Envío Correo Factura SRI
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Servidor SMTP</label>
+                        <input type="text" asp-for="SmtpHost" class="form-control border-0 bg-light" placeholder="smtp.gmail.com" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Puerto</label>
+                        <input type="number" asp-for="SmtpPort" class="form-control border-0 bg-light" placeholder="587" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Correo Remitente</label>
+                        <input type="text" asp-for="SmtpUser" class="form-control border-0 bg-light" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase d-flex align-items-center gap-2">
+                            Contraseña SMTP
+                            @if (!string.IsNullOrWhiteSpace(Model.SmtpPassword)) {
+                                <span class="badge bg-success rounded-pill" style="font-size:0.65rem"><i class="bi bi-check-circle-fill me-1"></i>Guardada</span>
+                            }
+                        </label>
+                        <div class="input-group">
+                            <input type="password" asp-for="SmtpPassword" class="form-control border-0 bg-light" id="pwdSmtp"
+                                   placeholder="@(string.IsNullOrWhiteSpace(Model.SmtpPassword) ? "Contraseña del correo SMTP" : "Dejar vacío para mantener la contraseña actual")" />
+                            <button class="btn btn-light border-0" type="button" onclick="togglePwd('pwdSmtp',this)"><i class="bi bi-eye"></i></button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.SmtpPassword)) {
+                            <small class="text-success"><i class="bi bi-lock-fill me-1"></i>Contraseña guardada — déjelo vacío para no cambiarla.</small>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Email Remitente Visible</label>
+                        <input type="text" asp-for="SenderEmail" class="form-control border-0 bg-light" />
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center" style="padding-top:28px">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="SmtpSsl" id="chkSsl">
+                            <label class="form-check-label fw-bold small" for="chkSsl">Usar SSL/TLS</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mb-4">
+                <button type="submit" class="btn btn-premium shadow px-5 py-2 fs-6">
+                    <i class="bi bi-save me-2"></i>Guardar Configuración
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════ COLUMNA DERECHA ══════ -->
+        <div class="col-lg-4">
+            <div class="premium-card mb-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-broadcast me-2 text-success"></i>Estado del Servicio</h6>
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td class="text-muted small">Ambiente:</td>
+                        <td>
+                            <span class="badge @(Model.Entorno == "PRODUCCION" ? "bg-success" : "bg-warning text-dark") rounded-pill">
+                                @Model.Entorno
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">RUC:</td>
+                        <td class="fw-bold small">@(Model.RUC_Emisor?.PadLeft(13,'0') ?? "No configurado")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Establecimiento:</td>
+                        <td class="fw-bold small">@Model.Establecimiento - @Model.PuntoEmision</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Régimen:</td>
+                        <td class="fw-bold small">@Model.Regimen</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Servicio SRI:</td>
+                        <td>
+                            @if (Model.ActivarServicioSRI) {
+                                <span class="badge bg-success rounded-pill"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                            } else {
+                                <span class="badge bg-secondary rounded-pill">Inactivo</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Envío desde ventas:</td>
+                        <td>
+                            @if (Model.ActivarEnvioDesdeVentas) {
+                                <span class="badge bg-primary rounded-pill"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                            } else {
+                                <span class="badge bg-secondary rounded-pill">Inactivo</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Actualizado:</td>
+                        <td class="small">@Model.UltimaActualizacion?.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="premium-card mb-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-link-45deg me-2"></i>URLs del SRI</h6>
+                <p class="fw-bold mb-1" style="font-size:10px">PRUEBAS:</p>
+                <p class="mb-3" style="font-size:9px;word-break:break-all">https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline</p>
+                <p class="fw-bold mb-1" style="font-size:10px">PRODUCCIÓN:</p>
+                <p class="mb-3" style="font-size:9px;word-break:break-all">https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline</p>
+                <a href="https://sri.gob.ec" target="_blank" class="btn btn-light btn-sm w-100 border-0">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Portal SRI
+                </a>
+            </div>
+
+            <div class="alert alert-warning border-0 shadow-sm">
+                <h6 class="fw-bold"><i class="bi bi-calendar-check me-2"></i>Vigencia del Certificado</h6>
+                <p class="mb-0 small">Verifique que su firma electrónica no haya vencido antes de emitir comprobantes.</p>
+            </div>
+        </div>
+
+    </div>
+</form>
+
+@if (TempData["Success"] != null) {
+    <script>
+        Swal.fire({ title: "¡Guardado!", text: "@TempData["Success"]", icon: "success", confirmButtonColor: "#1e3a8a" });
+    </script>
+}
+@if (TempData["Error"] != null) {
+    <script>
+        Swal.fire({ title: "Error al Guardar", text: "@TempData["Error"]", icon: "error", confirmButtonColor: "#dc2626" });
+    </script>
+}
+
+@section Scripts {
+    <script>
+        function togglePwd(id, btn) {
+            const inp = document.getElementById(id);
+            const hide = inp.type === 'password';
+            inp.type = hide ? 'text' : 'password';
+            btn.innerHTML = hide ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+        }
+    </script>
+}

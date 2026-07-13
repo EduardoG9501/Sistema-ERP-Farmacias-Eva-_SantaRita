@@ -1,0 +1,430 @@
+@model IEnumerable<SistemaERP.Models.Entities.CierreCaja>
+@{
+    ViewData["Title"] = "Reporte de Cierre de Caja";
+    var moneda = ViewBag.MonedaSimbolo ?? "$";
+    var desde = ViewBag.Desde as string;
+    var hasta = ViewBag.Hasta as string;
+}
+
+<!-- FILTROS DE BÚSQUEDA (SE OCULTAN EN IMPRESIÓN) -->
+<div class="row mb-3 align-items-center g-2 no-print animate__animated animate__fadeIn">
+    <div class="col-12 bg-light p-3 rounded border border-light shadow-sm">
+        <form method="get" class="d-flex flex-wrap gap-3 align-items-center justify-content-center">
+            <div class="d-flex align-items-center gap-2">
+                <label class="fw-bold text-dark small text-uppercase mb-0">Desde el:</label>
+                <input type="date" name="desde" class="form-control form-control-sm bg-white" value="@desde" />
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label class="fw-bold text-dark small text-uppercase mb-0">Hasta el:</label>
+                <input type="date" name="hasta" class="form-control form-control-sm bg-white" value="@hasta" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm fw-bold px-4 shadow-sm">
+                <i class="bi bi-search me-1"></i> BUSCAR
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm ms-auto">
+                <i class="bi bi-arrow-left"></i> Volver al Menú
+            </a>
+        </form>
+    </div>
+</div>
+
+<!-- BARRA DE HERRAMIENTAS ESTILO CRYSTAL REPORTS (SE OCULTA EN IMPRESIÓN) -->
+<div class="cr-toolbar d-flex align-items-center justify-content-between p-2 mb-3 bg-light border border-secondary border-opacity-10 no-print rounded">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-light btn-sm border-0 shadow-sm" onclick="window.print()" title="Imprimir Reporte">
+            <i class="bi bi-printer text-dark fs-5"></i>
+        </button>
+        <button class="btn btn-light btn-sm border-0 shadow-sm" onclick="exportarExcel()" title="Exportar CSV">
+            <i class="bi bi-file-earmark-excel text-success fs-5"></i>
+        </button>
+        <div class="vr h-20 text-muted mx-1"></div>
+        <div class="d-flex align-items-center gap-1">
+            <button class="btn btn-light btn-sm border-0 shadow-sm p-1 disabled"><i class="bi bi-chevron-bar-left"></i></button>
+            <button class="btn btn-light btn-sm border-0 shadow-sm p-1 disabled"><i class="bi bi-chevron-left"></i></button>
+            <input type="text" class="form-control form-control-sm text-center px-1 py-0 border bg-white" value="1" style="width: 40px; font-size: 0.85rem;" readonly />
+            <span class="small text-muted">/ 1</span>
+            <button class="btn btn-light btn-sm border-0 shadow-sm p-1 disabled"><i class="bi bi-chevron-right"></i></button>
+            <button class="btn btn-light btn-sm border-0 shadow-sm p-1 disabled"><i class="bi bi-chevron-bar-right"></i></button>
+        </div>
+        <div class="vr h-20 text-muted mx-1"></div>
+        <button class="btn btn-light btn-sm border-0 shadow-sm" title="Buscar en reporte"><i class="bi bi-search text-muted"></i></button>
+        <button class="btn btn-light btn-sm border-0 shadow-sm" title="Zoom"><i class="bi bi-zoom-in text-muted"></i> 100%</button>
+    </div>
+    <div>
+        <span class="text-uppercase text-secondary fw-semibold tracking-wider font-monospace small" style="font-size: 0.75rem;">SAP Crystal Reports</span>
+    </div>
+</div>
+
+<!-- CONTENEDOR DE LA PÁGINA DE REPORTE -->
+<div class="report-viewer-container bg-dark bg-opacity-10 py-4 px-2 rounded min-vh-100 border">
+    <div class="crystal-sheet bg-white p-5 mx-auto border shadow-lg position-relative" id="reportePrintContent" style="max-width: 1000px; min-height: 1120px; font-family: 'Arial', sans-serif;">
+        
+        <!-- ENCABEZADO DEL REPORTE -->
+        <div class="text-center position-relative mb-4">
+            <h1 class="fw-bold tracking-tight text-dark m-0" style="font-size: 2.1rem; border-bottom: 2px solid #000; padding-bottom: 5px;">Reporte de Cierre de Caja.</h1>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3 text-secondary small">
+                <div></div>
+                <div class="text-center font-monospace fw-semibold" style="font-size: 0.95rem;">
+                    Desde: <strong>@desde</strong> &nbsp;&nbsp;&nbsp;&nbsp; Hasta: <strong>@hasta</strong>
+                </div>
+                <div class="text-end text-dark font-monospace" style="font-size: 0.85rem; line-height: 1.2;">
+                    Fecha Impresión:<br/>
+                    <strong>@DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRUPO DE CIERRES POR FECHA -->
+        @if (Model == null || !Model.Any())
+        {
+            <div class="text-center py-5 text-muted border border-dashed rounded mt-5">
+                <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+                No se encontraron cierres de caja registrados en el rango de fechas seleccionado.
+            </div>
+        }
+        else
+        {
+            var cierresAgrupados = Model.GroupBy(c => c.FechaCierre.Date).OrderBy(g => g.Key);
+            decimal granTotalApertura = 0;
+            decimal granTotalSistema = 0;
+            decimal granTotalEgresos = 0;
+            decimal granTotalCierre = 0;
+            decimal granTotalSobrante = 0;
+            decimal granTotalFaltante = 0;
+
+            foreach (var grupo in cierresAgrupados)
+            {
+                decimal totalAp = 0;
+                decimal totalSist = 0;
+                decimal totalEgr = 0;
+                decimal totalCie = 0;
+                decimal totalSob = 0;
+                decimal totalFal = 0;
+
+                var rowData = new List<dynamic>();
+                foreach (var c in grupo)
+                {
+                    var apCaja = c.Apertura?.MontoInicial ?? 0;
+                    var ventasEfectivo = 0.00m;
+                    
+                    if (!string.IsNullOrEmpty(c.MetodosPago))
+                    {
+                        try
+                        {
+                            var items = System.Text.Json.JsonSerializer.Deserialize<List<CierreMetodoItem>>(c.MetodosPago);
+                            if (items != null)
+                            {
+                                var itemAp = items.FirstOrDefault(i => string.Equals(i.Metodo, "Apertura", StringComparison.OrdinalIgnoreCase));
+                                if (itemAp != null) apCaja = itemAp.Monto;
+                                
+                                var itemEf = items.FirstOrDefault(i => string.Equals(i.Metodo, "Efectivo", StringComparison.OrdinalIgnoreCase));
+                                if (itemEf != null) ventasEfectivo = itemEf.Monto;
+                            }
+                        }
+                        catch {}
+                    }
+                    
+                    var sistema = apCaja + ventasEfectivo;
+                    var egresos = 0.00m;
+                    var cierreCaja = c.MontoFinal;
+                    var diferencia = cierreCaja - ventasEfectivo;
+                    var sobrante = diferencia > 0 ? diferencia : 0;
+                    var faltante = diferencia < 0 ? -diferencia : 0;
+
+                    totalAp += apCaja;
+                    totalSist += sistema;
+                    totalEgr += egresos;
+                    totalCie += cierreCaja;
+                    totalSob += sobrante;
+                    totalFal += faltante;
+
+                    rowData.Add(new {
+                        Cierre = c,
+                        ApCaja = apCaja,
+                        Sistema = sistema,
+                        Egresos = egresos,
+                        CierreCaja = cierreCaja,
+                        Sobrante = sobrante,
+                        Faltante = faltante
+                    });
+                }
+
+                granTotalApertura += totalAp;
+                granTotalSistema += totalSist;
+                granTotalEgresos += totalEgr;
+                granTotalCierre += totalCie;
+                granTotalSobrante += totalSob;
+                granTotalFaltante += totalFal;
+
+                <div class="mb-5">
+                    <!-- TÍTULO DE GRUPO POR FECHA -->
+                    <div class="mb-2">
+                        <span class="fw-bold text-dark fs-6" style="border-bottom: 1px dotted #000; padding-bottom: 2px;">
+                            Fecha Cierre: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; @grupo.Key.ToString("yyyy-MM-dd")
+                        </span>
+                    </div>
+
+                    <!-- TABLA ESTILO CRYSTAL REPORTS -->
+                    <div class="table-responsive">
+                        <table class="w-100 cr-table text-dark align-middle mb-2">
+                            <thead>
+                                <tr class="cr-table-header text-uppercase font-monospace fw-bold">
+                                    <th style="width: 25%; text-align: left; padding: 6px 10px;">Usuario</th>
+                                    <th style="width: 12.5%; text-align: right; padding: 6px 10px;">Ap.Caja</th>
+                                    <th style="width: 12.5%; text-align: right; padding: 6px 10px;">Sistema</th>
+                                    <th style="width: 12.5%; text-align: right; padding: 6px 10px;">Egresos</th>
+                                    <th style="width: 12.5%; text-align: right; padding: 6px 10px;">Cierre Caja</th>
+                                    <th style="width: 12.5%; text-align: right; padding: 6px 10px;">Sobrante</th>
+                                    <th style="width: 12.5%; text-align: right; padding: 6px 10px;">Faltante</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in rowData)
+                                {
+                                    var c = r.Cierre as SistemaERP.Models.Entities.CierreCaja;
+                                    decimal apCaja = r.ApCaja;
+                                    decimal sistema = r.Sistema;
+                                    decimal egresos = r.Egresos;
+                                    decimal cierreCaja = r.CierreCaja;
+                                    decimal sobrante = r.Sobrante;
+                                    decimal faltante = r.Faltante;
+
+                                    <tr class="cr-table-row small text-uppercase" style="border-bottom: none;">
+                                        <td style="padding: 6px 10px; text-align: left; font-weight: 500;">@c?.UsuarioCierra?.Login</td>
+                                        <td style="padding: 6px 10px; text-align: right; font-family: monospace;">@apCaja.ToString("N2")</td>
+                                        <td style="padding: 6px 10px; text-align: right; font-family: monospace;">@sistema.ToString("N2")</td>
+                                        <td style="padding: 6px 10px; text-align: right; font-family: monospace;">@egresos.ToString("N2")</td>
+                                        <td style="padding: 6px 10px; text-align: right; font-family: monospace;">@cierreCaja.ToString("N2")</td>
+                                        <td style="padding: 6px 10px; text-align: right; font-family: monospace; color: @(sobrante > 0 ? "#198754" : "#2d3748");">@sobrante.ToString("N2")</td>
+                                        <td style="padding: 6px 10px; text-align: right; font-family: monospace; color: @(faltante > 0 ? "#dc3545" : "#2d3748");">@faltante.ToString("N2")</td>
+                                    </tr>
+                                    <!-- DETALLE DESGLOSE DEL CIERRE -->
+                                    <tr class="cr-details-row small bg-light bg-opacity-50" style="border-bottom: 1px dotted #ccc;">
+                                        <td colspan="7" style="padding: 8px 15px; font-size: 0.75rem;">
+                                            <div class="row g-2">
+                                                @{
+                                                    var denomItems = new List<CierreDenomItem>();
+                                                    if (c != null && !string.IsNullOrEmpty(c.DetalleDenominaciones))
+                                                    {
+                                                        try { denomItems = System.Text.Json.JsonSerializer.Deserialize<List<CierreDenomItem>>(c.DetalleDenominaciones) ?? new(); } catch {}
+                                                    }
+                                                    
+                                                    var metodoItems = new List<CierreMetodoItem>();
+                                                    if (c != null && !string.IsNullOrEmpty(c.MetodosPago))
+                                                    {
+                                                        try { metodoItems = System.Text.Json.JsonSerializer.Deserialize<List<CierreMetodoItem>>(c.MetodosPago) ?? new(); } catch {}
+                                                    }
+
+                                                    var denomDict = (ViewBag.Denominaciones as List<SistemaERP.Models.Entities.Denominacion>)?.ToDictionary(d => d.Id);
+                                                }
+
+                                                @if (denomItems.Any(i => i.Cantidad > 0) || metodoItems.Any(m => m.Monto > 0 && m.Metodo != "Apertura" && m.Metodo != "Efectivo"))
+                                                {
+                                                    <div class="col-12 d-flex flex-wrap gap-4 text-muted">
+                                                        @if (denomItems.Any(i => i.Cantidad > 0))
+                                                        {
+                                                            var billetesContados = new List<string>();
+                                                            var monedasContadas = new List<string>();
+                                                            foreach (var item in denomItems.Where(i => i.Cantidad > 0))
+                                                            {
+                                                                if (denomDict != null && denomDict.TryGetValue(item.DenominacionId, out var denom))
+                                                                {
+                                                                    var subtotal = denom.Valor * item.Cantidad;
+                                                                    var text = $"{item.Cantidad}x{moneda}{denom.Valor:N2}";
+                                                                    if (string.Equals(denom.Tipo, "Billete", StringComparison.OrdinalIgnoreCase))
+                                                                    {
+                                                                        billetesContados.Add(text);
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        monedasContadas.Add(text);
+                                                                    }
+                                                                }
+                                                            }
+                                                            <div>
+                                                                <span class="fw-bold text-dark text-uppercase"><i class="bi bi-cash me-1"></i>Efectivo:</span>
+                                                                @if (billetesContados.Any())
+                                                                {
+                                                                    <span class="me-2"><strong>Billetes:</strong> [ @string.Join(", ", billetesContados) ]</span>
+                                                                }
+                                                                @if (monedasContadas.Any())
+                                                                {
+                                                                    <span><strong>Monedas:</strong> [ @string.Join(", ", monedasContadas) ]</span>
+                                                                }
+                                                            </div>
+                                                        }
+
+                                                        @if (metodoItems.Any(m => m.Monto > 0 && m.Metodo != "Apertura" && m.Metodo != "Efectivo"))
+                                                        {
+                                                            var otrosMetodosText = new List<string>();
+                                                            foreach (var m in metodoItems.Where(m => m.Monto > 0 && m.Metodo != "Apertura" && m.Metodo != "Efectivo"))
+                                                            {
+                                                                var refText = string.IsNullOrEmpty(m.Referencia) ? "" : $" ({m.Referencia})";
+                                                                otrosMetodosText.Add($"{m.Metodo}: {moneda}{m.Monto:N2}{refText}");
+                                                            }
+                                                            <div>
+                                                                <span class="fw-bold text-dark text-uppercase"><i class="bi bi-credit-card me-1"></i>Otros Pagos:</span>
+                                                                <span>[ @string.Join(" | ", otrosMetodosText) ]</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="col-12 text-muted italic">Sin desglose registrado.</div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TOTAL DEL GRUPO -->
+                    <div class="d-flex justify-content-end align-items-center mt-1">
+                        <div class="text-end fw-bold font-monospace pe-3" style="font-size: 0.9rem; width: 25%;">Total:</div>
+                        <div class="d-flex w-75 cr-totals-container py-1 bg-light border-top border-bottom border-dark border-opacity-25">
+                            <div style="width: 16.66%; text-align: right; padding-right: 10px;">@totalAp.ToString("N2")</div>
+                            <div style="width: 16.66%; text-align: right; padding-right: 10px;">@totalSist.ToString("N2")</div>
+                            <div style="width: 16.66%; text-align: right; padding-right: 10px;">@totalEgr.ToString("N2")</div>
+                            <div style="width: 16.66%; text-align: right; padding-right: 10px;">@totalCie.ToString("N2")</div>
+                            <div style="width: 16.66%; text-align: right; padding-right: 10px; color: @(totalSob > 0 ? "#198754" : "")">@totalSob.ToString("N2")</div>
+                            <div style="width: 16.66%; text-align: right; padding-right: 10px; color: @(totalFal > 0 ? "#dc3545" : "")">@totalFal.ToString("N2")</div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- GRAN TOTAL DE TODOS LOS GRUPOS (SI HAY MÁS DE 1 FECHA) -->
+            @if (cierresAgrupados.Count() > 1)
+            {
+                <div class="mt-5 pt-4 border-top border-dark border-2">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <div class="text-end fw-bold text-uppercase tracking-wider font-monospace pe-3" style="font-size: 0.95rem; width: 25%;">Gran Total:</div>
+                        <div class="d-flex w-75 cr-totals-container py-2 bg-dark bg-opacity-10 border-top border-bottom border-dark border-2">
+                            <div class="fw-bold" style="width: 16.66%; text-align: right; padding-right: 10px;">@granTotalApertura.ToString("N2")</div>
+                            <div class="fw-bold" style="width: 16.66%; text-align: right; padding-right: 10px;">@granTotalSistema.ToString("N2")</div>
+                            <div class="fw-bold" style="width: 16.66%; text-align: right; padding-right: 10px;">@granTotalEgresos.ToString("N2")</div>
+                            <div class="fw-bold" style="width: 16.66%; text-align: right; padding-right: 10px;">@granTotalCierre.ToString("N2")</div>
+                            <div class="fw-bold" style="width: 16.66%; text-align: right; padding-right: 10px; color: #198754;">@granTotalSobrante.ToString("N2")</div>
+                            <div class="fw-bold" style="width: 16.66%; text-align: right; padding-right: 10px; color: #dc3545;">@granTotalFaltante.ToString("N2")</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        
+    </div>
+</div>
+
+<style>
+    /* Estilos de Crystal Reports */
+    .cr-toolbar {
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .cr-toolbar .btn:hover {
+        background-color: #e9ecef;
+    }
+    .crystal-sheet {
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+        border-radius: 4px;
+        border-color: #cbd5e0 !important;
+    }
+    .cr-table {
+        border-collapse: collapse;
+    }
+    .cr-table-header {
+        background-color: #e9ecef;
+        border-top: 1px solid #000;
+        border-bottom: 1px solid #000;
+        font-size: 0.82rem;
+    }
+    .cr-table-row {
+        border-bottom: 1px dotted #ccc;
+    }
+    .cr-table-row:hover {
+        background-color: #f8f9fa;
+    }
+    .cr-totals-container {
+        font-size: 0.88rem;
+        font-weight: 700;
+        font-family: monospace;
+    }
+
+    /* Soporte de Impresión Profesional */
+    @@media print {
+        .no-print, .no-print *, .main-sidebar, .main-header, .navbar, .btn, form {
+            display: none !important;
+        }
+        body, .content-wrapper, .container-fluid, main {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .report-viewer-container {
+            background: transparent !important;
+            border: 0 !important;
+            padding: 0 !important;
+        }
+        .crystal-sheet {
+            box-shadow: none !important;
+            border: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        @@page {
+            size: portrait;
+            margin: 1.5cm;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        function exportarExcel() {
+            var desde = '@desde';
+            var hasta = '@hasta';
+            var csv = [];
+            var rows = document.querySelectorAll("table tr");
+            
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll("td, th");
+                
+                for (var j = 0; j < cols.length; j++) {
+                    // Limpiar comas internas del texto
+                    var cleanText = cols[j].innerText.trim().replace(/;/g, ",");
+                    row.push(cleanText);
+                }
+                csv.push(row.join(";"));
+            }
+            
+            var csvContent = "data:text/csv;charset=utf-8,\uFEFF" + csv.join("\n");
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "ReporteCierresCaja_" + desde + "_" + hasta + ".csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+}
+
+@functions {
+    public class CierreDenomItem
+    {
+        public int DenominacionId { get; set; }
+        public int Cantidad { get; set; }
+    }
+    public class CierreMetodoItem
+    {
+        public string? Metodo { get; set; }
+        public decimal Monto { get; set; }
+        public string? Referencia { get; set; }
+    }
+}

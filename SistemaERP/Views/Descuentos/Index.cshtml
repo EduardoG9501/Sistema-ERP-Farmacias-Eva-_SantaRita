@@ -1,0 +1,1606 @@
+@{
+    ViewData["Title"] = "Gestión de Descuentos y Promociones";
+    var productosDict = ViewBag.ProductosDict as Dictionary<long, string> ?? new Dictionary<long, string>();
+    var productosClasicos = ViewBag.ProductosClasicos as List<SistemaERP.Models.Entities.Producto> ?? new List<SistemaERP.Models.Entities.Producto>();
+    var lineas = ViewBag.Lineas as List<SistemaERP.Models.Entities.DescuentoLineaProducto> ?? new List<SistemaERP.Models.Entities.DescuentoLineaProducto>();
+    var lineasDetalles = ViewBag.LineasDetalles as List<SistemaERP.Models.Entities.DescuentoLineaProductoDet> ?? new List<SistemaERP.Models.Entities.DescuentoLineaProductoDet>();
+    var combos = ViewBag.Combos as List<SistemaERP.Models.Entities.DescuentoCombo> ?? new List<SistemaERP.Models.Entities.DescuentoCombo>();
+    var combosDetalles = ViewBag.CombosDetalles as List<SistemaERP.Models.Entities.DescuentoComboProducto> ?? new List<SistemaERP.Models.Entities.DescuentoComboProducto>();
+    var especiales = ViewBag.Especiales as List<SistemaERP.Models.Entities.VentaPrecioEspecial> ?? new List<SistemaERP.Models.Entities.VentaPrecioEspecial>();
+    
+    var descProveedores = ViewBag.DescuentosProveedor as List<SistemaERP.Models.Entities.DescuentoProveedor> ?? new List<SistemaERP.Models.Entities.DescuentoProveedor>();
+    var proveedoresList = ViewBag.ProveedoresList as List<SistemaERP.Models.Entities.Proveedor> ?? new List<SistemaERP.Models.Entities.Proveedor>();
+    var proveedoresDict = ViewBag.ProveedoresDict as Dictionary<long, string> ?? new Dictionary<long, string>();
+}
+
+<div class="container-fluid animate__animated animate__fadeIn">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 bg-indigo-soft text-indigo p-4 rounded-4 shadow-sm">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h2 class="fw-bold mb-1"><i class="bi bi-percent me-2"></i> Módulo de Descuentos y Promociones</h2>
+                        <p class="mb-0 opacity-75">Administra los diferentes esquemas de precios y promociones del sistema para aplicación en el POS.</p>
+                    </div>
+                    <div class="d-none d-md-block">
+                        <span class="badge bg-indigo-soft border border-indigo text-indigo fs-6 px-3 py-2 rounded-pill">
+                            <i class="bi bi-shield-check me-1"></i> Sistema de Reglas Activas
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <ul class="nav nav-pills nav-fill bg-white p-2 rounded-4 shadow-sm border border-light-subtle gap-2" id="discountTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-3 py-3 fw-semibold transition-all d-flex align-items-center justify-content-center gap-2" id="clasicos-tab" data-bs-toggle="tab" data-bs-target="#clasicos" type="button" role="tab">
+                        <i class="bi bi-tag-fill fs-5"></i> 1. Clásico de Productos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-3 fw-semibold transition-all d-flex align-items-center justify-content-center gap-2" id="lineas-tab" data-bs-toggle="tab" data-bs-target="#lineas" type="button" role="tab">
+                        <i class="bi bi-folder-symlink-fill fs-5"></i> 2. Por Categorías (Porcentajes)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-3 fw-semibold transition-all d-flex align-items-center justify-content-center gap-2" id="combos-tab" data-bs-toggle="tab" data-bs-target="#combos" type="button" role="tab">
+                        <i class="bi bi-boxes fs-5"></i> 3. Combos (Paquetes)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-3 fw-semibold transition-all d-flex align-items-center justify-content-center gap-2" id="especiales-tab" data-bs-toggle="tab" data-bs-target="#especiales" type="button" role="tab">
+                        <i class="bi bi-star-fill fs-5"></i> 4. Precios Especiales
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-3 fw-semibold transition-all d-flex align-items-center justify-content-center gap-2" id="proveedores-tab" data-bs-toggle="tab" data-bs-target="#proveedores" type="button" role="tab">
+                        <i class="bi bi-truck fs-5"></i> 5. Por Proveedores
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="discountTabsContent">
+        
+        <!-- Tab 1: Clásicos -->
+        <div class="tab-pane fade show active" id="clasicos" role="tabpanel">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-dark">Descuento Directo por Producto</h4>
+                        <p class="text-muted mb-0 small">Asigna porcentajes de descuento específicos por producto con rango de vigencia.</p>
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-4 py-2" onclick="openNewClasicoModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Asignar Descuento a Producto
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle rounded-3 overflow-hidden border border-light-subtle">
+                        <thead class="bg-light text-secondary">
+                            <tr>
+                                <th class="py-3 px-4">Producto</th>
+                                <th class="py-3">Descuento (%)</th>
+                                <th class="py-3">Vigente Desde</th>
+                                <th class="py-3">Vigente Hasta</th>
+                                <th class="py-3">Estado</th>
+                                <th class="py-3 text-end px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!productosClasicos.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                        No hay productos con descuentos configurados actualmente.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var p in productosClasicos)
+                                {
+                                    var estaVigente = p.Descuento_Desde <= DateTime.Today && p.Descuento_Hasta >= DateTime.Today;
+                                    <tr>
+                                        <td class="fw-medium px-4">@p.Nombre</td>
+                                        <td>
+                                            <span class="badge bg-danger-soft text-danger fw-bold fs-6">@p.Descuento%</span>
+                                        </td>
+                                        <td>@(p.Descuento_Desde?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                        <td>@(p.Descuento_Hasta?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                        <td>
+                                            @if (estaVigente)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Vigente</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning-soft text-warning px-3 py-1.5 rounded-pill"><i class="bi bi-exclamation-triangle-fill me-1"></i> Fuera de Rango</span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <button class="btn btn-sm btn-primary-soft rounded-circle me-1" onclick="editClasico(@p.Id, @p.Descuento, '@(p.Descuento_Desde?.ToString("yyyy-MM-dd"))', '@(p.Descuento_Hasta?.ToString("yyyy-MM-dd"))')" title="Editar">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger-soft rounded-circle" onclick="deleteClasico(@p.Id)" title="Eliminar">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Categorías / Líneas -->
+        <div class="tab-pane fade" id="lineas" role="tabpanel">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-dark">Descuento Global por Categoría/Línea</h4>
+                        <p class="text-muted mb-0 small">Aplica un porcentaje de descuento uniforme a un grupo seleccionado de productos.</p>
+                    </div>
+                    <button class="btn btn-indigo rounded-pill px-4 py-2" onclick="openNewLineaModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Crear Descuento de Línea
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle rounded-3 overflow-hidden border border-light-subtle">
+                        <thead class="bg-light text-secondary">
+                            <tr>
+                                <th class="py-3 px-4">Descripción</th>
+                                <th class="py-3">Porcentaje (%)</th>
+                                <th class="py-3">Vigencia</th>
+                                <th class="py-3">Productos Asociados</th>
+                                <th class="py-3">Estado</th>
+                                <th class="py-3 text-end px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!lineas.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                        No hay descuentos de línea registrados.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var l in lineas)
+                                {
+                                    var prodIds = lineasDetalles.Where(d => d.Id_Descuento_Linea == l.Id).Select(d => d.Id_Producto).ToList();
+                                    var nombres = prodIds.Select(id => productosDict.ContainsKey(id) ? productosDict[id] : $"Producto #{id}").ToList();
+                                    var estaVigente = l.Estado && l.Vence_Desde <= DateTime.Today && l.Vence_Hasta >= DateTime.Today;
+
+                                    <tr>
+                                        <td class="fw-bold px-4">@l.Descripcion</td>
+                                        <td>
+                                            <span class="badge bg-indigo-soft text-indigo fw-bold fs-6">@l.Porcentaje%</span>
+                                        </td>
+                                        <td>
+                                            <span class="small d-block text-muted">Desde: @l.Vence_Desde.ToString("dd/MM/yyyy")</span>
+                                            <span class="small d-block text-muted">Hasta: @l.Vence_Hasta.ToString("dd/MM/yyyy")</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary-soft text-secondary rounded-pill px-2.5 py-1">@prodIds.Count productos</span>
+                                            <button class="btn btn-link btn-sm text-indigo p-0 ms-1 fw-semibold" onclick="verProductosDeLinea('@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(l.Descripcion))', @Json.Serialize(nombres))">Ver Lista</button>
+                                        </td>
+                                        <td>
+                                            @if (estaVigente)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Vigente</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i> Inactivo / Vencido</span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <button class="btn btn-sm btn-indigo-soft rounded-circle me-1" onclick="editLinea(@l.Id, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(l.Descripcion))', @l.Porcentaje, '@l.Vence_Desde.ToString("yyyy-MM-dd")', '@l.Vence_Hasta.ToString("yyyy-MM-dd")', @(l.Estado ? "true" : "false"), @Json.Serialize(prodIds))" title="Editar">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger-soft rounded-circle" onclick="deleteLinea(@l.Id)" title="Eliminar">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Combos -->
+        <div class="tab-pane fade" id="combos" role="tabpanel">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-dark">Combos Promocionales (Paquetes)</h4>
+                        <p class="text-muted mb-0 small">Agrupa un conjunto de productos para ofrecerlos a un precio consolidado especial.</p>
+                    </div>
+                    <button class="btn btn-teal rounded-pill px-4 py-2 text-white" onclick="openNewComboModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Crear Nuevo Combo
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle rounded-3 overflow-hidden border border-light-subtle">
+                        <thead class="bg-light text-secondary">
+                            <tr>
+                                <th class="py-3 px-4">Descripción Combo</th>
+                                <th class="py-3">Precio Combo</th>
+                                <th class="py-3">Límites Cant. (Rango)</th>
+                                <th class="py-3">Vigencia</th>
+                                <th class="py-3">Componentes</th>
+                                <th class="py-3">Estado</th>
+                                <th class="py-3 text-end px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!combos.Any())
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                        No hay combos registrados.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var c in combos)
+                                {
+                                    var prodIds = combosDetalles.Where(d => d.Id_Descuento_Combo == c.Id).Select(d => d.Id_Producto).ToList();
+                                    var nombres = prodIds.Select(id => productosDict.ContainsKey(id) ? productosDict[id] : $"Producto #{id}").ToList();
+                                    var estaVigente = c.Estado && c.Vence_Desde <= DateTime.Today && c.Vence_Hasta >= DateTime.Today;
+
+                                    <tr>
+                                        <td class="fw-bold px-4 text-teal">@c.Descripcion</td>
+                                        <td>
+                                            <span class="badge bg-teal-soft text-teal fw-bold fs-6">@ViewBag.MonedaSimbolo@c.Precio_Combo.ToString("N2")</span>
+                                        </td>
+                                        <td>Min: @c.Cant_Min | Max: @c.Cant_Max</td>
+                                        <td>
+                                            <span class="small d-block text-muted">Desde: @c.Vence_Desde.ToString("dd/MM/yyyy")</span>
+                                            <span class="small d-block text-muted">Hasta: @c.Vence_Hasta.ToString("dd/MM/yyyy")</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary-soft text-secondary rounded-pill px-2.5 py-1">@prodIds.Count productos</span>
+                                            <button class="btn btn-link btn-sm text-teal p-0 ms-1 fw-semibold" onclick="verProductosDeLinea('@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(c.Descripcion))', @Json.Serialize(nombres))">Ver Lista</button>
+                                        </td>
+                                        <td>
+                                            @if (estaVigente)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Vigente</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i> Inactivo / Vencido</span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <button class="btn btn-sm btn-teal-soft rounded-circle me-1" onclick="editCombo(@c.Id, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(c.Descripcion))', @c.Precio_Combo, @c.Cant_Min, @c.Cant_Max, '@c.Vence_Desde.ToString("yyyy-MM-dd")', '@c.Vence_Hasta.ToString("yyyy-MM-dd")', @(c.Estado ? "true" : "false"), @Json.Serialize(prodIds))" title="Editar">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger-soft rounded-circle" onclick="deleteCombo(@c.Id)" title="Eliminar">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Especiales -->
+        <div class="tab-pane fade" id="especiales" role="tabpanel">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-dark">Precios Especiales de Venta</h4>
+                        <p class="text-muted mb-0 small">Asigna precios especiales específicos a productos cuando se cumple una cantidad mínima.</p>
+                    </div>
+                    <button class="btn btn-dark rounded-pill px-4 py-2" onclick="openNewEspecialModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Asignar Precio Especial
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle rounded-3 overflow-hidden border border-light-subtle">
+                        <thead class="bg-light text-secondary">
+                            <tr>
+                                <th class="py-3 px-4">Producto</th>
+                                <th class="py-3">Precio Especial</th>
+                                <th class="py-3">Cantidad Mínima</th>
+                                <th class="py-3">Estado</th>
+                                <th class="py-3 text-end px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!especiales.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                        No hay precios especiales registrados.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var e in especiales)
+                                {
+                                    var nombreProd = productosDict.ContainsKey(e.Id_Producto) ? productosDict[e.Id_Producto] : $"Producto #{e.Id_Producto}";
+                                    <tr>
+                                        <td class="fw-medium px-4">@nombreProd</td>
+                                        <td>
+                                            <span class="badge bg-dark text-white fw-bold fs-6">@ViewBag.MonedaSimbolo@e.Precio_Especial.ToString("N2")</span>
+                                        </td>
+                                        <td>@e.Cantidad.ToString("N0") unidades</td>
+                                        <td>
+                                            @if (e.Estado == "A" || e.Estado == "Activo" || e.Estado == "APROBADO")
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Activo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning-soft text-warning px-3 py-1.5 rounded-pill">@e.Estado</span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <button class="btn btn-sm btn-dark-soft rounded-circle me-1" onclick="editEspecial(@e.Id, @e.Id_Producto, @e.Precio_Especial, @e.Cantidad, '@e.Estado')" title="Editar">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger-soft rounded-circle" onclick="deleteEspecial(@e.Id)" title="Eliminar">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 5: Proveedores -->
+        <div class="tab-pane fade" id="proveedores" role="tabpanel">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-dark">Descuento Global por Proveedor</h4>
+                        <p class="text-muted mb-0 small">Aplica un porcentaje de descuento global a todos los productos del proveedor seleccionado.</p>
+                    </div>
+                    <button class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-semibold" onclick="openNewProveedorModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Asignar Descuento a Proveedor
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle rounded-3 overflow-hidden border border-light-subtle">
+                        <thead class="bg-light text-secondary">
+                            <tr>
+                                <th class="py-3 px-4">Proveedor</th>
+                                <th class="py-3">Descripción</th>
+                                <th class="py-3">Descuento (%)</th>
+                                <th class="py-3">Vigencia</th>
+                                <th class="py-3">Estado</th>
+                                <th class="py-3 text-end px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!descProveedores.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                        No hay descuentos por proveedor registrados actualmente.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var dp in descProveedores)
+                                {
+                                    var nombreProv = proveedoresDict.ContainsKey(dp.Id_Proveedor) ? proveedoresDict[dp.Id_Proveedor] : $"Proveedor #{dp.Id_Proveedor}";
+                                    var estaVigente = dp.Estado && dp.Vence_Desde <= DateTime.Today && dp.Vence_Hasta >= DateTime.Today;
+                                    <tr>
+                                        <td class="fw-bold px-4 text-warning-dark">@nombreProv</td>
+                                        <td>@dp.Descripcion</td>
+                                        <td>
+                                            <span class="badge bg-warning-soft text-warning fw-bold fs-6">@dp.Porcentaje%</span>
+                                        </td>
+                                        <td>
+                                            <span class="small d-block text-muted">Desde: @dp.Vence_Desde.ToString("dd/MM/yyyy")</span>
+                                            <span class="small d-block text-muted">Hasta: @dp.Vence_Hasta.ToString("dd/MM/yyyy")</span>
+                                        </td>
+                                        <td>
+                                            @if (estaVigente)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Vigente</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i> Inactivo / Vencido</span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <button class="btn btn-sm btn-warning-soft rounded-circle me-1" onclick="editProveedor(@dp.Id, @dp.Id_Proveedor, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(dp.Descripcion))', @dp.Porcentaje, '@dp.Vence_Desde.ToString("yyyy-MM-dd")', '@dp.Vence_Hasta.ToString("yyyy-MM-dd")', @(dp.Estado ? "true" : "false"))" title="Editar">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger-soft rounded-circle" onclick="deleteProveedor(@dp.Id)" title="Eliminar">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==================== MODALES ==================== -->
+
+<!-- Modal 1: Clásico (Directo por Producto) -->
+<div class="modal fade" id="clasicoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 bg-light p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="clasicoModalTitle">Asignar Descuento Clásico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="clasicoProdId">
+                <div class="mb-3" id="clasicoSelectContainer">
+                    <label class="form-label fw-semibold text-secondary">Seleccionar Producto</label>
+                    <select class="form-select select2-ajax" id="clasicoProducto" style="width: 100%;"></select>
+                </div>
+                <div class="mb-3 d-none" id="clasicoStaticContainer">
+                    <label class="form-label fw-semibold text-secondary">Producto</label>
+                    <input type="text" class="form-control bg-light fw-bold" id="clasicoProductoNombre" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Descuento (%)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="clasicoPorcentaje" min="1" max="100" placeholder="10">
+                        <span class="input-group-text bg-light text-secondary fw-bold">%</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vigente Desde</label>
+                        <input type="date" class="form-control" id="clasicoDesde">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vigente Hasta</label>
+                        <input type="date" class="form-control" id="clasicoHasta">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 p-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="saveClasico()">Guardar Descuento</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Descuento de Línea -->
+<div class="modal fade" id="lineaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 bg-light p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="lineaModalTitle font-heading">Crear Descuento por Categoría/Línea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="lineaId">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Descripción de la Línea Promocional</label>
+                        <input type="text" class="form-control" id="lineaDescripcion" placeholder="Ej: Especial Inmunidad Mayo">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Porcentaje Descuento</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="lineaPorcentaje" min="1" max="100" placeholder="15">
+                            <span class="input-group-text bg-light fw-bold">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vence Desde</label>
+                        <input type="date" class="form-control" id="lineaVenceDesde">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vence Hasta</label>
+                        <input type="date" class="form-control" id="lineaVenceHasta">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary d-flex justify-content-between align-items-center">
+                        <span>Seleccionar Productos Participantes</span>
+                        <span class="small text-muted">Busca y añade los productos que tendrán esta promoción</span>
+                    </label>
+                    <select class="form-select select2-ajax" id="lineaProductos" multiple style="width: 100%;"></select>
+                </div>
+                <div class="form-check form-switch mb-3 mt-2">
+                    <input class="form-check-input" type="checkbox" id="lineaEstado" checked>
+                    <label class="form-check-label fw-semibold text-secondary" for="lineaEstado">Estado Activo (Vigente en el POS)</label>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 p-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-indigo rounded-pill px-4 text-white" onclick="saveLinea()">Guardar Promoción</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: Combo -->
+<div class="modal fade" id="comboModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 bg-light p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark font-heading" id="comboModalTitle">Crear Combo Promocional</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="comboId">
+                <div class="row">
+                    <div class="col-md-7 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Descripción del Combo</label>
+                        <input type="text" class="form-control" id="comboDescripcion" placeholder="Ej: Combo Mega Protección">
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Precio Especial Combo</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light fw-bold">$</span>
+                            <input type="number" step="0.01" class="form-control" id="comboPrecio" placeholder="45.00">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Cantidad Mínima</label>
+                        <input type="number" class="form-control" id="comboCantMin" min="1" value="1" placeholder="1">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Cantidad Máxima</label>
+                        <input type="number" class="form-control" id="comboCantMax" min="1" value="999" placeholder="999">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vence Desde</label>
+                        <input type="date" class="form-control" id="comboVenceDesde">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vence Hasta</label>
+                        <input type="date" class="form-control" id="comboVenceHasta">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Seleccionar Componentes del Combo</label>
+                    <select class="form-select select2-ajax" id="comboProductos" multiple style="width: 100%;"></select>
+                </div>
+                <div class="form-check form-switch mb-3 mt-2">
+                    <input class="form-check-input" type="checkbox" id="comboEstado" checked>
+                    <label class="form-check-label fw-semibold text-secondary" for="comboEstado">Combo Activo</label>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 p-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-teal rounded-pill px-4 text-white" onclick="saveCombo()">Guardar Combo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 4: Precio Especial -->
+<div class="modal fade" id="especialModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 bg-light p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="especialModalTitle">Asignar Precio Especial</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="especialId">
+                <div class="mb-3" id="especialSelectContainer">
+                    <label class="form-label fw-semibold text-secondary">Seleccionar Producto</label>
+                    <select class="form-select select2-ajax" id="especialProducto" style="width: 100%;"></select>
+                </div>
+                <div class="mb-3 d-none" id="especialStaticContainer">
+                    <label class="form-label fw-semibold text-secondary">Producto</label>
+                    <input type="text" class="form-control bg-light fw-bold" id="especialProductoNombre" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Precio Especial</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light fw-bold">$</span>
+                        <input type="number" step="0.01" class="form-control" id="especialPrecio" placeholder="12.50">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Cantidad Umbral (Mínimo)</label>
+                    <input type="number" class="form-control" id="especialCantidad" min="1" value="1" placeholder="6">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Estado</label>
+                    <select class="form-select" id="especialEstado">
+                        <option value="A">Activo (APROBADO)</option>
+                        <option value="P">Pendiente de Aprobación</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 p-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-dark rounded-pill px-4" onclick="saveEspecial()">Guardar Precio Especial</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: Descuento por Proveedor -->
+<div class="modal fade" id="proveedorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 bg-light p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="proveedorModalTitle">Asignar Descuento a Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="proveedorDescId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Seleccionar Proveedor</label>
+                    <select class="form-select border-2 shadow-none py-2 fw-bold" id="proveedorSelect">
+                        <option value="">-- Seleccionar Proveedor --</option>
+                        @foreach (var prov in proveedoresList)
+                        {
+                            <option value="@prov.Id">@prov.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Descripción de la Promoción</label>
+                    <input type="text" class="form-control" id="proveedorDescripcion" placeholder="Ej: Descuento especial laboratorios">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Descuento (%)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="proveedorPorcentaje" min="1" max="100" placeholder="10">
+                        <span class="input-group-text bg-light text-secondary fw-bold">%</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vence Desde</label>
+                        <input type="date" class="form-control" id="proveedorVenceDesde">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Vence Hasta</label>
+                        <input type="date" class="form-control" id="proveedorVenceHasta">
+                    </div>
+                </div>
+                <div class="form-check form-switch mb-3 mt-2">
+                    <input class="form-check-input" type="checkbox" id="proveedorEstado" checked>
+                    <label class="form-check-label fw-semibold text-secondary" for="proveedorEstado">Estado Activo</label>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 p-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning text-dark fw-bold rounded-pill px-4" onclick="saveProveedor()">Guardar Descuento</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Inicializar Select2 en los inputs AJAX de productos
+            $('.select2-ajax').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Escribe el nombre o código de barra...',
+                minimumInputLength: 2,
+                allowClear: true,
+                dropdownParent: $('.modal:visible').length ? $('.modal:visible') : null, // Ajuste para modales
+                ajax: {
+                    url: '/Descuentos/BuscarProductos',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return { term: params.term };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data.map(function(item) {
+                                return {
+                                    id: item.id,
+                                    text: item.nombre + " (" + (item.codigoBarra || "Sin código") + ") - PVP: $" + item.pvp.toFixed(2),
+                                    item: item
+                                };
+                            })
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            // Arreglar problema de dropdownParent al abrir modales
+            $('#clasicoModal, #lineaModal, #comboModal, #especialModal').on('shown.bs.modal', function() {
+                var modalId = $(this).attr('id');
+                $(this).find('.select2-ajax').select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Escribe el nombre o código de barra...',
+                    minimumInputLength: 2,
+                    allowClear: true,
+                    dropdownParent: $('#' + modalId),
+                    ajax: {
+                        url: '/Descuentos/BuscarProductos',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params) {
+                            return { term: params.term };
+                        },
+                        processResults: function(data) {
+                            return {
+                                results: data.map(function(item) {
+                                    return {
+                                        id: item.id,
+                                        text: item.nombre + " (" + (item.codigoBarra || "Sin código") + ") - PVP: $" + item.pvp.toFixed(2),
+                                        item: item
+                                    };
+                                })
+                            };
+                        },
+                        cache: true
+                    }
+                });
+            });
+        });
+
+        // Helper para establecer fechas por defecto
+        function getTodayString() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function getNextYearString() {
+            var d = new Date();
+            d.setFullYear(d.getFullYear() + 1);
+            return d.toISOString().split('T')[0];
+        }
+
+        // ==================== ACCIONES TAB 1: CLÁSICO ====================
+        function openNewClasicoModal() {
+            $('#clasicoModalTitle').text('Asignar Descuento Clásico');
+            $('#clasicoProdId').val('');
+            $('#clasicoSelectContainer').removeClass('d-none');
+            $('#clasicoStaticContainer').addClass('d-none');
+            $('#clasicoProducto').val(null).trigger('change');
+            $('#clasicoPorcentaje').val('');
+            $('#clasicoDesde').val(getTodayString());
+            $('#clasicoHasta').val(getNextYearString());
+            
+            var modal = new bootstrap.Modal(document.getElementById('clasicoModal'));
+            modal.show();
+        }
+
+        function editClasico(id, porcentaje, desde, hasta) {
+            $('#clasicoModalTitle').text('Editar Descuento de Producto');
+            $('#clasicoProdId').val(id);
+            $('#clasicoSelectContainer').addClass('d-none');
+            $('#clasicoStaticContainer').removeClass('d-none');
+            
+            // Obtener el nombre del producto de la fila o del lookup
+            var prodNombre = @Json.Serialize(productosDict);
+            $('#clasicoProductoNombre').val(prodNombre[id] || "Producto #" + id);
+            
+            $('#clasicoPorcentaje').val(porcentaje);
+            $('#clasicoDesde').val(desde ? desde.substring(0,10) : getTodayString());
+            $('#clasicoHasta').val(hasta ? hasta.substring(0,10) : getNextYearString());
+
+            var modal = new bootstrap.Modal(document.getElementById('clasicoModal'));
+            modal.show();
+        }
+
+        function saveClasico() {
+            var id = $('#clasicoProdId').val();
+            var pId = id ? parseInt(id) : $('#clasicoProducto').val();
+            var porc = $('#clasicoPorcentaje').val();
+            var desde = $('#clasicoDesde').val();
+            var hasta = $('#clasicoHasta').val();
+
+            if (!pId) {
+                Swal.fire('Error', 'Debe seleccionar un producto.', 'error');
+                return;
+            }
+            if (!porc || porc <= 0 || porc > 100) {
+                Swal.fire('Error', 'Porcentaje de descuento debe estar entre 1 y 100.', 'error');
+                return;
+            }
+            if (!desde || !hasta) {
+                Swal.fire('Error', 'Debe definir el rango de vigencia.', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Guardando...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            $.ajax({
+                url: '/Descuentos/UpdateProductDiscount',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    ProductoId: parseInt(pId),
+                    Descuento: parseFloat(porc),
+                    Desde: desde,
+                    Hasta: hasta
+                }),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'Ocurrió un error al procesar el servidor.', 'error');
+                }
+            });
+        }
+
+        function deleteClasico(pId) {
+            Swal.fire({
+                title: '¿Eliminar Descuento?',
+                text: "El producto ya no tendrá este descuento en el POS.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Descuentos/UpdateProductDiscount',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            ProductoId: pId,
+                            Descuento: null,
+                            Desde: null,
+                            Hasta: null
+                        }),
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire('Eliminado', 'Descuento eliminado correctamente.', 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==================== ACCIONES TAB 2: LÍNEAS ====================
+        function openNewLineaModal() {
+            $('#lineaModalTitle').text('Crear Descuento por Categoría/Línea');
+            $('#lineaId').val('');
+            $('#lineaDescripcion').val('');
+            $('#lineaPorcentaje').val('');
+            $('#lineaVenceDesde').val(getTodayString());
+            $('#lineaVenceHasta').val(getNextYearString());
+            $('#lineaEstado').prop('checked', true);
+            $('#lineaProductos').val(null).trigger('change');
+
+            var modal = new bootstrap.Modal(document.getElementById('lineaModal'));
+            modal.show();
+        }
+
+        function editLinea(id, descripcion, porcentaje, desde, hasta, estado, prodIds) {
+            $('#lineaModalTitle').text('Editar Descuento de Línea');
+            $('#lineaId').val(id);
+            $('#lineaDescripcion').val(descripcion);
+            $('#lineaPorcentaje').val(porcentaje);
+            $('#lineaVenceDesde').val(desde.substring(0, 10));
+            $('#lineaVenceHasta').val(hasta.substring(0, 10));
+            $('#lineaEstado').prop('checked', estado);
+
+            // Cargar productos en Select2 de forma asíncrona
+            var select = $('#lineaProductos');
+            select.val(null).trigger('change');
+
+            var prodNombre = @Json.Serialize(productosDict);
+            prodIds.forEach(function(pId) {
+                var text = prodNombre[pId] || "Producto #" + pId;
+                var option = new Option(text, pId, true, true);
+                select.append(option).trigger('change');
+            });
+
+            var modal = new bootstrap.Modal(document.getElementById('lineaModal'));
+            modal.show();
+        }
+
+        function saveLinea() {
+            var id = $('#lineaId').val();
+            var desc = $('#lineaDescripcion').val();
+            var porc = $('#lineaPorcentaje').val();
+            var desde = $('#lineaVenceDesde').val();
+            var hasta = $('#lineaVenceHasta').val();
+            var estado = $('#lineaEstado').is(':checked');
+            var prodIds = $('#lineaProductos').val();
+
+            if (!desc) {
+                Swal.fire('Error', 'La descripción es obligatoria.', 'error');
+                return;
+            }
+            if (!porc || porc <= 0 || porc > 100) {
+                Swal.fire('Error', 'Porcentaje de descuento debe estar entre 1 y 100.', 'error');
+                return;
+            }
+            if (!desde || !hasta) {
+                Swal.fire('Error', 'Debe definir el rango de vigencia.', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Guardando...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            $.ajax({
+                url: '/Descuentos/SaveLineDiscount',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    Id: id ? parseInt(id) : 0,
+                    Descripcion: desc,
+                    Porcentaje: parseFloat(porc),
+                    VenceDesde: desde,
+                    VenceHasta: hasta,
+                    Estado: estado,
+                    ProductIds: prodIds ? prodIds.map(Number) : []
+                }),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteLinea(id) {
+            Swal.fire({
+                title: '¿Eliminar Promoción?',
+                text: "Esta acción borrará la línea de descuento y sus asignaciones.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Descuentos/DeleteLineDiscount?id=' + id,
+                        type: 'POST',
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire('Eliminado', res.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function verProductosDeLinea(titulo, nombres) {
+            var html = '<ul class="list-group text-start shadow-sm rounded-3 overflow-hidden">';
+            if (!nombres || nombres.length === 0) {
+                html += '<li class="list-group-item text-center text-muted py-3">No hay productos vinculados.</li>';
+            } else {
+                nombres.forEach(function(nom) {
+                    html += '<li class="list-group-item py-2.5 px-3 border-light-subtle"><i class="bi bi-dot text-primary fs-4 me-1"></i> ' + nom + '</li>';
+                });
+            }
+            html += '</ul>';
+
+            Swal.fire({
+                title: titulo,
+                html: html,
+                confirmButtonText: 'Cerrar',
+                customClass: {
+                    popup: 'rounded-4'
+                }
+            });
+        }
+
+        // ==================== ACCIONES TAB 3: COMBOS ====================
+        function openNewComboModal() {
+            $('#comboModalTitle').text('Crear Combo Promocional');
+            $('#comboId').val('');
+            $('#comboDescripcion').val('');
+            $('#comboPrecio').val('');
+            $('#comboCantMin').val(1);
+            $('#comboCantMax').val(999);
+            $('#comboVenceDesde').val(getTodayString());
+            $('#comboVenceHasta').val(getNextYearString());
+            $('#comboEstado').prop('checked', true);
+            $('#comboProductos').val(null).trigger('change');
+
+            var modal = new bootstrap.Modal(document.getElementById('comboModal'));
+            modal.show();
+        }
+
+        function editCombo(id, descripcion, precio, cantMin, cantMax, desde, hasta, estado, prodIds) {
+            $('#comboModalTitle').text('Editar Combo Promocional');
+            $('#comboId').val(id);
+            $('#comboDescripcion').val(descripcion);
+            $('#comboPrecio').val(precio);
+            $('#comboCantMin').val(cantMin);
+            $('#comboCantMax').val(cantMax);
+            $('#comboVenceDesde').val(desde.substring(0, 10));
+            $('#comboVenceHasta').val(hasta.substring(0, 10));
+            $('#comboEstado').prop('checked', estado);
+
+            var select = $('#comboProductos');
+            select.val(null).trigger('change');
+
+            var prodNombre = @Json.Serialize(productosDict);
+            prodIds.forEach(function(pId) {
+                var text = prodNombre[pId] || "Producto #" + pId;
+                var option = new Option(text, pId, true, true);
+                select.append(option).trigger('change');
+            });
+
+            var modal = new bootstrap.Modal(document.getElementById('comboModal'));
+            modal.show();
+        }
+
+        function saveCombo() {
+            var id = $('#comboId').val();
+            var desc = $('#comboDescripcion').val();
+            var precio = $('#comboPrecio').val();
+            var min = $('#comboCantMin').val();
+            var max = $('#comboCantMax').val();
+            var desde = $('#comboVenceDesde').val();
+            var hasta = $('#comboVenceHasta').val();
+            var estado = $('#comboEstado').is(':checked');
+            var prodIds = $('#comboProductos').val();
+
+            if (!desc) {
+                Swal.fire('Error', 'La descripción es obligatoria.', 'error');
+                return;
+            }
+            if (!precio || precio <= 0) {
+                Swal.fire('Error', 'Debe definir un precio de combo válido.', 'error');
+                return;
+            }
+            if (!desde || !hasta) {
+                Swal.fire('Error', 'Debe definir el rango de vigencia.', 'error');
+                return;
+            }
+            if (!prodIds || prodIds.length === 0) {
+                Swal.fire('Error', 'Un combo debe contener al menos un producto.', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Guardando...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            $.ajax({
+                url: '/Descuentos/SaveCombo',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    Id: id ? parseInt(id) : 0,
+                    Descripcion: desc,
+                    PrecioCombo: parseFloat(precio),
+                    CantMin: parseInt(min),
+                    CantMax: parseInt(max),
+                    VenceDesde: desde,
+                    VenceHasta: hasta,
+                    Estado: estado,
+                    ProductIds: prodIds.map(Number)
+                }),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteCombo(id) {
+            Swal.fire({
+                title: '¿Eliminar Combo?',
+                text: "Esta acción borrará el combo y sus detalles de la base de datos.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Descuentos/DeleteCombo?id=' + id,
+                        type: 'POST',
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire('Eliminado', res.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==================== ACCIONES TAB 4: ESPECIALES ====================
+        function openNewEspecialModal() {
+            $('#especialModalTitle').text('Asignar Precio Especial');
+            $('#especialId').val('');
+            $('#especialSelectContainer').removeClass('d-none');
+            $('#especialStaticContainer').addClass('d-none');
+            $('#especialProducto').val(null).trigger('change');
+            $('#especialPrecio').val('');
+            $('#especialCantidad').val(1);
+            $('#especialEstado').val('A');
+
+            var modal = new bootstrap.Modal(document.getElementById('especialModal'));
+            modal.show();
+        }
+
+        function editEspecial(id, pId, precio, cant, estado) {
+            $('#especialModalTitle').text('Editar Precio Especial');
+            $('#especialId').val(id);
+            $('#especialSelectContainer').addClass('d-none');
+            $('#especialStaticContainer').removeClass('d-none');
+            
+            var prodNombre = @Json.Serialize(productosDict);
+            $('#especialProductoNombre').val(prodNombre[pId] || "Producto #" + pId);
+            $('#especialPrecio').val(precio);
+            $('#especialCantidad').val(cant);
+            $('#especialEstado').val(estado === 'A' || estado === 'Activo' || estado === 'APROBADO' ? 'A' : estado);
+
+            var modal = new bootstrap.Modal(document.getElementById('especialModal'));
+            modal.show();
+        }
+
+        function saveEspecial() {
+            var id = $('#especialId').val();
+            var pId = id ? 0 : $('#especialProducto').val(); // Si es edición, el backend ya tiene el producto mapeado de antes o lo ignoramos porque no cambia
+            var precio = $('#especialPrecio').val();
+            var cant = $('#especialCantidad').val();
+            var estado = $('#especialEstado').val();
+
+            // Si es nuevo y no tiene pId
+            if (!id && !pId) {
+                Swal.fire('Error', 'Debe seleccionar un producto.', 'error');
+                return;
+            }
+            if (!precio || precio <= 0) {
+                Swal.fire('Error', 'Debe definir un precio especial válido.', 'error');
+                return;
+            }
+            if (!cant || cant <= 0) {
+                Swal.fire('Error', 'La cantidad mínima debe ser 1 o más.', 'error');
+                return;
+            }
+
+            // Obtener el ID del producto correcto
+            var finalPid = id ? 0 : parseInt(pId);
+            if (id) {
+                // Para edición, necesitamos el ID del producto que estaba previamente, lo buscaremos
+                // Pero wait, en la tabla ya tenemos el registro. Podemos pasar el producto original.
+                // Buscaremos el ID de la fila.
+                // En el editEspecial pasamos pId, así que lo guardamos en un data attribute o variable.
+            }
+
+            Swal.fire({
+                title: 'Guardando...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            // Si es edición, buscaremos el producto ID que cargamos
+            var editPid = 0;
+            if (id) {
+                // Buscar producto mapeado para este ID de precio especial
+                var especialesMapeados = @Json.Serialize(especiales);
+                var esp = especialesMapeados.find(e => e.id == parseInt(id));
+                if (esp) {
+                    editPid = esp.id_Producto;
+                }
+            }
+
+            $.ajax({
+                url: '/Descuentos/SaveSpecialPrice',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    Id: id ? parseInt(id) : 0,
+                    ProductoId: id ? editPid : parseInt(pId),
+                    PrecioEspecial: parseFloat(precio),
+                    Cantidad: parseFloat(cant),
+                    Estado: estado
+                }),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteEspecial(id) {
+            Swal.fire({
+                title: '¿Eliminar Precio Especial?',
+                text: "Esta regla ya no se aplicará en el POS.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Descuentos/DeleteSpecialPrice?id=' + id,
+                        type: 'POST',
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire('Eliminado', res.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==================== ACCIONES TAB 5: PROVEEDORES ====================
+        function openNewProveedorModal() {
+            $('#proveedorModalTitle').text('Asignar Descuento a Proveedor');
+            $('#proveedorDescId').val('');
+            $('#proveedorSelect').val('').prop('disabled', false);
+            $('#proveedorDescripcion').val('');
+            $('#proveedorPorcentaje').val('');
+            $('#proveedorVenceDesde').val(getTodayString());
+            $('#proveedorVenceHasta').val(getNextYearString());
+            $('#proveedorEstado').prop('checked', true);
+
+            var modal = new bootstrap.Modal(document.getElementById('proveedorModal'));
+            modal.show();
+        }
+
+        function editProveedor(id, proveedorId, descripcion, porcentaje, desde, hasta, estado) {
+            $('#proveedorModalTitle').text('Editar Descuento de Proveedor');
+            $('#proveedorDescId').val(id);
+            $('#proveedorSelect').val(proveedorId).prop('disabled', true);
+            $('#proveedorDescripcion').val(descripcion);
+            $('#proveedorPorcentaje').val(porcentaje);
+            $('#proveedorVenceDesde').val(desde.substring(0, 10));
+            $('#proveedorVenceHasta').val(hasta.substring(0, 10));
+            $('#proveedorEstado').prop('checked', estado);
+
+            var modal = new bootstrap.Modal(document.getElementById('proveedorModal'));
+            modal.show();
+        }
+
+        function saveProveedor() {
+            var id = $('#proveedorDescId').val();
+            var provId = $('#proveedorSelect').val();
+            var desc = $('#proveedorDescripcion').val();
+            var porc = $('#proveedorPorcentaje').val();
+            var desde = $('#proveedorVenceDesde').val();
+            var hasta = $('#proveedorVenceHasta').val();
+            var estado = $('#proveedorEstado').is(':checked');
+
+            if (!provId) {
+                Swal.fire('Error', 'Debe seleccionar un proveedor.', 'error');
+                return;
+            }
+            if (!desc) {
+                Swal.fire('Error', 'La descripción es obligatoria.', 'error');
+                return;
+            }
+            if (!porc || porc <= 0 || porc > 100) {
+                Swal.fire('Error', 'Porcentaje de descuento debe estar entre 1 y 100.', 'error');
+                return;
+            }
+            if (!desde || !hasta) {
+                Swal.fire('Error', 'Debe definir el rango de vigencia.', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Guardando...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            $.ajax({
+                url: '/Descuentos/SaveSupplierDiscount',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    Id: id ? parseInt(id) : 0,
+                    ProveedorId: parseInt(provId),
+                    Descripcion: desc,
+                    Porcentaje: parseFloat(porc),
+                    VenceDesde: desde,
+                    VenceHasta: hasta,
+                    Estado: estado
+                }),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteProveedor(id) {
+            Swal.fire({
+                title: '¿Eliminar Descuento de Proveedor?',
+                text: "Los productos de este proveedor ya no tendrán este descuento global en el POS.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Descuentos/DeleteSupplierDiscount?id=' + id,
+                        type: 'POST',
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire('Eliminado', res.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
+
+<style>
+    /* Premium aesthetics details */
+    .bg-indigo-soft {
+        background-color: rgba(99, 102, 241, 0.08);
+    }
+    .text-indigo {
+        color: #4f46e5;
+    }
+    .border-indigo {
+        border-color: rgba(99, 102, 241, 0.3) !important;
+    }
+    .btn-indigo {
+        background-color: #6366f1;
+        color: white;
+    }
+    .btn-indigo:hover {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .btn-indigo-soft {
+        background-color: rgba(99, 102, 241, 0.1);
+        color: #4f46e5;
+    }
+    .btn-indigo-soft:hover {
+        background-color: #6366f1;
+        color: white;
+    }
+
+    .bg-teal-soft {
+        background-color: rgba(20, 184, 166, 0.08);
+    }
+    .text-teal {
+        color: #0d9488;
+    }
+    .btn-teal {
+        background-color: #14b8a6;
+    }
+    .btn-teal:hover {
+        background-color: #0d9488;
+    }
+    .btn-teal-soft {
+        background-color: rgba(20, 184, 166, 0.1);
+        color: #0d9488;
+    }
+    .btn-teal-soft:hover {
+        background-color: #14b8a6;
+        color: white;
+    }
+
+    .bg-danger-soft {
+        background-color: rgba(239, 68, 68, 0.08);
+    }
+    .text-danger {
+        color: #dc2626;
+    }
+    .btn-danger-soft {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+    .btn-danger-soft:hover {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .bg-success-soft {
+        background-color: rgba(34, 197, 94, 0.08);
+    }
+    .text-success {
+        color: #16a34a;
+    }
+
+    .bg-warning-soft {
+        background-color: rgba(234, 179, 8, 0.08);
+    }
+    .text-warning {
+        color: #ca8a04;
+    }
+
+    .bg-secondary-soft {
+        background-color: rgba(107, 114, 128, 0.08);
+    }
+    .text-secondary {
+        color: #4b5563;
+    }
+
+    .bg-primary-soft {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+    }
+    .bg-primary-soft:hover {
+        background-color: #2563eb;
+        color: white;
+    }
+
+    .bg-dark-soft {
+        background-color: rgba(31, 41, 55, 0.1);
+        color: #111827;
+    }
+    .bg-dark-soft:hover {
+        background-color: #111827;
+        color: white;
+    }
+
+    .transition-all {
+        transition: all 0.25s ease-in-out;
+    }
+
+    /* Table styling details */
+    .table > :not(caption) > * > * {
+        padding: 1rem 0.75rem;
+    }
+
+    .nav-pills .nav-link {
+        color: #6b7280;
+        border: 1px solid transparent;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #4f46e5;
+        color: white;
+        box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.3);
+    }
+    .nav-pills .nav-link:hover:not(.active) {
+        background-color: #f3f4f6;
+        color: #374151;
+    }
+
+    /* Modal inputs */
+    .form-control:focus, .form-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+    }
+    .form-check-input:checked {
+        background-color: #6366f1;
+        border-color: #6366f1;
+    }
+
+    /* Custom select2-bootstrap5 override */
+    .select2-container--bootstrap-5 .select2-dropdown {
+        border-color: #6366f1 !important;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    }
+    .select2-container--bootstrap-5 .select2-selection {
+        border-radius: 10px;
+        border-color: #dee2e6;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+    .select2-container--bootstrap-5 .select2-selection:focus {
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25) !important;
+    }
+
+    .text-warning-dark {
+        color: #b45309;
+    }
+    .btn-warning-soft {
+        background-color: rgba(234, 179, 8, 0.1);
+        color: #b45309;
+    }
+    .btn-warning-soft:hover {
+        background-color: #f59e0b;
+        color: white;
+    }
+</style>

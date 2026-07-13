@@ -1,0 +1,931 @@
+@{
+    ViewData["Title"] = "Nuevo Traslado de Inventario - POS Style";
+    var bodegas = (ViewBag.Bodegas as List<SistemaERP.Models.Entities.Bodega>) ?? new List<SistemaERP.Models.Entities.Bodega>();
+    var productos = (ViewBag.Productos as List<SistemaERP.Models.Entities.Producto>) ?? new List<SistemaERP.Models.Entities.Producto>();
+    var presentaciones = ViewBag.Presentaciones as List<SistemaERP.Models.Entities.Presentacion>;
+}
+
+<style>
+    :root {
+        --pos-indigo: #4f46e5;
+        --pos-indigo-hover: #4338ca;
+        --pos-indigo-light: #e0e7ff;
+        --pos-bg: #f8fafc;
+        --pos-card-bg: #ffffff;
+        --pos-border: #e2e8f0;
+        --pos-text: #1e293b;
+        --pos-text-muted: #64748b;
+    }
+
+    .btn-indigo {
+        background-color: var(--pos-indigo) !important;
+        border-color: var(--pos-indigo) !important;
+        color: #ffffff !important;
+    }
+    .btn-indigo:hover {
+        background-color: var(--pos-indigo-hover) !important;
+        border-color: var(--pos-indigo-hover) !important;
+        color: #ffffff !important;
+    }
+    .btn-outline-indigo {
+        color: var(--pos-indigo) !important;
+        border-color: var(--pos-indigo) !important;
+        background-color: transparent !important;
+    }
+    .btn-outline-indigo:hover {
+        background-color: var(--pos-indigo) !important;
+        color: #ffffff !important;
+    }
+
+    /* Ocultar barra superior y lateral del sistema para simular pantalla completa estilo POS */
+    .main-header { display: none !important; }
+    #sidebar-wrapper { display: none !important; }
+    #page-content-wrapper { margin-left: 0 !important; width: 100% !important; }
+    #page-content-wrapper main { padding: 0 !important; background-color: var(--pos-bg) !important; }
+
+    /* Contenedor Principal POS */
+    .pos-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh !important;
+        width: 100%;
+        overflow: hidden;
+        font-family: 'Inter', sans-serif;
+        color: var(--pos-text);
+        background-color: var(--pos-bg);
+    }
+
+    /* Encabezado */
+    .pos-header {
+        height: 60px;
+        background: linear-gradient(135deg, #1e1b4b, #312e81);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 100;
+        flex-shrink: 0;
+    }
+
+    .pos-logo {
+        font-weight: 800;
+        font-size: 1.15rem;
+        letter-spacing: 0.5px;
+    }
+
+    .pos-header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    /* Workspace principal */
+    .pos-workspace {
+        display: flex;
+        flex-grow: 1;
+        height: 0;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* Panel Izquierdo: Catálogo y Buscador (38% ancho) */
+    .pos-catalog-panel {
+        width: 38%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: #f1f5f9;
+        border-right: 1px solid var(--pos-border);
+        overflow: hidden;
+    }
+
+    .catalog-search-bar {
+        padding: 0.75rem;
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--pos-border);
+        flex-shrink: 0;
+    }
+
+    .category-tabs {
+        display: flex;
+        gap: 0.4rem;
+        padding: 0.5rem 0.75rem;
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--pos-border);
+        overflow-x: auto;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .category-tabs::-webkit-scrollbar { height: 4px; }
+    .category-tabs::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .category-tab {
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--pos-text-muted);
+        background-color: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .category-tab.active {
+        background-color: var(--pos-indigo);
+        color: #ffffff;
+        border-color: var(--pos-indigo);
+    }
+
+    .product-grid {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 0.75rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
+        align-content: start;
+    }
+
+    /* Modos de visualización adicionales */
+    .product-grid.layout-grid {
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .product-grid.layout-lineas {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+    }
+
+    .product-card {
+        background-color: #ffffff;
+        border: 1px solid var(--pos-border);
+        border-radius: 10px;
+        padding: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        border-color: #cbd5e1;
+    }
+
+    .product-card-name {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--pos-text);
+        margin-bottom: 0.4rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 2.2rem;
+    }
+
+    .product-card-info {
+        font-size: 0.7rem;
+        color: var(--pos-text-muted);
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        flex-grow: 1;
+    }
+
+    .product-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        border-top: 1px solid #f1f5f9;
+        padding-top: 0.4rem;
+    }
+
+    /* Visualización Grid Compacto */
+    .product-grid.layout-grid .product-card {
+        padding: 0.4rem;
+        border-radius: 6px;
+    }
+    .product-grid.layout-grid .product-card-name {
+        height: auto;
+        -webkit-line-clamp: 1;
+        font-size: 0.72rem;
+        margin-bottom: 0.15rem;
+    }
+    .product-grid.layout-grid .product-card-info,
+    .product-grid.layout-grid .product-card-footer {
+        display: none !important;
+    }
+
+    /* Panel Derecho: Cabecera y Carrito (62% ancho) */
+    .pos-cart-panel {
+        width: 62%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: #ffffff;
+        overflow: hidden;
+    }
+
+    .cart-document-info {
+        padding: 0.75rem 1rem;
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--pos-border);
+        flex-shrink: 0;
+    }
+
+    .cart-items-wrapper {
+        flex-grow: 1;
+        overflow-y: auto;
+        background-color: #f8fafc;
+    }
+
+    .cart-table-row:hover {
+        background-color: var(--pos-indigo-light) !important;
+    }
+
+    .cart-totals-panel {
+        background-color: #ffffff;
+        border-top: 1px solid var(--pos-border);
+        padding: 0.75rem 1.25rem;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
+        flex-shrink: 0;
+    }
+
+    .total-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .total-box-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-uppercase: true;
+        color: var(--pos-text-muted);
+        letter-spacing: 0.5px;
+    }
+
+    .total-box-value {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--pos-text);
+    }
+
+    .badge-frac {
+        display: inline-block;
+        background: #ede9fe;
+        color: #6d28d9;
+        border-radius: 6px;
+        padding: 1px 7px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+</style>
+
+<div class="pos-container">
+    <!-- Header superior -->
+    <div class="pos-header">
+        <div class="d-flex align-items-center gap-3">
+            <span class="pos-logo text-white"><i class="bi bi-arrow-left-right me-2"></i>TRASLADOS DE INVENTARIO</span>
+            <span class="badge bg-white bg-opacity-20 text-white fw-bold px-3 border border-white border-opacity-10">MÓDULO DE LOGÍSTICA</span>
+        </div>
+        <div class="pos-header-right">
+            <div class="text-white text-opacity-75 small fw-semibold"><i class="bi bi-clock me-1"></i> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+            <a asp-action="Index" class="btn btn-sm btn-outline-light fw-bold px-3"><i class="bi bi-house-door me-1"></i> HISTORIAL / VOLVER</a>
+        </div>
+    </div>
+
+    <!-- Workspace principal -->
+    <div class="pos-workspace">
+        <!-- Panel Izquierdo: Catálogo y Buscador -->
+        <div class="pos-catalog-panel">
+            <div class="catalog-search-bar">
+                <div class="row g-2">
+                    <div class="col">
+                        <div class="input-group">
+                            <span class="input-group-text border-end-0 bg-white text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" id="txtBuscarProductoTrigger" class="form-control border-start-0 ps-0 shadow-none text-uppercase fw-semibold" placeholder="F1: Buscar por Código o Nombre..." autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-indigo active px-2" id="btnLayoutTarjetas" onclick="setCatalogLayout('tarjetas')" title="Vista Tarjetas"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+                            <button type="button" class="btn btn-outline-indigo px-2" id="btnLayoutLineas" onclick="setCatalogLayout('lineas')" title="Vista Líneas"><i class="bi bi-list-ul"></i></button>
+                            <button type="button" class="btn btn-outline-indigo px-2" id="btnLayoutGrid" onclick="setCatalogLayout('grid')" title="Vista Grid"><i class="bi bi-grid-fill"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categorías (Presentaciones) -->
+            <div class="category-tabs">
+                <div class="category-tab active" data-id="0" onclick="selectCategory(0)">TODOS</div>
+                @foreach (var pres in presentaciones ?? new())
+                {
+                    <div class="category-tab" data-id="@pres.Id" onclick="selectCategory(@pres.Id)">@pres.Nombre.ToUpper()</div>
+                }
+            </div>
+
+            <!-- Catálogo de productos -->
+            <div class="product-grid" id="productGrid">
+                <!-- Render dinámico vía JS -->
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Cabecera de bodegas y carrito -->
+        <div class="pos-cart-panel">
+            <!-- Formulario de Cabecera -->
+            <div class="cart-document-info">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted mb-1">BODEGA ORIGEN (SALIDA)</label>
+                        <select id="bodegaOrigen" class="form-select form-select-sm fw-bold border-indigo" onchange="actualizarInventarios()">
+                            <option value="">-- Seleccione origen --</option>
+                            @foreach (var b in bodegas)
+                            {
+                                <option value="@b.Id">@b.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted mb-1">BODEGA DESTINO (ENTRADA)</label>
+                        <select id="bodegaDestino" class="form-select form-select-sm fw-bold border-indigo">
+                            <option value="">-- Seleccione destino --</option>
+                            @foreach (var b in bodegas)
+                            {
+                                <option value="@b.Id">@b.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted mb-1">OBSERVACIÓN / JUSTIFICACIÓN</label>
+                        <input type="text" id="observacion" class="form-control form-control-sm" placeholder="Ej: Abastecimiento local...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Listado del Detalle (Carrito) -->
+            <div class="cart-items-wrapper">
+                <div class="table-responsive h-100 bg-white">
+                    <table class="table table-hover align-middle mb-0" id="tblDetalle" style="font-size:0.85rem;">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th class="text-center" style="width: 80px;">Cant.</th>
+                                <th>Producto</th>
+                                <th class="text-center" style="width: 140px;">Stock Origen</th>
+                                <th class="text-center" style="width: 120px;">Tipo Unidad</th>
+                                <th class="text-center" style="width: 80px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartItemsContainer">
+                            <!-- Render dinámico vía JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Panel de Totales -->
+            <div class="cart-totals-panel">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small fw-bold"><i class="bi bi-keyboard me-1"></i> F1: Buscar · F7: Registrar Traslado · Doble click sobre ítem edita en popup</span>
+                    <div class="d-flex gap-2">
+                        <button onclick="enviarTraslado()" class="btn btn-indigo fw-bold px-4"><i class="bi bi-send me-1"></i> REGISTRAR ORDEN DE SALIDA</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configuración de Producto -->
+<div class="modal fade" id="modalProductConfig" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:14px;">
+            <div class="modal-header bg-indigo text-white py-3">
+                <h5 class="modal-title fw-bold" id="modalProductConfigTitle"><i class="bi bi-gear-fill me-2"></i>Detalle de Traslado del Artículo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formProductConfig" onsubmit="event.preventDefault(); applyProductConfig();">
+                    <input type="hidden" id="cfgIdProducto" />
+                    <input type="hidden" id="cfgEditIndex" value="-1" />
+                    
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <label class="form-label fw-bold m-0" id="cfgNombreProducto" style="color:var(--pos-indigo); font-size:1rem;">-</label>
+                        <div class="text-muted small mt-1" id="cfgContieneLabel"></div>
+                        <div class="text-success small fw-bold mt-1" id="cfgStockLabel">Stock Disponible: 0 uds</div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1">CANTIDAD A TRASLADAR</label>
+                            <input type="number" id="cfgCantidad" class="form-control text-center fw-bold" min="1" value="1" required>
+                        </div>
+                        
+                        <div class="col-12" id="smartUnitPanelModal">
+                            <label class="form-label small fw-bold text-muted mb-1">UNIDAD DE TRASLADO</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="cfgUnitType" id="cfgUnitU" value="U" checked>
+                                <label class="btn btn-outline-indigo py-2 fw-semibold" for="cfgUnitU" style="font-size:0.8rem;">Unidad</label>
+                                
+                                <input type="radio" class="btn-check" name="cfgUnitType" id="cfgUnitC" value="C">
+                                <label class="btn btn-outline-indigo py-2 fw-semibold" for="cfgUnitC" style="font-size:0.8rem;">Caja (<span id="cfgSpanContiene">0</span>)</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-indigo px-4 fw-bold shadow-sm text-white" onclick="applyProductConfig()">
+                    <i class="bi bi-check-circle me-1"></i> ACEPTAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Select2 inclusion for search functionality -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+@section Scripts {
+    <script>
+        const stockPorBodega = @Html.Raw(Json.Serialize(ViewBag.StockPorBodega));
+        const productosMap = @Html.Raw(Json.Serialize(productos.ToDictionary(p => p.Id, p => p)));
+        let selectedCategoryVal = 0;
+        let activeCatalogLayout = 'tarjetas';
+        let modalConfigInstance = null;
+        let carrito = [];
+
+        $(document).ready(function() {
+            modalConfigInstance = new bootstrap.Modal(document.getElementById('modalProductConfig'));
+
+            // Teclas de Atajos
+            $(document).keydown(function(e) {
+                if (e.which === 112) { // F1
+                    e.preventDefault();
+                    $("#txtBuscarProductoTrigger").focus().select();
+                }
+                if (e.which === 118) { // F7
+                    e.preventDefault();
+                    enviarTraslado();
+                }
+            });
+
+            // Buscador con escáner de código de barra
+            $("#txtBuscarProductoTrigger").on('input', function() {
+                let query = $(this).val().trim();
+                const bodId = $('#bodegaOrigen').val();
+                if (!bodId) return;
+
+                // Buscar por código de barra exacto
+                let p = Object.values(productosMap).find(x => x.codigoBarra.trim() === query);
+                if (p) {
+                    $(this).val('');
+                    
+                    // Verificar si tiene stock en bodega origen
+                    const stockList = stockPorBodega[p.id.toString()] || [];
+                    const sb = stockList.find(s => s.id_Bodega == bodId);
+                    const stockUnits = sb ? sb.stock : 0;
+                    
+                    if (stockUnits <= 0) {
+                        toastr.warning(`El producto ${p.nombre} no tiene existencias en la bodega de origen.`);
+                        return;
+                    }
+
+                    openAddProductModal(p.id);
+                    return;
+                }
+                renderCatalogGrid();
+            });
+
+            actualizarInventarios();
+        });
+
+        // Configuración de Grid
+        function setCatalogLayout(layout) {
+            activeCatalogLayout = layout;
+            $(".btn-outline-indigo").removeClass("active");
+            if (layout === 'tarjetas') $("#btnLayoutTarjetas").addClass("active");
+            if (layout === 'lineas') $("#btnLayoutLineas").addClass("active");
+            if (layout === 'grid') $("#btnLayoutGrid").addClass("active");
+            renderCatalogGrid();
+        }
+
+        function selectCategory(id) {
+            selectedCategoryVal = id;
+            $(".category-tab").removeClass("active");
+            $(`.category-tab[data-id="${id}"]`).addClass("active");
+            renderCatalogGrid();
+        }
+
+        function actualizarInventarios() {
+            const bodId = $('#bodegaOrigen').val();
+            
+            // Vaciar el carrito si cambian de bodega origen para evitar incongruencias
+            if (carrito.length > 0) {
+                Swal.fire({
+                    title: '¿Cambiar bodega origen?',
+                    text: "Se vaciará el carrito de traslado actual para validar las existencias de la nueva bodega.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cambiar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        carrito = [];
+                        renderTable();
+                        filtrarYRenderizarCatalogo();
+                    } else {
+                        // Revertir bodega anterior
+                        // (Para simplificar, vaciamos el carrito directo)
+                        carrito = [];
+                        renderTable();
+                        filtrarYRenderizarCatalogo();
+                    }
+                });
+            } else {
+                filtrarYRenderizarCatalogo();
+            }
+        }
+
+        function filtrarYRenderizarCatalogo() {
+            renderCatalogGrid();
+        }
+
+        function renderCatalogGrid() {
+            const bodId = $('#bodegaOrigen').val();
+            let container = $("#productGrid");
+            container.empty();
+
+            if (!bodId) {
+                container.html(`<div class="col-12 text-center text-muted py-5 small"><i class="bi bi-info-circle fs-2 d-block mb-2 opacity-50"></i>Seleccione primero una Bodega de Origen para cargar el catálogo</div>`);
+                return;
+            }
+
+            let query = $("#txtBuscarProductoTrigger").val().toLowerCase().trim();
+            let words = query.split(/\s+/);
+
+            // Filtrar productos con existencias en la bodega origen seleccionada
+            let filtered = Object.values(productosMap).filter(p => {
+                const stockList = stockPorBodega[p.id.toString()] || [];
+                const sb = stockList.find(s => s.id_Bodega == bodId);
+                const stockUnits = sb ? sb.stock : 0;
+
+                let hasStock = stockUnits > 0;
+                let matchCat = selectedCategoryVal === 0 || p.idPresentacion === selectedCategoryVal;
+                let matchText = words.every(w => p.nombre.toLowerCase().includes(w) || p.codigoBarra.includes(w));
+                
+                return hasStock && matchCat && matchText;
+            });
+
+            if (filtered.length === 0) {
+                container.html(`<div class="col-12 text-center text-muted py-4 small">No se encontraron productos con existencias</div>`);
+                return;
+            }
+
+            if (activeCatalogLayout === 'lineas') {
+                let h = `<div class="w-100 bg-white border rounded-3 p-1">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Cód. Barra</th>
+                                        <th>Descripción</th>
+                                        <th class="text-center">Stock Origen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                filtered.forEach(p => {
+                    const stockList = stockPorBodega[p.id.toString()] || [];
+                    const sb = stockList.find(s => s.id_Bodega == bodId);
+                    const stockUnits = sb ? sb.stock : 0;
+                    const contiene = p.contiene || 1;
+                    const cajas = Math.floor(stockUnits / contiene);
+                    const fracs = stockUnits % contiene;
+                    const stockLabel = contiene > 1 ? `${cajas}F${fracs} (${stockUnits} uds)` : `${stockUnits} uds`;
+
+                    h += `<tr style="cursor:pointer;" onclick="openAddProductModal(${p.id})">
+                            <td class="text-muted fw-bold">${escapeHtml(p.codigoBarra)}</td>
+                            <td class="fw-bold text-dark">${escapeHtml(p.nombre)}</td>
+                            <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success">${stockLabel}</span></td>
+                          </tr>`;
+                });
+                h += `</tbody></table></div>`;
+                container.html(h);
+            }
+            else if (activeCatalogLayout === 'grid') {
+                filtered.forEach(p => {
+                    const stockList = stockPorBodega[p.id.toString()] || [];
+                    const sb = stockList.find(s => s.id_Bodega == bodId);
+                    const stockUnits = sb ? sb.stock : 0;
+
+                    container.append(`
+                        <div class="product-card p-2 text-center" onclick="openAddProductModal(${p.id})">
+                            <div class="product-card-name text-truncate mb-1" style="font-size:0.75rem; height:auto; font-weight:700;" title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</div>
+                            <span class="badge bg-indigo bg-opacity-10 text-indigo fw-bold mb-1" style="font-size:0.68rem;">Stock: ${stockUnits}</span>
+                        </div>
+                    `);
+                });
+            }
+            else {
+                filtered.forEach(p => {
+                    const stockList = stockPorBodega[p.id.toString()] || [];
+                    const sb = stockList.find(s => s.id_Bodega == bodId);
+                    const stockUnits = sb ? sb.stock : 0;
+                    const contiene = p.contiene || 1;
+                    const cajas = Math.floor(stockUnits / contiene);
+                    const fracs = stockUnits % contiene;
+                    const stockLabel = contiene > 1 ? `${cajas} F ${fracs} (${stockUnits} uds)` : `${stockUnits} uds`;
+
+                    container.append(`
+                        <div class="product-card" onclick="openAddProductModal(${p.id})">
+                            <div class="product-card-name">${escapeHtml(p.nombre)}</div>
+                            <div class="product-card-info">
+                                <div>Stock Origen: <strong>${stockLabel}</strong></div>
+                            </div>
+                            <div class="product-card-footer">
+                                <span class="badge bg-indigo-soft text-indigo" style="font-size:0.65rem;">Cód: ${p.codigoBarra.substring(0,6)}</span>
+                                <button class="btn btn-sm btn-indigo rounded-circle p-0 d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
+                                    <i class="bi bi-plus text-white"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                });
+            }
+        }
+
+        // --- Manejo del Popup Modal (Añadir / Editar) ---
+        function openAddProductModal(id) {
+            const bodId = $('#bodegaOrigen').val();
+            let p = productosMap[id];
+            if (!p || !bodId) return;
+
+            // Obtener stock disponible
+            const stockList = stockPorBodega[p.id.toString()] || [];
+            const sb = stockList.find(s => s.id_Bodega == bodId);
+            const stockUnits = sb ? sb.stock : 0;
+
+            $("#cfgIdProducto").val(p.id);
+            $("#cfgEditIndex").val("-1");
+            $("#cfgNombreProducto").text(p.nombre);
+            $("#cfgStockLabel").text(`Stock Disponible: ${stockUnits} unidades`);
+            $("#cfgCantidad").val("1");
+
+            if (p.contiene > 1) {
+                $("#smartUnitPanelModal").removeClass("d-none");
+                $("#cfgSpanContiene").text(p.contiene);
+                $("#cfgContieneLabel").text(`Empaque: Caja contiene ${p.contiene} unidades`);
+                $("#cfgUnitU").prop("checked", true);
+            } else {
+                $("#smartUnitPanelModal").addClass("d-none");
+                $("#cfgContieneLabel").text("");
+            }
+
+            modalConfigInstance.show();
+            setTimeout(() => { $("#cfgCantidad").focus().select(); }, 400);
+        }
+
+        function openEditProductModal(idx) {
+            const bodId = $('#bodegaOrigen').val();
+            let item = carrito[idx];
+            if (!item || !bodId) return;
+
+            let p = productosMap[item.idProducto];
+            if (!p) return;
+
+            // Obtener stock disponible
+            const stockList = stockPorBodega[p.id.toString()] || [];
+            const sb = stockList.find(s => s.id_Bodega == bodId);
+            const stockUnits = sb ? sb.stock : 0;
+
+            $("#cfgIdProducto").val(item.idProducto);
+            $("#cfgEditIndex").val(idx);
+            $("#cfgNombreProducto").text(item.nombre);
+            $("#cfgStockLabel").text(`Stock Disponible: ${stockUnits} unidades`);
+            $("#cfgCantidad").val(item.cantidad);
+
+            if (p.contiene > 1) {
+                $("#smartUnitPanelModal").removeClass("d-none");
+                $("#cfgSpanContiene").text(p.contiene);
+                $("#cfgContieneLabel").text(`Empaque: Caja contiene ${p.contiene} unidades`);
+                if (item.esCaja) {
+                    $("#cfgUnitC").prop("checked", true);
+                } else {
+                    $("#cfgUnitU").prop("checked", true);
+                }
+            } else {
+                $("#smartUnitPanelModal").addClass("d-none");
+                $("#cfgContieneLabel").text("");
+            }
+
+            modalConfigInstance.show();
+            setTimeout(() => { $("#cfgCantidad").focus().select(); }, 400);
+        }
+
+        function applyProductConfig() {
+            const bodId = $('#bodegaOrigen').val();
+            let id = parseInt($("#cfgIdProducto").val());
+            let editIdx = parseInt($("#cfgEditIndex").val());
+            let p = productosMap[id];
+            if (!p || !bodId) return;
+
+            let cant = parseInt($("#cfgCantidad").val()) || 1;
+            let esCaja = p.contiene > 1 && ($("input[name='cfgUnitType']:checked").val() === 'C');
+            let contiene = p.contiene || 1;
+            let cantReal = esCaja ? cant * contiene : cant;
+
+            // Validar stock disponible
+            const stockList = stockPorBodega[p.id.toString()] || [];
+            const sb = stockList.find(s => s.id_Bodega == bodId);
+            const stockUnits = sb ? sb.stock : 0;
+
+            // Sumar cantidades en el carrito excluyendo el elemento editado
+            let cantExistente = 0;
+            carrito.forEach((item, idx) => {
+                if (item.idProducto == id && idx !== editIdx) {
+                    let itemP = productosMap[item.idProducto];
+                    cantExistente += item.esCaja ? item.cantidad * (itemP.contiene || 1) : item.cantidad;
+                }
+            });
+
+            if (stockUnits < (cantReal + cantExistente)) {
+                Swal.fire("Stock Insuficiente", `No hay suficiente stock en bodega origen. Disponible: ${stockUnits} unidades. En el carrito (otros ítems): ${cantExistente} unidades.`, "error");
+                return;
+            }
+
+            let rowData = {
+                idProducto: id,
+                nombre: p.nombre,
+                cantidad: cant,
+                esCaja: esCaja,
+                stockDisponible: stockUnits,
+                contiene: contiene
+            };
+
+            if (editIdx >= 0) {
+                // Editar línea existente
+                carrito[editIdx] = rowData;
+                toastr.success(`Actualizado: ${p.nombre}`);
+            } else {
+                // Consolidar duplicados
+                let existingIdx = carrito.findIndex(x => 
+                    x.idProducto === id && 
+                    x.esCaja === esCaja
+                );
+
+                if (existingIdx >= 0) {
+                    carrito[existingIdx].cantidad += cant;
+                    toastr.success(`Cantidad acumulada para: ${p.nombre}`);
+                } else {
+                    carrito.push(rowData);
+                    toastr.success(`Agregado: ${p.nombre}`);
+                }
+            }
+
+            modalConfigInstance.hide();
+            renderTable();
+        }
+
+        function renderTable() {
+            const body = $('#cartItemsContainer');
+            body.empty();
+
+            if (carrito.length === 0) {
+                body.html(`
+                    <tr id="emptyCartRow">
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-cart-x fs-2 d-block mb-2 opacity-25"></i>
+                            <span>No se han añadido productos al traslado.</span>
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            carrito.forEach((x, i) => {
+                let contiene = x.contiene || 1;
+                let stockOrigenDisplay = "";
+                let cantDisplay = "";
+
+                if (contiene > 1) {
+                    // Formatear stock origen
+                    let origCajas = Math.floor(x.stockDisponible / contiene);
+                    let origFracs = x.stockDisponible % contiene;
+                    stockOrigenDisplay = `${origCajas}F${origFracs} (${x.stockDisponible} uds)`;
+
+                    // Formatear cantidad solicitada
+                    if (x.esCaja) {
+                        cantDisplay = `<span class="badge bg-indigo text-white ms-1">CAJA</span>`;
+                    } else {
+                        let boxes = Math.floor(x.cantidad / contiene);
+                        let fracs = x.cantidad % contiene;
+                        cantDisplay = `<span class="badge bg-light text-secondary border ms-1">${boxes}F${fracs}</span>`;
+                    }
+                } else {
+                    stockOrigenDisplay = `${x.stockDisponible} uds`;
+                }
+
+                body.append(`
+                    <tr style="cursor:pointer;" class="cart-table-row" ondblclick="openEditProductModal(${i})" title="Doble click para editar">
+                        <td class="text-center fw-bold text-dark">${x.cantidad}</td>
+                        <td class="fw-semibold">
+                            ${escapeHtml(x.nombre)} ${cantDisplay}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success bg-opacity-10 text-success fw-bold">${stockOrigenDisplay}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge ${x.esCaja ? 'bg-indigo text-white' : 'bg-light text-indigo border'} rounded-pill px-3">
+                                ${x.esCaja ? 'CAJA' : 'UNID'}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 fs-5" onclick="eliminarItem(${i}); event.stopPropagation();">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function eliminarItem(idx) {
+            carrito.splice(idx, 1);
+            renderTable();
+        }
+
+        function enviarTraslado() {
+            const orig = $('#bodegaOrigen').val();
+            const dest = $('#bodegaDestino').val();
+            const obs = $('#observacion').val();
+
+            if (!orig) {
+                Swal.fire("Información", "Por favor seleccione una bodega de origen.", "info");
+                return;
+            }
+            if (!dest) {
+                Swal.fire("Información", "Por favor seleccione una bodega de destino.", "info");
+                return;
+            }
+            if (orig === dest) {
+                Swal.fire("Error de Bodegas", "La bodega de origen y destino no pueden ser la misma.", "error");
+                return;
+            }
+            if (carrito.length === 0) {
+                Swal.fire("Error", "Debe agregar al menos un producto al detalle del traslado.", "error");
+                return;
+            }
+
+            const data = {
+                idBodegaOrigen: parseInt(orig),
+                idBodegaDestino: parseInt(dest),
+                observacion: obs,
+                detalles: carrito.map(item => ({
+                    idProducto: item.idProducto,
+                    cantidad: item.cantidad,
+                    esCaja: item.esCaja
+                }))
+            };
+
+            $.ajax({
+                url: '@Url.Action("GuardarTraslado", "Traslados")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire("Éxito", res.message, "success").then(() => {
+                            location.href = '@Url.Action("Index")';
+                        });
+                    } else {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                },
+                error: function() {
+                    Swal.fire("Error", "Ocurrió un error al guardar el traslado. Intente de nuevo.", "error");
+                }
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+}

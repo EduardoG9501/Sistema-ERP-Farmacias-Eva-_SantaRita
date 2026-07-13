@@ -1,0 +1,224 @@
+@{
+    ViewData["Title"] = "Reportes";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-bar-chart-line me-2"></i>Reportes</h2>
+        <p class="text-muted">Panel centralizado de todos los reportes del sistema. Seleccione un reporte para generar.</p>
+    </div>
+</div>
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <!-- Cuadrante 1: Ventas -->
+    <div class="col-12 col-md-6">
+        <div class="premium-card h-100 p-4 border-0 shadow-sm bg-white rounded-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="report-icon bg-blue-soft me-3">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-0">Reportes de Ventas</h5>
+            </div>
+            <p class="text-muted small mb-4">Facturación, ventas diarias, mensuales y auditoría de documentos.</p>
+            
+            <div class="list-group list-group-flush border-top">
+                <a asp-controller="Reportes" asp-action="VentasDiarias" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-calendar-check me-1 text-success"></i> Ventas del Día</h6>
+                        <small class="text-muted">Desglose de ventas por fecha con subtotal, descuento, IVA y total</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+                <a asp-controller="Reportes" asp-action="VentasMensuales" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-calendar-month me-1 text-info"></i> Ventas Mensuales</h6>
+                        <small class="text-muted">Totales acumulados por mes con comparativas</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+                <a asp-controller="Facturacion" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-receipt me-1"></i> Historial de Facturas</h6>
+                        <small class="text-muted">Lista y auditoría de tickets emitidos al SRI</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                <a asp-controller="Facturacion" asp-action="CierreCaja" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-cash-stack me-1 text-success"></i> Cierre de Caja Diario</h6>
+                        <small class="text-muted">Desglose por métodos de pago del día</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuadrante 2: Inventarios -->
+    <div class="col-12 col-md-6">
+        <div class="premium-card h-100 p-4 border-0 shadow-sm bg-white rounded-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="report-icon bg-green-soft me-3">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-0">Reportes de Inventarios</h5>
+            </div>
+            <p class="text-muted small mb-4">Existencias, valorización, vencimientos y movimientos de bodega.</p>
+            
+            <div class="list-group list-group-flush border-top">
+                <a asp-controller="Reportes" asp-action="StockReport" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-grid-3x3-gap-fill me-1 text-success"></i> Reporte de Stock</h6>
+                        <small class="text-muted">Existencias, PVF, PVP, PVPX y Utilidades estimadas</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+                <a asp-controller="Reportes" asp-action="ProductosVencidos" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-exclamation-triangle me-1 text-danger"></i> Productos Vencidos</h6>
+                        <small class="text-muted">Productos cuya fecha de caducidad ha expirado</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuadrante 3: Contabilidad y Caja -->
+    <div class="col-12 col-md-6">
+        <div class="premium-card h-100 p-4 border-0 shadow-sm bg-white rounded-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="report-icon bg-orange-soft me-3">
+                    <i class="bi bi-bank"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-0">Contabilidad y Caja</h5>
+            </div>
+            <p class="text-muted small mb-4">Cuentas por cobrar, cuentas por pagar, cierres de caja y bancos.</p>
+            
+            <div class="list-group list-group-flush border-top">
+                <a asp-controller="Bancos" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-bank me-1"></i> Cuentas Bancarias</h6>
+                        <small class="text-muted">Administración y auditoría de cuentas bancarias</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                <a asp-controller="Cobros" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-cash-coin me-1 text-success"></i> Cuentas por Cobrar / Abonos</h6>
+                        <small class="text-muted">Seguimiento de facturas pendientes de cobro</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                <a asp-controller="Reportes" asp-action="ReporteCierresCaja" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-file-earmark-bar-graph me-1 text-primary"></i> Reporte de Cierres de Caja</h6>
+                        <small class="text-muted">Historial y desglose de cierres en rango de fecha (Crystal Reports)</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+                <a asp-controller="Reportes" asp-action="ResumenDetalleCierre" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-calculator me-1 text-success"></i> Arqueo y Auditoría de Caja</h6>
+                        <small class="text-muted">Resumen interactivo, conteo de billetes y monedas por usuario</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+                <a asp-controller="Reportes" asp-action="EstadoResultados" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-file-earmark-bar-graph me-1 text-info"></i> Estado de Resultados</h6>
+                        <small class="text-muted">Reporte interactivo de pérdidas y ganancias diseñado a medida</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-primary"></i>
+                </a>
+                <a asp-controller="CuentasContables" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-list-nested me-1 text-primary"></i> Catálogo de Cuentas</h6>
+                        <small class="text-muted">Configuración del catálogo de cuentas contables</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                <a asp-controller="Gastos" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-receipt-cutoff me-1 text-warning"></i> Registro de Gastos</h6>
+                        <small class="text-muted">Registros de egresos y gastos operacionales</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                <a asp-controller="ConfiguracionReporte" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-gear-fill me-1 text-secondary"></i> Diseñador Estado Resultados</h6>
+                        <small class="text-muted">Configuración de filas, fórmulas y orden del reporte</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuadrante 4: Seguridad -->
+    <div class="col-12 col-md-6">
+        <div class="premium-card h-100 p-4 border-0 shadow-sm bg-white rounded-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="report-icon bg-purple-soft me-3">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-0">Seguridad y Administración</h5>
+            </div>
+            <p class="text-muted small mb-4">Configuración, denominaciones y auditoría del sistema.</p>
+            
+            <div class="list-group list-group-flush border-top">
+                <a asp-controller="Denominaciones" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-cash-stack me-1 text-success"></i> Denominaciones (Billetes/Monedas)</h6>
+                        <small class="text-muted">Gestión de monedas y billetes para arqueo de caja</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                <a asp-controller="ParametrosSistema" asp-action="Index" class="list-group-item list-group-item-action py-3 px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-sliders me-1"></i> Parámetros del Sistema</h6>
+                        <small class="text-muted">Configuración global, moneda oficial y formatos</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .report-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.45rem;
+    }
+    .bg-blue-soft {
+        background-color: #eff6ff;
+        color: #3b82f6;
+    }
+    .bg-green-soft {
+        background-color: #f0fdf4;
+        color: #22c55e;
+    }
+    .bg-orange-soft {
+        background-color: #fff7ed;
+        color: #f97316;
+    }
+    .bg-purple-soft {
+        background-color: #faf5ff;
+        color: #a855f7;
+    }
+    .list-group-item {
+        border-color: #f3f4f6;
+        transition: padding 0.2s;
+    }
+    .list-group-item:hover {
+        background-color: #fbfbfb;
+        padding-left: 8px !important;
+    }
+</style>

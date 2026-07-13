@@ -1,0 +1,309 @@
+@model SistemaERP.Controllers.ReportesController.VentasMensualesReportViewModel
+@{
+    ViewData["Title"] = "Reporte de Ventas Mensuales";
+    var simb = (ViewBag.MonedaSimbolo as string) ?? "$";
+    var isInitial = (bool)(ViewBag.InitialLoad ?? true);
+}
+
+<!-- Estilos On-Screen y Print CSS de Alta Fidelidad -->
+<style>
+    .filter-box {
+        background-color: #f2f2f2;
+        border: 1px solid #ccc;
+        padding: 12px 20px;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+        font-weight: bold;
+        color: #000;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-radius: 4px;
+        margin-top: 15px;
+    }
+    .filter-box label {
+        margin-bottom: 0;
+    }
+    .filter-box input[type="date"] {
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        font-weight: normal;
+        border-radius: 3px;
+    }
+    .btn-action {
+        border: 0;
+        padding: 6px 14px;
+        font-weight: bold;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        border-radius: 3px;
+        text-transform: uppercase;
+        color: #fff;
+        text-decoration: none;
+    }
+    .btn-buscar {
+        background-color: #005a9e;
+    }
+    .btn-buscar:hover {
+        background-color: #004578;
+    }
+    .btn-imprimir {
+        background-color: #5b5b5b;
+    }
+    .btn-imprimir:hover {
+        background-color: #444;
+    }
+    .btn-pdf {
+        background-color: #a80000;
+    }
+    .btn-pdf:hover {
+        background-color: #800000;
+    }
+    .btn-excel {
+        background-color: #107c41;
+    }
+    .btn-excel:hover {
+        background-color: #0b5930;
+    }
+
+    /* Tabla principal tipo Mockup */
+    .table-mockup-mensual {
+        width: 100%;
+        max-width: 600px;
+        margin: 25px auto 0 auto;
+        border-collapse: collapse;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .table-mockup-mensual thead th {
+        border-bottom: 2px solid #000;
+        color: #000;
+        font-weight: bold;
+        font-size: 14px;
+        padding: 8px 10px;
+        text-align: left;
+    }
+    .table-mockup-mensual tbody td {
+        padding: 10px;
+        font-size: 13px;
+        color: #000;
+        border-bottom: 1px dotted #000;
+    }
+    .table-mockup-mensual tbody tr.totals-row td {
+        border-top: 2px solid #000;
+        border-bottom: 2px solid #000;
+        font-weight: bold;
+        font-size: 14px;
+        background-color: #fff;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+    .underline-text {
+        text-decoration: underline;
+    }
+
+    .report-title-container {
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+        margin-top: 30px;
+    }
+    .report-title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        color: #000;
+    }
+    .report-subtitle {
+        font-size: 13px;
+        color: #000;
+        margin-bottom: 20px;
+    }
+
+    /* Configuración por defecto para impresión */
+    .print-only {
+        display: none;
+    }
+
+    /* Reglas de impresión CSS */
+    @@media print {
+        .no-print, 
+        #sidebar-wrapper, 
+        .main-header,
+        header, 
+        footer, 
+        nav, 
+        .navbar,
+        .offcanvas {
+            display: none !important;
+        }
+        body, .container, main, #content, #wrapper, #page-content-wrapper {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #fff !important;
+            border: 0 !important;
+        }
+        .print-only {
+            display: block !important;
+        }
+        .table-mockup-mensual {
+            max-width: 100% !important;
+        }
+    }
+</style>
+
+<!-- ========================================== -->
+<!-- ESTRUCTURA EN PANTALLA (WEB)               -->
+<!-- ========================================== -->
+<div class="no-print p-3 animate__animated animate__fadeIn">
+    <!-- Título -->
+    <h3 class="fw-bold mb-0 text-uppercase" style="font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 18px; letter-spacing: 0.5px;">VENTAS MENSUALES</h3>
+
+    <!-- Caja de Filtros -->
+    <div class="filter-box">
+        <form method="get" class="d-flex align-items-center gap-2 flex-wrap m-0 w-100">
+            <div class="d-flex align-items-center gap-2">
+                DESDE EL: 
+                <input type="date" name="desde" id="desdeInput" value="@ViewBag.Desde" />
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                HASTA EL: 
+                <input type="date" name="hasta" id="hastaInput" value="@ViewBag.Hasta" />
+            </div>
+            
+            <button class="btn-action btn-buscar" type="submit">
+                <i class="bi bi-search"></i> BUSCAR
+            </button>
+            
+            @if (!isInitial)
+            {
+                <button class="btn-action btn-imprimir" type="button" onclick="window.print()">
+                    <i class="bi bi-printer"></i> IMPRIMIR
+                </button>
+                <button class="btn-action btn-pdf" type="button" onclick="window.print()">
+                    <i class="bi bi-file-earmark-pdf"></i> EXPORTAR A PDF
+                </button>
+                <a class="btn-action btn-excel" id="exportExcelBtn" href="#" onclick="exportExcel(event)">
+                    <i class="bi bi-file-earmark-excel"></i> EXPORTAR A EXCEL
+                </a>
+            }
+        </form>
+    </div>
+
+    @if (!isInitial)
+    {
+        <div class="report-title-container">
+            <div class="report-title">REPORTE DE LAS VENTAS MENSUALES</div>
+            <div class="report-subtitle">Desde: @Model.Desde.ToString("dd/MM/yyyy") &nbsp;&nbsp; Hasta: @Model.Hasta.ToString("dd/MM/yyyy")</div>
+        </div>
+
+        <table class="table-mockup-mensual">
+            <thead>
+                <tr>
+                    <th style="width: 60%;">FECHA</th>
+                    <th style="width: 40%; text-align: right;">TOTAL A PAGAR</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.GruposMensuales.Any())
+                {
+                    <tr>
+                        <td colspan="2" class="text-center py-4 text-muted">
+                            No se encontraron ventas en el rango seleccionado.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model.GruposMensuales)
+                    {
+                        <tr>
+                            <td class="fw-bold">@item.MesAnio</td>
+                            <td style="text-align: right; font-weight: bold;">@item.TotalCobrado.ToString("N2")</td>
+                        </tr>
+                    }
+                    <tr class="totals-row">
+                        <td><span class="underline-text">Totales:</span></td>
+                        <td style="text-align: right;">@Model.TotalVentas.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<!-- ========================================== -->
+<!-- ESTRUCTURA EXCLUSIVA PARA IMPRESIÓN (PRINT) -->
+<!-- ========================================== -->
+@if (!isInitial)
+{
+    <div id="report-print-container" class="print-only">
+        <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto;">
+            <!-- Encabezado de la Empresa -->
+            <div class="text-center mb-4" style="text-align: center;">
+                <h4 class="fw-bold mb-0 text-uppercase" style="margin: 0; font-weight: bold;">@ViewBag.Parametros.NombreEmpresa</h4>
+                <div class="small text-uppercase text-secondary" style="font-size: 12px;">@ViewBag.Parametros.Direccion</div>
+                <div class="small text-muted mt-1" style="font-size: 11px;">
+                    Impreso: @DateTime.Now.ToString("yyyy-MM-dd : HH:mm:ss")
+                </div>
+            </div>
+
+            <div class="report-title-container" style="text-align: center; margin-top: 20px;">
+                <div class="report-title" style="font-weight: bold; font-size: 16px;">REPORTE DE LAS VENTAS MENSUALES</div>
+                <div class="report-subtitle" style="font-size: 12px;">Desde: @Model.Desde.ToString("dd/MM/yyyy") &nbsp;&nbsp; Hasta: @Model.Hasta.ToString("dd/MM/yyyy")</div>
+            </div>
+            
+            <table class="table-mockup-mensual" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #000;">
+                        <th style="text-align: left; padding: 8px 10px; font-weight: bold;">FECHA</th>
+                        <th style="text-align: right; padding: 8px 10px; font-weight: bold; width: 40%;">TOTAL A PAGAR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.GruposMensuales.Any())
+                    {
+                        <tr>
+                            <td colspan="2" style="text-align: center; padding: 15px; border-bottom: 1px dotted #000;">
+                                No se encontraron ventas en el rango seleccionado.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.GruposMensuales)
+                        {
+                            <tr style="border-bottom: 1px dotted #000;">
+                                <td style="padding: 10px; font-weight: bold;">@item.MesAnio</td>
+                                <td style="text-align: right; padding: 10px; font-weight: bold;">@item.TotalCobrado.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr style="font-weight: bold; border-top: 2px solid #000; border-bottom: 2px solid #000;">
+                            <td style="padding: 12px 10px;"><span style="text-decoration: underline;">Totales:</span></td>
+                            <td style="text-align: right; padding: 12px 10px;">@Model.TotalVentas.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<!-- Script de Interacción Dinámica -->
+<script>
+    function exportExcel(event) {
+        event.preventDefault();
+        var desde = document.getElementById("desdeInput").value;
+        var hasta = document.getElementById("hastaInput").value;
+        if (desde && hasta) {
+            window.location.href = "/Reportes/VentasMensualesExcel?desde=" + desde + "&hasta=" + hasta;
+        } else {
+            alert("Por favor seleccione un rango de fechas.");
+        }
+    }
+</script>

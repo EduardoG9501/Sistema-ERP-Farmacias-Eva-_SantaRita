@@ -1,0 +1,1435 @@
+@inject SistemaERP.Models.ScmContext _context
+@inject SistemaERP.Areas.Admin.Models.AdminContext AdminDb
+@using System.Text.Json
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Sistema ERP Premium</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/SistemaERP.styles.css" asp-append-version="true" />
+    
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    
+    <style>
+        /* Core Layout Styles to prevent menu from flowing to top */
+        #wrapper {
+            display: flex;
+            width: 100%;
+        }
+
+        #sidebar-wrapper {
+            height: 100vh;
+            width: var(--sidebar-width, 260px);
+            background: var(--sidebar-bg, #0f172a);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            overflow-y: auto;
+            border-right: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08));
+        }
+
+        #wrapper.toggled #sidebar-wrapper {
+            margin-left: calc(-1 * var(--sidebar-width, 260px));
+        }
+
+        #page-content-wrapper {
+            width: 100%;
+            margin-left: var(--sidebar-width, 260px);
+            min-height: 100vh;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #wrapper.toggled #page-content-wrapper {
+            margin-left: 0;
+        }
+
+        /* Mobile responsive layout overrides */
+        @@media (max-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: calc(-1 * var(--sidebar-width, 260px)) !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: var(--sidebar-width, 260px) !important;
+                height: 100vh !important;
+                z-index: 1050 !important;
+                box-shadow: none !important;
+                background: var(--sidebar-bg, #0f172a) !important;
+            }
+
+            #page-content-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            #wrapper.toggled #sidebar-wrapper {
+                margin-left: 0 !important;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+            }
+        }
+
+        /* Custom Premium Collapsible Categories Sidebar */
+        .category-header {
+            padding: 0.7rem 0.9rem;
+            color: var(--sidebar-text);
+            user-select: none;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+        }
+        .category-header:hover {
+            background-color: var(--sidebar-hover-bg);
+            color: var(--primary-color);
+        }
+        .category-header.expanded {
+            color: var(--primary-color);
+            background-color: rgba(99, 102, 241, 0.06);
+            font-weight: 600;
+        }
+        .category-chevron {
+            font-size: 0.7rem;
+            transition: transform 0.2s ease-in-out;
+        }
+        .category-header.expanded .category-chevron {
+            transform: rotate(90deg);
+        }
+        .category-body {
+            display: none;
+        }
+        .sidebar-category {
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        .category-body .list-group-item {
+            font-size: 0.775rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            margin: 1px 0;
+            margin-left: 0.5rem;
+        }
+        .bg-indigo-soft {
+            background-color: rgba(99, 102, 241, 0.08) !important;
+        }
+    </style>
+</head>
+<body>
+    <input type="hidden" id="hfMonedaSimbolo" value="@ViewBag.MonedaSimbolo" />
+    <div id="wrapper">
+        <script>
+            // Set timezone offset cookie to sync server-side date/time with browser timezone
+            (function() {
+                try {
+                    var offset = new Date().getTimezoneOffset();
+                    document.cookie = "UserTimeZoneOffset=" + offset + "; path=/; max-age=31536000; SameSite=Lax";
+                } catch(e) { console.error("Error setting timezone cookie", e); }
+            })();
+            const MONEDA_SIMBOLO = '@ViewBag.MonedaSimbolo';
+            // Apply toggled/shrunk sidebar state immediately to prevent visual flash on page load
+            if (localStorage.getItem('sidebar-state') === 'toggled') {
+                document.getElementById('wrapper').classList.add('toggled');
+            }
+            
+            // Premium Anti-Flash Early Theme Loader (User-specific)
+            (function() {
+                try {
+                    const activeUser = '@(User.Identity?.Name ?? "guest")';
+                    const themeStorageKey = `erp-theme-pref-${activeUser}`;
+                    const prefStr = localStorage.getItem(themeStorageKey);
+                    if (prefStr) {
+                        const pref = JSON.parse(prefStr);
+                        const html = document.documentElement;
+                        html.setAttribute('data-theme', pref.themeMode || 'light');
+                        if (pref.styles) {
+                            for (const [key, val] of Object.entries(pref.styles)) {
+                                html.style.setProperty(key, val);
+                            }
+                        }
+                    } else {
+                        // Fallback to legacy theme if general toggle is present
+                        const savedTheme = localStorage.getItem('theme') || 'light';
+                        document.documentElement.setAttribute('data-theme', savedTheme);
+                    }
+                } catch (e) {
+                    console.error("Early theme loader error:", e);
+                }
+            })();
+        </script>
+        
+        <!-- Sidebar -->
+        <div id="sidebar-wrapper">
+            @{
+                var sysParams = _context.ParametrosSistema.FirstOrDefault(p => p.Id == 1);
+            }
+            <div class="sidebar-heading text-center py-3">
+                @if (sysParams != null && !string.IsNullOrEmpty(sysParams.LogoPath) && sysParams.MostrarLogoEnDocumentos)
+                {
+                    <img src="@(sysParams.LogoPath.Split('?')[0])" alt="Logo" style="max-height: 40px; max-width: 160px; object-fit: contain;" class="d-block mx-auto mb-1" />
+                    <span class="fw-bold tracking-tight" style="font-size: 0.75rem;">@(sysParams.AliasEmpresa ?? sysParams.NombreEmpresa ?? "SCM")</span>
+                }
+                else
+                {
+                    <i class="bi bi-hospital me-2 text-primary fs-3"></i><span class="fw-bold tracking-tight">@(sysParams?.NombreEmpresa ?? "SCM")</span>
+                }
+            </div>
+            <div class="list-group list-group-flush px-3">
+                @{
+                    var isadmin = false;
+                    var allowedPrivileges = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    if (User.Identity?.IsAuthenticated == true)
+                    {
+                        var username = User.Identity.Name;
+                        var dbUser = _context.Usuarios.FirstOrDefault(u => u.Login.Trim() == (username ?? "").Trim());
+                        if (dbUser != null)
+                        {
+                            isadmin = string.Equals(dbUser.Tipo_Usuario?.Trim(), "ADMINISTRADOR", StringComparison.OrdinalIgnoreCase);
+                            if (!isadmin)
+                            {
+                                var dbPrivileges = _context.UsuarioPrivilegiosWeb
+                                    .Where(up => up.Id_Usuario == dbUser.Id && up.Privilegio.Estado)
+                                    .Select(up => new {
+                                        Controller = up.Privilegio.Modulo.ControllerName,
+                                        Action = up.Privilegio.ActionName
+                                    })
+                                    .ToList();
+                                    
+                                foreach (var p in dbPrivileges)
+                                {
+                                    allowedPrivileges.Add($"{p.Controller}/{p.Action}");
+                                }
+                            }
+                        }
+                    }
+
+                    // Dynamic folder categories allowed visibility checks
+                    bool showVentas = isadmin || 
+                        allowedPrivileges.Contains("Facturacion/POS") || 
+                        allowedPrivileges.Contains("Facturacion/Index") || 
+                        allowedPrivileges.Contains("Cobros/Index");
+
+                    bool showInventario = isadmin || 
+                        allowedPrivileges.Contains("Facturacion/Kardex") || 
+                        allowedPrivileges.Contains("Productos/Index") || 
+                        allowedPrivileges.Contains("Ajustes/Index") || 
+                        allowedPrivileges.Contains("Traslados/Index");
+
+                    bool showCompras = isadmin || 
+                        allowedPrivileges.Contains("Compras/Index") || 
+                        allowedPrivileges.Contains("Proveedores/Index") ||
+                        allowedPrivileges.Contains("CuentasPorPagar/Index");
+
+                    bool showBancos = isadmin || 
+                        allowedPrivileges.Contains("Clientes/Index");
+
+                    bool showContabilidad = isadmin || 
+                        allowedPrivileges.Contains("CuentasContables/Index") || 
+                        allowedPrivileges.Contains("Gastos/Index") || 
+                        allowedPrivileges.Contains("ConfiguracionReporte/Index") || 
+                        allowedPrivileges.Contains("Reportes/EstadoResultados");
+
+                    bool showConfig = isadmin || 
+                        allowedPrivileges.Contains("Usuarios/Index") || 
+                        allowedPrivileges.Contains("AjustesSRI/Index") || 
+                        allowedPrivileges.Contains("Descuentos/Index") ||
+                        allowedPrivileges.Contains("ParametrosSistema/Index");
+
+                    bool showCatalogos = isadmin || 
+                        allowedPrivileges.Contains("Bodegas/Index") || 
+                        allowedPrivileges.Contains("Presentaciones/Index") || 
+                        allowedPrivileges.Contains("CatGastos/Index") || 
+                        allowedPrivileges.Contains("Bancos/Index") || 
+                        allowedPrivileges.Contains("Denominaciones/Index");
+
+                    var dynamicTables = new List<Tuple<string, string>>();
+                    if (User.Identity?.IsAuthenticated == true)
+                    {
+                        var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
+                        if (int.TryParse(empresaIdClaim, out int currentEmpresaId))
+                        {
+                            var currentEmpresa = AdminDb.Empresas.Find(currentEmpresaId);
+                            int? currentRubroId = currentEmpresa?.RubroId;
+
+                            var customLookupFields = AdminDb.CamposPersonalizados
+                                .Where(c => c.Activo && c.TipoDato == "Lista" && 
+                                            (c.EmpresaId == null || c.EmpresaId == currentEmpresaId) &&
+                                            (c.RubroId == null || c.RubroId == currentRubroId))
+                                .ToList();
+
+                            foreach (var campo in customLookupFields)
+                            {
+                                if (!string.IsNullOrEmpty(campo.OpcionesLista) && campo.OpcionesLista.Trim().StartsWith("{"))
+                                {
+                                    try
+                                    {
+                                        using (var doc = JsonDocument.Parse(campo.OpcionesLista))
+                                        {
+                                            if (doc.RootElement.TryGetProperty("EsTabla", out var esTablaProp) && esTablaProp.GetBoolean())
+                                            {
+                                                var tableName = doc.RootElement.GetProperty("TablaNombre").GetString();
+                                                if (!string.IsNullOrEmpty(tableName))
+                                                {
+                                                    dynamicTables.Add(Tuple.Create(campo.Etiqueta, tableName));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+                        }
+                    }
+
+                    if (dynamicTables.Any())
+                    {
+                        showCatalogos = true;
+                    }
+
+                    // Active state detection to auto-expand folders on page load
+                    string currentController = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+                    string currentAction = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
+
+                    bool isVentasActive = currentController == "Facturacion" && currentAction != "Kardex" || currentController == "Cobros";
+                    bool isInventarioActive = currentController == "Productos" || currentController == "Ajustes" || currentController == "Traslados" || (currentController == "Facturacion" && currentAction == "Kardex");
+                    bool isComprasActive = currentController == "Compras" || currentController == "Proveedores" || currentController == "CuentasPorPagar";
+                    bool isBancosActive = currentController == "Clientes";
+                    bool isContabilidadActive = currentController == "CuentasContables" || currentController == "Gastos" || currentController == "ConfiguracionReporte" || (currentController == "Reportes" && currentAction == "EstadoResultados");
+                    bool isConfigActive = currentController == "Usuarios" || currentController == "AjustesSRI" || currentController == "Descuentos" || currentController == "ParametrosSistema";
+                    bool isCatalogosActive = currentController == "Bodegas" || currentController == "Presentaciones" || currentController == "CatGastos" || currentController == "Bancos" || currentController == "Denominaciones" || currentController == "CatalogosDinamicos";
+                    
+                    // Resolver subdominio central para el catálogo público
+                    string? subdominio = null;
+                    if (sysParams != null && sysParams.CatalogoPublicoActivo && !string.IsNullOrEmpty(sysParams.RUC))
+                    {
+                        var empresa = AdminDb.Empresas.FirstOrDefault(e => e.RUC == sysParams.RUC);
+                        subdominio = empresa?.Subdominio;
+                    }
+                }
+
+                <!-- Standalone Standby Dashboards -->
+                <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Home" ? "active" : "")">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+
+                @if (isadmin || allowedPrivileges.Contains("Reportes/Index"))
+                {
+                    <a asp-controller="Reportes" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Reportes" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line"></i> Reportes
+                    </a>
+                }
+
+                @if (sysParams != null && sysParams.CatalogoPublicoActivo && !string.IsNullOrEmpty(subdominio))
+                {
+                    <a href="/catalogo/@subdominio" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="bi bi-globe text-primary"></i> Mi Catálogo Web
+                    </a>
+                }
+
+                <!-- Categoría 1: Ventas & Cobros -->
+                @if (showVentas)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isVentasActive ? "expanded" : "")" data-target="#sub_menu_ventas">
+                            <i class="bi bi-cart-check fs-5 me-3 text-primary"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Ventas & Cobros</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_ventas" style="display: @(isVentasActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Facturacion/POS"))
+                            {
+                                <a asp-controller="Facturacion" asp-action="POS" class="list-group-item list-group-item-action @(currentController == "Facturacion" && currentAction == "POS" ? "active" : "") bg-indigo-soft">
+                                    <i class="bi bi-cpu"></i> POS (Punto Venta)
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Facturacion/Index"))
+                            {
+                                <a asp-controller="Facturacion" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Facturacion" && currentAction == "Index" ? "active" : "")">
+                                    <i class="bi bi-list-ul"></i> Historial Ventas
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Facturacion/CierreCaja"))
+                            {
+                                <a asp-controller="Facturacion" asp-action="CierreCaja" class="list-group-item list-group-item-action @(currentController == "Facturacion" && currentAction == "CierreCaja" ? "active" : "")">
+                                    <i class="bi bi-cash-coin text-warning"></i> Cierre de Caja
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Cobros/Index"))
+                            {
+                                <a asp-controller="Cobros" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Cobros" ? "active" : "")">
+                                    <i class="bi bi-wallet2 text-success"></i> CxC (Clientes)
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Categoría 2: Inventarios & Almacenes -->
+                @if (showInventario)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isInventarioActive ? "expanded" : "")" data-target="#sub_menu_inventario">
+                            <i class="bi bi-box-seam fs-5 me-3 text-warning"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Inventario</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_inventario" style="display: @(isInventarioActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Facturacion/Kardex"))
+                            {
+                                <a asp-controller="Facturacion" asp-action="Kardex" class="list-group-item list-group-item-action @(currentController == "Facturacion" && currentAction == "Kardex" ? "active" : "")">
+                                    <i class="bi bi-journals"></i> Kardex Inventario
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Productos/Index"))
+                            {
+                                <a asp-controller="Productos" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Productos" ? "active" : "")">
+                                    <i class="bi bi-box-seam"></i> Productos
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Ajustes/Index"))
+                            {
+                                <a asp-controller="Ajustes" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Ajustes" ? "active" : "")">
+                                    <i class="bi bi-arrow-left-right"></i> Ajustes Stock
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Traslados/Index"))
+                            {
+                                <a asp-controller="Traslados" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Traslados" ? "active" : "")">
+                                    <i class="bi bi-arrow-left-right text-warning"></i> Traslados Bodega
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Categoría 3: Compras & Proveedores -->
+                @if (showCompras)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isComprasActive ? "expanded" : "")" data-target="#sub_menu_compras">
+                            <i class="bi bi-shop fs-5 me-3 text-info"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Compras</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_compras" style="display: @(isComprasActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Compras/Index"))
+                            {
+                                <a asp-controller="Compras" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Compras" ? "active" : "")">
+                                    <i class="bi bi-cart-plus"></i> Compras
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Proveedores/Index"))
+                            {
+                                <a asp-controller="Proveedores" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Proveedores" ? "active" : "")">
+                                    <i class="bi bi-truck"></i> Proveedores
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("CuentasPorPagar/Index"))
+                            {
+                                <a asp-controller="CuentasPorPagar" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "CuentasPorPagar" ? "active" : "")">
+                                    <i class="bi bi-wallet2 text-success"></i> CxP (Proveedores)
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Categoría 4: Clientes -->
+                @if (showBancos)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isBancosActive ? "expanded" : "")" data-target="#sub_menu_bancos">
+                            <i class="bi bi-people fs-5 me-3 text-danger"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Clientes</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_bancos" style="display: @(isBancosActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Clientes/Index"))
+                            {
+                                <a asp-controller="Clientes" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Clientes" ? "active" : "")">
+                                    <i class="bi bi-people"></i> Clientes
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Categoría: Contabilidad -->
+                @if (showContabilidad)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isContabilidadActive ? "expanded" : "")" data-target="#sub_menu_contabilidad">
+                            <i class="bi bi-journal-bookmark-fill fs-5 me-3 text-info"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Contabilidad</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_contabilidad" style="display: @(isContabilidadActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Reportes/EstadoResultados"))
+                            {
+                                <a asp-controller="Reportes" asp-action="EstadoResultados" class="list-group-item list-group-item-action @(currentController == "Reportes" && currentAction == "EstadoResultados" ? "active" : "")">
+                                    <i class="bi bi-file-earmark-bar-graph"></i> Estado Resultados
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("CuentasContables/Index"))
+                            {
+                                <a asp-controller="CuentasContables" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "CuentasContables" ? "active" : "")">
+                                    <i class="bi bi-list-nested"></i> Catálogo Cuentas
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Gastos/Index"))
+                            {
+                                <a asp-controller="Gastos" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Gastos" ? "active" : "")">
+                                    <i class="bi bi-receipt-cutoff"></i> Registro Gastos
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("ConfiguracionReporte/Index"))
+                            {
+                                <a asp-controller="ConfiguracionReporte" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "ConfiguracionReporte" ? "active" : "")">
+                                    <i class="bi bi-gear-fill"></i> Config. Reporte
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- NUEVA Categoría: Catálogos Estáticos y Dinámicos -->
+                @if (showCatalogos)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isCatalogosActive ? "expanded" : "")" data-target="#sub_menu_catalogos">
+                            <i class="bi bi-folder2-open fs-5 me-3 text-success"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Catálogos</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_catalogos" style="display: @(isCatalogosActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Bodegas/Index"))
+                            {
+                                <a asp-controller="Bodegas" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Bodegas" ? "active" : "")">
+                                    <i class="bi bi-buildings"></i> Bodegas / Almacén
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Presentaciones/Index"))
+                            {
+                                <a asp-controller="Presentaciones" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Presentaciones" ? "active" : "")">
+                                    <i class="bi bi-box"></i> Presentaciones
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("CatGastos/Index"))
+                            {
+                                <a asp-controller="CatGastos" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "CatGastos" ? "active" : "")">
+                                    <i class="bi bi-tag"></i> Catálogos Gastos
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Bancos/Index"))
+                            {
+                                <a asp-controller="Bancos" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Bancos" ? "active" : "")">
+                                    <i class="bi bi-bank"></i> Bancos
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Denominaciones/Index"))
+                            {
+                                <a asp-controller="Denominaciones" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Denominaciones" ? "active" : "")">
+                                    <i class="bi bi-cash-stack"></i> Denominaciones (Efectivo)
+                                </a>
+                            }
+
+                            <!-- Inyección dinámica de tablas lookup creadas por el admin -->
+                            @if (dynamicTables != null && dynamicTables.Any())
+                            {
+                                <div class="dropdown-divider my-2 border-top border-light" style="opacity: 0.12;"></div>
+                                @foreach (var table in dynamicTables)
+                                {
+                                    <a asp-controller="CatalogosDinamicos" asp-action="Index" asp-route-tabla="@table.Item2" class="list-group-item list-group-item-action @(currentController == "CatalogosDinamicos" && ViewContext.RouteData.Values["tabla"]?.ToString() == table.Item2 ? "active" : "")">
+                                        <i class="bi bi-table"></i> @table.Item1
+                                    </a>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Categoría 5: Configuración -->
+                @if (showConfig)
+                {
+                    <div class="sidebar-category">
+                        <div class="category-header @(isConfigActive ? "expanded" : "")" data-target="#sub_menu_config">
+                            <i class="bi bi-gear fs-5 me-3 text-secondary"></i>
+                            <span class="fw-semibold text-uppercase tracking-wider">Configuración</span>
+                            <i class="bi bi-chevron-right ms-auto text-muted category-chevron"></i>
+                        </div>
+                        <div class="category-body px-2 py-1 border-start ms-3" id="sub_menu_config" style="display: @(isConfigActive ? "block" : "none"); border-width: 2px !important; border-color: rgba(99, 102, 241, 0.2) !important;">
+                            @if (isadmin || allowedPrivileges.Contains("Usuarios/Index"))
+                            {
+                                <a asp-controller="Usuarios" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Usuarios" ? "active" : "")">
+                                    <i class="bi bi-people-fill"></i> Usuarios
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("AjustesSRI/Index"))
+                            {
+                                <a asp-controller="AjustesSRI" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "AjustesSRI" ? "active" : "")">
+                                    <i class="bi bi-gear-wide-connected"></i> Parámetros SRI
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("Descuentos/Index"))
+                            {
+                                <a asp-controller="Descuentos" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "Descuentos" ? "active" : "")">
+                                    <i class="bi bi-percent text-danger"></i> Módulo Descuentos
+                                </a>
+                            }
+                            @if (isadmin || allowedPrivileges.Contains("ParametrosSistema/Index"))
+                            {
+                                <a asp-controller="ParametrosSistema" asp-action="Index" class="list-group-item list-group-item-action @(currentController == "ParametrosSistema" ? "active" : "")">
+                                    <i class="bi bi-sliders text-primary"></i> Parámetros Sistema
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <header class="main-header">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-primary-soft rounded-circle me-3" id="menu-toggle">
+                        <i class="bi bi-list fs-4"></i>
+                    </button>
+                    <h5 class="mb-0 fw-semibold text-muted">@ViewData["Title"]</h5>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-outline-secondary border-0 rounded-pill px-3 d-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#themeCustomizer" id="appearance-btn">
+                        <i class="bi bi-palette-fill text-primary"></i> <span class="d-none d-md-inline fw-medium">Apariencia</span>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn border-0 position-relative" type="button">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                                <span class="visually-hidden">Notificaciones</span>
+                            </span>
+                        </button>
+                    </div>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="dropdown">
+                            @{
+                                var loggedUser = _context.Usuarios.FirstOrDefault(u => u.Login.Trim() == (User.Identity.Name ?? "").Trim());
+                            }
+                            <a class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown">
+                                @if (loggedUser != null && !string.IsNullOrEmpty(loggedUser.FotoPath))
+                                {
+                                    <img src="@loggedUser.FotoPath" alt="@User.Identity.Name" class="rounded-circle me-2 border border-2 border-primary shadow-sm" style="width: 32px; height: 32px; object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-weight: 600; font-size: 0.8rem;">
+                                        @User.Identity.Name?[0].ToString().ToUpper()
+                                    </div>
+                                }
+                                <span class="d-none d-sm-inline fw-medium">@User.Identity.Name</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                                <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i> Perfil</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" asp-controller="Account" asp-action="Logout" onclick="localStorage.removeItem('erp_session_active');"><i class="bi bi-box-arrow-right me-2"></i> Salir</a></li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+            </header>
+
+            <main class="p-4 bg-light">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <!-- Offcanvas theme customizer -->
+    <div class="offcanvas offcanvas-end border-0 shadow" tabindex="-1" id="themeCustomizer" aria-labelledby="themeCustomizerLabel" style="background-color: var(--card-bg); color: var(--text-main); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1055;">
+        <div class="offcanvas-header border-bottom" style="border-color: var(--border-color) !important;">
+            <h5 class="offcanvas-title fw-bold" id="themeCustomizerLabel">
+                <i class="bi bi-palette-fill text-primary me-2"></i>Personalizar Apariencia
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close" style="filter: var(--text-main) === '#ffffff' ? 'invert(1)' : 'none';"></button>
+        </div>
+        <div class="offcanvas-body p-4">
+            <!-- 1. Modo del Tema -->
+            <div class="mb-4">
+                <label class="form-label fw-bold mb-2 d-block text-muted">Modo del Tema</label>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-mode-light" onclick="setThemeMode('light')">
+                            <i class="bi bi-sun-fill text-warning"></i> Claro
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-mode-dark" onclick="setThemeMode('dark')">
+                            <i class="bi bi-moon-stars-fill text-primary"></i> Oscuro
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4" style="border-color: var(--border-color);">
+
+            <!-- 2. Paletas Predefinidas -->
+            <div class="mb-4">
+                <label class="form-label fw-bold mb-2 text-muted">Paletas Predefinidas</label>
+                <div class="d-grid gap-2">
+                    <button class="btn border w-100 text-start d-flex align-items-center justify-content-between p-3 rounded-3" onclick="applyPresetPalette('default')" style="background-color: var(--sidebar-hover-bg); border-color: var(--border-color); color: var(--text-main);">
+                        <span class="fw-semibold"><i class="bi bi-shield-check text-primary me-2"></i>Índigo Premium (Defecto)</span>
+                        <div class="d-flex gap-1">
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #4f46e5;"></span>
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #0f172a;"></span>
+                        </div>
+                    </button>
+                    <button class="btn border w-100 text-start d-flex align-items-center justify-content-between p-3 rounded-3" onclick="applyPresetPalette('ocean')" style="background-color: var(--sidebar-hover-bg); border-color: var(--border-color); color: var(--text-main);">
+                        <span class="fw-semibold"><i class="bi bi-water text-info me-2"></i>Brisa Marina</span>
+                        <div class="d-flex gap-1">
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #0ea5e9;"></span>
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #0c4a6e;"></span>
+                        </div>
+                    </button>
+                    <button class="btn border w-100 text-start d-flex align-items-center justify-content-between p-3 rounded-3" onclick="applyPresetPalette('emerald')" style="background-color: var(--sidebar-hover-bg); border-color: var(--border-color); color: var(--text-main);">
+                        <span class="fw-semibold"><i class="bi bi-tree text-success me-2"></i>Esmeralda Clásico</span>
+                        <div class="d-flex gap-1">
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #10b981;"></span>
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #064e3b;"></span>
+                        </div>
+                    </button>
+                    <button class="btn border w-100 text-start d-flex align-items-center justify-content-between p-3 rounded-3" onclick="applyPresetPalette('sunset')" style="background-color: var(--sidebar-hover-bg); border-color: var(--border-color); color: var(--text-main);">
+                        <span class="fw-semibold"><i class="bi bi-sunset text-warning me-2"></i>Calidez Atardecer</span>
+                        <div class="d-flex gap-1">
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #f97316;"></span>
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #2d0f04;"></span>
+                        </div>
+                    </button>
+                    <button class="btn border w-100 text-start d-flex align-items-center justify-content-between p-3 rounded-3" onclick="applyPresetPalette('luxury')" style="background-color: var(--sidebar-hover-bg); border-color: var(--border-color); color: var(--text-main);">
+                        <span class="fw-semibold"><i class="bi bi-gem text-purple me-2"></i>Medianoche Luxury</span>
+                        <div class="d-flex gap-1">
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #8b5cf6;"></span>
+                            <span class="rounded-circle d-inline-block" style="width: 14px; height: 14px; background: #1e1b4b;"></span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="my-4" style="border-color: var(--border-color);">
+
+            <!-- 3. Personalización Avanzada -->
+            <div class="mb-4">
+                <label class="form-label fw-bold mb-3 d-flex align-items-center gap-2 text-muted">
+                    <i class="bi bi-sliders"></i>Avanzado / Personalizado
+                </label>
+                <div class="mb-3 d-flex align-items-center justify-content-between">
+                    <label for="picker-primary" class="form-label mb-0">Color de Acento (Botones)</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-xs font-monospace text-muted" id="val-primary" style="font-size: 0.75rem;">#4f46e5</span>
+                        <input type="color" class="form-control form-control-color border-0 p-0 rounded-circle" id="picker-primary" value="#4f46e5" style="width: 38px; height: 38px; cursor: pointer;" oninput="onCustomColorInput()">
+                    </div>
+                </div>
+                <div class="mb-3 d-flex align-items-center justify-content-between">
+                    <label for="picker-sidebar" class="form-label mb-0">Color de Menú (Sidebar)</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-xs font-monospace text-muted" id="val-sidebar" style="font-size: 0.75rem;">#0f172a</span>
+                        <input type="color" class="form-control form-control-color border-0 p-0 rounded-circle" id="picker-sidebar" value="#0f172a" style="width: 38px; height: 38px; cursor: pointer;" oninput="onCustomColorInput()">
+                    </div>
+                </div>
+                <div class="mb-3 d-flex align-items-center justify-content-between">
+                    <label for="picker-bg" class="form-label mb-0">Color de Fondo General</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-xs font-monospace text-muted" id="val-bg" style="font-size: 0.75rem;">#f8fafc</span>
+                        <input type="color" class="form-control form-control-color border-0 p-0 rounded-circle" id="picker-bg" value="#f8fafc" style="width: 38px; height: 38px; cursor: pointer;" oninput="onCustomColorInput()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 mt-5">
+                <button class="btn btn-premium py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="saveThemePreferences()">
+                    <i class="bi bi-check-lg"></i> Guardar Preferencias
+                </button>
+                <button class="btn btn-outline-secondary py-2 d-flex align-items-center justify-content-center gap-2" onclick="resetThemeDefaults()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Restaurar Defecto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+    
+    <script>
+        // Sidebar Toggling with LocalStorage Persistence
+        $("#menu-toggle").click(function(e) {
+            e.preventDefault();
+            $("#wrapper").toggleClass("toggled");
+            
+            if ($(window).width() < 768) {
+                if ($("#wrapper").hasClass("toggled")) {
+                    $("body").addClass("sidebar-open");
+                } else {
+                    $("body").removeClass("sidebar-open");
+                }
+            }
+
+            if ($("#wrapper").hasClass("toggled")) {
+                localStorage.setItem("sidebar-state", "toggled");
+            } else {
+                localStorage.setItem("sidebar-state", "expanded");
+            }
+        });
+
+        // Sidebar Category Expanding/Collapsing with slideToggle
+        $(document).ready(function() {
+            // Reset toggled class on mobile load so sidebar starts hidden
+            if ($(window).width() < 768) {
+                $("#wrapper").removeClass("toggled");
+            }
+
+            // Close sidebar on mobile when clicking outside of it
+            $(document).click(function(event) {
+                if ($(window).width() < 768) {
+                    var $target = $(event.target);
+                    if (!$target.closest('#sidebar-wrapper').length && 
+                        !$target.closest('#menu-toggle').length && 
+                        $('#wrapper').hasClass('toggled')) {
+                        $('#wrapper').removeClass('toggled');
+                        $("body").removeClass("sidebar-open");
+                    }
+                }
+            });
+
+            $('.category-header').click(function() {
+                var targetSelector = $(this).attr('data-target');
+                var target = $(targetSelector);
+                var header = $(this);
+                
+                header.toggleClass('expanded');
+                target.slideToggle(200);
+            });
+        });
+
+        // Global SweetAlert Notifications
+        $(document).ready(function() {
+            var successMsg = '@TempData["Success"]';
+            var errorMsg = '@TempData["Error"]';
+
+            if (successMsg) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: successMsg,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+
+            if (errorMsg) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
+            }
+        });
+    </script>
+    <script>
+        // Premium User-Specific Dynamic Theme Engine with YIQ Contrast Calculation
+        const activeUser = '@(User.Identity?.Name ?? "guest")';
+        const themeStorageKey = `erp-theme-pref-${activeUser}`;
+
+        // Define standard presets
+        const presetPalettes = {
+            'default': {
+                light: {
+                    '--primary-color': '#4f46e5',
+                    '--primary-hover': '#4338ca',
+                    '--sidebar-bg': '#0f172a',
+                    '--sidebar-text': '#94a3b8',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#1e293b',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.08)',
+                    '--bg-main': '#f8fafc',
+                    '--card-bg': '#ffffff',
+                    '--text-main': '#0f172a',
+                    '--text-muted': '#64748b',
+                    '--border-color': '#e2e8f0',
+                    '--header-bg': '#ffffff',
+                    '--header-text': '#0f172a'
+                },
+                dark: {
+                    '--primary-color': '#6366f1',
+                    '--primary-hover': '#818cf8',
+                    '--sidebar-bg': '#030712',
+                    '--sidebar-text': '#9ca3af',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#111827',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.05)',
+                    '--bg-main': '#090d16',
+                    '--card-bg': '#111827',
+                    '--text-main': '#f9fafb',
+                    '--text-muted': '#9ca3af',
+                    '--border-color': '#1f2937',
+                    '--header-bg': '#111827',
+                    '--header-text': '#f9fafb'
+                }
+            },
+            'ocean': {
+                light: {
+                    '--primary-color': '#0ea5e9',
+                    '--primary-hover': '#0284c7',
+                    '--sidebar-bg': '#0c4a6e',
+                    '--sidebar-text': '#bae6fd',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#075985',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.1)',
+                    '--bg-main': '#f0f9ff',
+                    '--card-bg': '#ffffff',
+                    '--text-main': '#0c4a6e',
+                    '--text-muted': '#64748b',
+                    '--border-color': '#e0f2fe',
+                    '--header-bg': '#ffffff',
+                    '--header-text': '#0c4a6e'
+                },
+                dark: {
+                    '--primary-color': '#38bdf8',
+                    '--primary-hover': '#7dd3fc',
+                    '--sidebar-bg': '#030712',
+                    '--sidebar-text': '#93c5fd',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#1e3a8a',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.05)',
+                    '--bg-main': '#020617',
+                    '--card-bg': '#0b0f19',
+                    '--text-main': '#f8fafc',
+                    '--text-muted': '#94a3b8',
+                    '--border-color': '#1e293b',
+                    '--header-bg': '#0b0f19',
+                    '--header-text': '#f8fafc'
+                }
+            },
+            'emerald': {
+                light: {
+                    '--primary-color': '#10b981',
+                    '--primary-hover': '#059669',
+                    '--sidebar-bg': '#064e3b',
+                    '--sidebar-text': '#a7f3d0',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#065f46',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.1)',
+                    '--bg-main': '#f0fdf4',
+                    '--card-bg': '#ffffff',
+                    '--text-main': '#064e3b',
+                    '--text-muted': '#64748b',
+                    '--border-color': '#d1fae5',
+                    '--header-bg': '#ffffff',
+                    '--header-text': '#064e3b'
+                },
+                dark: {
+                    '--primary-color': '#34d399',
+                    '--primary-hover': '#6ee7b7',
+                    '--sidebar-bg': '#011c14',
+                    '--sidebar-text': '#a7f3d0',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#042f22',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.05)',
+                    '--bg-main': '#022c22',
+                    '--card-bg': '#031c16',
+                    '--text-main': '#f8fafc',
+                    '--text-muted': '#a7f3d0',
+                    '--border-color': '#064e3b',
+                    '--header-bg': '#031c16',
+                    '--header-text': '#f8fafc'
+                }
+            },
+            'sunset': {
+                light: {
+                    '--primary-color': '#f97316',
+                    '--primary-hover': '#ea580c',
+                    '--sidebar-bg': '#2d0f04',
+                    '--sidebar-text': '#ffedd5',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#431407',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.08)',
+                    '--bg-main': '#fff7ed',
+                    '--card-bg': '#ffffff',
+                    '--text-main': '#431407',
+                    '--text-muted': '#7c2d12',
+                    '--border-color': '#ffedd5',
+                    '--header-bg': '#ffffff',
+                    '--header-text': '#431407'
+                },
+                dark: {
+                    '--primary-color': '#fb923c',
+                    '--primary-hover': '#fdba74',
+                    '--sidebar-bg': '#0f0500',
+                    '--sidebar-text': '#ffedd5',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#2d0f04',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.05)',
+                    '--bg-main': '#1c0a00',
+                    '--card-bg': '#0f0500',
+                    '--text-main': '#fdfaf8',
+                    '--text-muted': '#fdba74',
+                    '--border-color': '#431407',
+                    '--header-bg': '#0f0500',
+                    '--header-text': '#fdfaf8'
+                }
+            },
+            'luxury': {
+                light: {
+                    '--primary-color': '#8b5cf6',
+                    '--primary-hover': '#7c3aed',
+                    '--sidebar-bg': '#1e1b4b',
+                    '--sidebar-text': '#ddd6fe',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#2e1065',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.08)',
+                    '--bg-main': '#faf5ff',
+                    '--card-bg': '#ffffff',
+                    '--text-main': '#2e1065',
+                    '--text-muted': '#6d28d9',
+                    '--border-color': '#ddd6fe',
+                    '--header-bg': '#ffffff',
+                    '--header-text': '#2e1065'
+                },
+                dark: {
+                    '--primary-color': '#a78bfa',
+                    '--primary-hover': '#c4b5fd',
+                    '--sidebar-bg': '#0b021d',
+                    '--sidebar-text': '#ddd6fe',
+                    '--sidebar-active': '#ffffff',
+                    '--sidebar-hover-bg': '#1e1b4b',
+                    '--sidebar-border': 'rgba(255, 255, 255, 0.05)',
+                    '--bg-main': '#0f052d',
+                    '--card-bg': '#0b021d',
+                    '--text-main': '#fbfaff',
+                    '--text-muted': '#c4b5fd',
+                    '--border-color': '#2e1065',
+                    '--header-bg': '#0b021d',
+                    '--header-text': '#fbfaff'
+                }
+            }
+        };
+
+        let currentThemeMode = 'light';
+        let currentPreset = 'default';
+        let isCustomMode = false;
+        let currentCustomStyles = {};
+
+        function setThemeMode(mode) {
+            currentThemeMode = mode;
+            document.documentElement.setAttribute('data-theme', mode);
+            
+            // Sync buttons visual state
+            const btnLight = document.getElementById('btn-mode-light');
+            const btnDark = document.getElementById('btn-mode-dark');
+            if (btnLight && btnDark) {
+                if (mode === 'light') {
+                    btnLight.classList.remove('btn-outline-secondary');
+                    btnLight.classList.add('btn-primary', 'border-primary', 'text-white');
+                    btnDark.classList.remove('btn-primary', 'border-primary', 'text-white');
+                    btnDark.classList.add('btn-outline-secondary');
+                } else {
+                    btnDark.classList.remove('btn-outline-secondary');
+                    btnDark.classList.add('btn-primary', 'border-primary', 'text-white');
+                    btnLight.classList.remove('btn-primary', 'border-primary', 'text-white');
+                    btnLight.classList.add('btn-outline-secondary');
+                }
+            }
+            
+            // Reapply layout colors
+            if (isCustomMode) {
+                onCustomColorInput();
+            } else {
+                applyPresetPalette(currentPreset);
+            }
+        }
+
+        function applyPresetPalette(paletteName) {
+            currentPreset = paletteName;
+            isCustomMode = false;
+            
+            const palette = presetPalettes[paletteName];
+            if (palette) {
+                const styles = palette[currentThemeMode];
+                const html = document.documentElement;
+                
+                // Clear inline style rules to apply presets cleanly
+                html.removeAttribute('style');
+                
+                // Apply variables dynamically
+                for (const [key, val] of Object.entries(styles)) {
+                    html.style.setProperty(key, val);
+                }
+                
+                // Sync color pickers
+                document.getElementById('picker-primary').value = rgbToHex(getComputedStyle(html).getPropertyValue('--primary-color').trim()) || styles['--primary-color'];
+                document.getElementById('picker-sidebar').value = rgbToHex(getComputedStyle(html).getPropertyValue('--sidebar-bg').trim()) || styles['--sidebar-bg'];
+                document.getElementById('picker-bg').value = rgbToHex(getComputedStyle(html).getPropertyValue('--bg-main').trim()) || styles['--bg-main'];
+                
+                updateHexLabels();
+            }
+        }
+
+        function rgbToHex(rgb) {
+            if (!rgb) return null;
+            if (rgb.startsWith('#')) return rgb;
+            const match = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+            if (!match) return rgb;
+            return "#" + 
+                ("0" + parseInt(match[1], 10).toString(16)).slice(-2) +
+                ("0" + parseInt(match[2], 10).toString(16)).slice(-2) +
+                ("0" + parseInt(match[3], 10).toString(16)).slice(-2);
+        }
+
+        function updateHexLabels() {
+            document.getElementById('val-primary').innerText = document.getElementById('picker-primary').value;
+            document.getElementById('val-sidebar').innerText = document.getElementById('picker-sidebar').value;
+            document.getElementById('val-bg').innerText = document.getElementById('picker-bg').value;
+        }
+
+        function adjustColorBrightness(hex, percent) {
+            let R = parseInt(hex.substring(1,3), 16);
+            let G = parseInt(hex.substring(3,5), 16);
+            let B = parseInt(hex.substring(5,7), 16);
+
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+
+            R = (R < 255) ? R : 255;  
+            G = (G < 255) ? G : 255;  
+            B = (B < 255) ? B : 255;  
+
+            R = (R > 0) ? R : 0;
+            G = (G > 0) ? G : 0;
+            B = (B > 0) ? B : 0;
+
+            const rHex = R.toString(16).padStart(2, '0');
+            const gHex = G.toString(16).padStart(2, '0');
+            const bHex = B.toString(16).padStart(2, '0');
+
+            return `#${rHex}${gHex}${bHex}`;
+        }
+
+        function getContrastColor(hexColor) {
+            let color = hexColor.replace('#', '');
+            if (color.length === 3) {
+                color = color[0] + color[0] + color[1] + color[1] + color[2] + color[2];
+            }
+            const r = parseInt(color.substr(0, 2), 16);
+            const g = parseInt(color.substr(2, 2), 16);
+            const b = parseInt(color.substr(4, 2), 16);
+            
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return (yiq >= 128) ? '#0f172a' : '#ffffff';
+        }
+
+        function onCustomColorInput() {
+            isCustomMode = true;
+            
+            const primary = document.getElementById('picker-primary').value;
+            const sidebar = document.getElementById('picker-sidebar').value;
+            const bg = document.getElementById('picker-bg').value;
+            
+            updateHexLabels();
+            
+            const primaryHover = adjustColorBrightness(primary, -12);
+            const bgMain = bg;
+            
+            const sidebarBg = sidebar;
+            const sidebarTextContrast = getContrastColor(sidebarBg);
+            
+            const sidebarActive = sidebarTextContrast;
+            const sidebarHoverBg = adjustColorBrightness(sidebarBg, sidebarTextContrast === '#ffffff' ? 10 : -10);
+            const sidebarBorder = adjustColorBrightness(sidebarBg, sidebarTextContrast === '#ffffff' ? 6 : -6);
+            const sidebarText = sidebarTextContrast === '#ffffff' ? '#9ca3af' : '#4b5563';
+            
+            const textMain = getContrastColor(bgMain);
+            const textMuted = textMain === '#ffffff' ? '#9ca3af' : '#64748b';
+            const cardBg = currentThemeMode === 'dark' ? adjustColorBrightness(bgMain, 6) : '#ffffff';
+            const borderColor = currentThemeMode === 'dark' ? adjustColorBrightness(bgMain, 12) : '#e2e8f0';
+            
+            const headerBg = cardBg;
+            const headerText = textMain;
+            
+            const html = document.documentElement;
+            
+            currentCustomStyles = {
+                '--primary-color': primary,
+                '--primary-hover': primaryHover,
+                '--sidebar-bg': sidebarBg,
+                '--sidebar-text': sidebarText,
+                '--sidebar-active': sidebarActive,
+                '--sidebar-hover-bg': sidebarHoverBg,
+                '--sidebar-border': sidebarBorder,
+                '--bg-main': bgMain,
+                '--card-bg': cardBg,
+                '--text-main': textMain,
+                '--text-muted': textMuted,
+                '--border-color': borderColor,
+                '--header-bg': headerBg,
+                '--header-text': headerText
+            };
+            
+            for (const [key, val] of Object.entries(currentCustomStyles)) {
+                html.style.setProperty(key, val);
+            }
+        }
+
+        function saveThemePreferences() {
+            const preferences = {
+                themeMode: currentThemeMode,
+                isCustom: isCustomMode,
+                paletteName: currentPreset,
+                styles: isCustomMode ? currentCustomStyles : presetPalettes[currentPreset][currentThemeMode]
+            };
+            
+            localStorage.setItem(themeStorageKey, JSON.stringify(preferences));
+            
+            Swal.fire({
+                icon: 'success',
+                title: '¡Preferencias Guardadas!',
+                text: 'Tus colores personalizados se han guardado con éxito para este usuario.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+
+        function resetThemeDefaults() {
+            localStorage.removeItem(themeStorageKey);
+            localStorage.removeItem('theme');
+            
+            currentThemeMode = 'light';
+            currentPreset = 'default';
+            isCustomMode = false;
+            
+            const html = document.documentElement;
+            html.removeAttribute('style');
+            
+            setThemeMode('light');
+            applyPresetPalette('default');
+            
+            Swal.fire({
+                icon: 'info',
+                title: 'Tema Reestablecido',
+                text: 'Se han cargado los colores predeterminados de fábrica.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+
+        // Initialize Theme from LocalStorage
+        $(document).ready(function() {
+            try {
+                const prefStr = localStorage.getItem(themeStorageKey);
+                if (prefStr) {
+                    const pref = JSON.parse(prefStr);
+                    currentThemeMode = pref.themeMode || 'light';
+                    isCustomMode = pref.isCustom || false;
+                    currentPreset = pref.paletteName || 'default';
+                    
+                    setThemeMode(currentThemeMode);
+                    
+                    if (isCustomMode) {
+                        document.getElementById('picker-primary').value = pref.styles['--primary-color'];
+                        document.getElementById('picker-sidebar').value = pref.styles['--sidebar-bg'];
+                        document.getElementById('picker-bg').value = pref.styles['--bg-main'];
+                        onCustomColorInput();
+                    } else {
+                        applyPresetPalette(currentPreset);
+                    }
+                } else {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    setThemeMode(savedTheme);
+                    applyPresetPalette('default');
+                }
+            } catch (e) {
+                console.error("Error setting custom theme colors:", e);
+                setThemeMode('light');
+                applyPresetPalette('default');
+            }
+        });
+    </script>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script>
+            (function() {
+                const SESSION_TIMEOUT_MS = 6 * 60 * 60 * 1000; // 6 horas
+                const WARNING_TIME_MS = 5 * 60 * 1000; // 5 minutos de aviso
+                const PING_INTERVAL_MS = 15 * 60 * 1000; // 15 minutos para ping
+                const STORAGE_KEY = 'erp_session_last_activity';
+                const ACTIVE_KEY = 'erp_session_active';
+
+                // Registrar que hay una sesión de usuario activa en este navegador
+                localStorage.setItem(ACTIVE_KEY, 'true');
+                
+                // Inicializar última actividad si no existe
+                if (!localStorage.getItem(STORAGE_KEY)) {
+                    localStorage.setItem(STORAGE_KEY, Date.now().toString());
+                }
+
+                // Actualizar marca de tiempo de la última actividad del usuario
+                function updateActivity() {
+                    localStorage.setItem(STORAGE_KEY, Date.now().toString());
+                }
+
+                // Escuchar eventos usuales de interacción
+                const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'click', 'touchstart'];
+                events.forEach(evt => {
+                    document.addEventListener(evt, updateActivity, { passive: true });
+                });
+
+                // Enviar ping silencioso periódicamente si ha habido actividad para renovar el cookie deslizante en el servidor
+                let lastPingTime = Date.now();
+                setInterval(function() {
+                    const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || Date.now().toString());
+                    const now = Date.now();
+
+                    // Si se ha interactuado en los últimos 15 minutos, y han pasado 15 minutos desde el último ping
+                    if (now - lastActivity < PING_INTERVAL_MS && now - lastPingTime >= PING_INTERVAL_MS) {
+                        lastPingTime = now;
+                        $.get('/Account/Ping').done(function(data) {
+                            if (data && data.authenticated === false) {
+                                localStorage.removeItem(ACTIVE_KEY);
+                                window.location.href = '/Account/Login?sessionExpired=true';
+                            }
+                        }).fail(function() {
+                            // En caso de caída de servidor o desconexión no forzamos cierre para evitar falsos positivos
+                        });
+                    }
+                }, 30000); // Evaluar cada 30 segundos
+
+                // Monitoreo de inactividad
+                let warningAlertShowing = false;
+                let countdownInterval = null;
+
+                setInterval(function() {
+                    const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || Date.now().toString());
+                    const now = Date.now();
+                    const idleTime = now - lastActivity;
+
+                    if (idleTime >= (SESSION_TIMEOUT_MS - WARNING_TIME_MS)) {
+                        if (idleTime >= SESSION_TIMEOUT_MS) {
+                            // Tiempo expirado por completo
+                            if (warningAlertShowing) {
+                                Swal.close();
+                            }
+                            localStorage.removeItem(ACTIVE_KEY);
+                            window.location.href = '/Account/Logout?expired=true';
+                            return;
+                        }
+
+                        // Mostrar aviso SweetAlert
+                        if (!warningAlertShowing) {
+                            warningAlertShowing = true;
+                            
+                            let remainingMs = SESSION_TIMEOUT_MS - idleTime;
+                            let secondsLeft = Math.ceil(remainingMs / 1000);
+
+                            Swal.fire({
+                                title: 'Tu sesión está por expirar',
+                                html: 'Tu sesión se cerrará automáticamente por inactividad en <strong id="session-countdown">' + secondsLeft + '</strong> segundos.<br><br>¿Deseas mantener la sesión activa?',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Sí, continuar',
+                                cancelButtonText: 'Cerrar sesión',
+                                confirmButtonColor: '#4f46e5',
+                                cancelButtonColor: '#dc3545',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                didOpen: () => {
+                                    countdownInterval = setInterval(() => {
+                                        const currentActivity = parseInt(localStorage.getItem(STORAGE_KEY) || Date.now().toString());
+                                        const currentNow = Date.now();
+                                        const currentIdle = currentNow - currentActivity;
+
+                                        // Si el usuario interactuó en otra pestaña, cerramos esta alerta de inmediato
+                                        if (currentIdle < (SESSION_TIMEOUT_MS - WARNING_TIME_MS)) {
+                                            clearInterval(countdownInterval);
+                                            warningAlertShowing = false;
+                                            Swal.close();
+                                            return;
+                                        }
+
+                                        const remaining = SESSION_TIMEOUT_MS - currentIdle;
+                                        if (remaining <= 0) {
+                                            clearInterval(countdownInterval);
+                                            warningAlertShowing = false;
+                                            Swal.close();
+                                            localStorage.removeItem(ACTIVE_KEY);
+                                            window.location.href = '/Account/Logout?expired=true';
+                                            return;
+                                        }
+
+                                        const sec = Math.ceil(remaining / 1000);
+                                        const container = Swal.getHtmlContainer();
+                                        if (container) {
+                                            const el = container.querySelector('#session-countdown');
+                                            if (el) el.textContent = sec;
+                                        }
+                                    }, 1000);
+                                },
+                                willClose: () => {
+                                    clearInterval(countdownInterval);
+                                }
+                            }).then((result) => {
+                                warningAlertShowing = false;
+                                if (result.isConfirmed) {
+                                    // Renovar actividad y forzar ping al servidor
+                                    updateActivity();
+                                    $.get('/Account/Ping');
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                    localStorage.removeItem(ACTIVE_KEY);
+                                    window.location.href = '/Account/Logout?expired=true';
+                                }
+                            });
+                        }
+                    } else {
+                        // Si ya no está inactivo (por ejemplo, porque interactuó en otra pestaña), cerrar la alerta si estuviera abierta
+                        if (warningAlertShowing) {
+                            Swal.close();
+                            warningAlertShowing = false;
+                        }
+                    }
+                }, 5000); // Monitorear cada 5 segundos
+            })();
+        </script>
+    }
+</body>
+</html>

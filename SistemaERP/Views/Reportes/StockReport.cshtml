@@ -1,0 +1,227 @@
+@model IEnumerable<SistemaERP.Controllers.ReportesController.StockReportRowViewModel>
+
+@{
+    ViewData["Title"] = "Reporte de Stock de Inventario";
+    var fProducto = ViewBag.FilterProducto as string;
+    var fLaboratorio = ViewBag.FilterLaboratorio as string;
+    var fStockNuevo = ViewBag.FilterStockNuevo as bool? ?? true;
+
+    decimal totalPVF = ViewBag.TotalPVF ?? 0;
+    decimal totalPVP = ViewBag.TotalPVP ?? 0;
+    decimal totalPVPX = ViewBag.TotalPVPX ?? 0;
+    decimal totalUtilidad = ViewBag.TotalUtilidad ?? 0;
+    long totalItems = ViewBag.TotalItems ?? 0;
+    var simb = (ViewBag.MonedaSimbolo as string) ?? "$";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn no-print">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-box2-fill me-2"></i>Reporte de Stock de Inventario</h2>
+        <p class="text-muted">Valorización de existencias, costos (PVF), precios públicos (PVP, PVPX) y utilidades estimadas de mercancías.</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="Index" class="btn btn-outline-secondary px-4 py-2 fw-medium d-flex align-items-center">
+            <i class="bi bi-arrow-left me-2"></i> Volver a Reportes
+        </a>
+    </div>
+</div>
+
+<!-- Filtros superiores estilo ERP original -->
+<div class="premium-card mb-4 animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 p-4 no-print">
+    <form id="stockFilterForm" method="get" asp-action="StockReport" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label fw-bold text-uppercase text-secondary" style="font-size: 0.8rem;">PRODUCTO [A-Z]:</label>
+            <input type="text" name="producto" value="@fProducto" class="form-control border border-secondary-subtle bg-light" placeholder="(*) PARA BUSCAR TODOS" />
+        </div>
+        
+        <div class="col-md-4">
+            <label class="form-label fw-bold text-uppercase text-secondary" style="font-size: 0.8rem;">PROVEEDOR [A-Z]:</label>
+            <input type="text" name="laboratorio" value="@fLaboratorio" class="form-control border border-secondary-subtle bg-light" placeholder="(*) PARA BUSCAR TODOS" />
+        </div>
+
+        <div class="col-md-2 text-center pb-2">
+            <div class="form-check form-checkbox d-inline-block">
+                <input class="form-check-input border-secondary-subtle" type="checkbox" name="stockNuevo" id="stockNuevo" value="true" @(fStockNuevo ? "checked" : "") />
+                <input type="hidden" name="stockNuevo" value="false" />
+                <label class="form-check-label fw-bold text-secondary small" for="stockNuevo">Filtro Stock Nuevo</label>
+            </div>
+        </div>
+
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary shadow-sm fw-semibold flex-fill d-flex align-items-center justify-content-center" title="Buscar">
+                <i class="bi bi-search"></i>
+            </button>
+            <button type="button" onclick="exportStockExcel()" class="btn btn-success shadow-sm fw-semibold flex-fill d-flex align-items-center justify-content-center" title="Exportar Excel">
+                <i class="bi bi-file-earmark-excel"></i>
+            </button>
+            <button type="button" onclick="printStockPdf()" class="btn btn-danger shadow-sm fw-semibold flex-fill d-flex align-items-center justify-content-center" title="Generar PDF / Imprimir">
+                <i class="bi bi-file-earmark-pdf"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function exportStockExcel() {
+        var form = document.getElementById('stockFilterForm');
+        var originalAction = form.action;
+        form.action = '@Url.Action("StockReportExportExcel", "Reportes")';
+        form.target = '_blank';
+        form.submit();
+        form.action = originalAction;
+        form.target = '';
+    }
+
+    function printStockPdf() {
+        var form = document.getElementById('stockFilterForm');
+        var originalAction = form.action;
+        form.action = '@Url.Action("StockReportPrint", "Reportes")';
+        form.target = '_blank';
+        form.submit();
+        form.action = originalAction;
+        form.target = '';
+    }
+</script>
+
+<!-- Tabla Principal de Existencias -->
+<div class="premium-card animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered table-striped align-middle mb-0 text-center" style="font-size: 0.82rem;">
+            <thead class="bg-primary text-white text-uppercase" style="font-size: 0.78rem; font-weight: 700; border-bottom: 2px solid #dee2e6;">
+                <tr>
+                    <th class="py-2.5 ps-3" style="text-align: left; width: 110px;">ID/COD.BARRA</th>
+                    <th class="py-2.5 text-start" style="min-width: 250px;">Producto</th>
+                    <th class="py-2.5 text-start" style="min-width: 150px;">Proveedor</th>
+                    <th class="py-2.5" style="width: 80px;">PVF</th>
+                    <th class="py-2.5" style="width: 80px;">PVP</th>
+                    <th class="py-2.5" style="width: 80px;">PVPX</th>
+                    <th class="py-2.5" style="width: 80px;">Disponible</th>
+                    <th class="py-2.5" style="width: 90px;">ToPVF</th>
+                    <th class="py-2.5" style="width: 90px;">ToPVP</th>
+                    <th class="py-2.5" style="width: 90px;">ToPVPX</th>
+                    <th class="py-2.5" style="width: 90px;">Utilidad</th>
+                    <th class="py-2.5 pe-3" style="width: 100px;">Vencimiento</th>
+                    @if (ViewBag.CustomFields != null)
+                    {
+                        @foreach (var campo in (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnReporte))
+                        {
+                            <th class="py-2.5" style="min-width: 100px;">@campo.Etiqueta</th>
+                        }
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-3 text-start font-monospace text-secondary small">@item.CodigoBarra</td>
+                            <td class="text-start fw-semibold text-dark">@item.Nombre</td>
+                            <td class="text-start text-secondary">@item.Proveedor</td>
+                            <td class="fw-medium text-dark">@simb@item.PVF.ToString("N2")</td>
+                            <td class="fw-medium text-dark">@simb@item.PVP.ToString("N2")</td>
+                            <td class="fw-medium text-dark">@simb@item.PVPX.ToString("N2")</td>
+                            <td class="fw-bold text-primary">@item.Disponible</td>
+                            <td class="text-secondary">@simb@item.ToPVF.ToString("N2")</td>
+                            <td class="fw-semibold text-dark">@simb@item.ToPVP.ToString("N2")</td>
+                            <td class="fw-semibold text-dark">@simb@item.ToPVPX.ToString("N2")</td>
+                            <td class="fw-bold text-success">@simb@item.Utilidad.ToString("N2")</td>
+                            <td class="pe-3 text-secondary font-monospace">@item.Vencimiento</td>
+                            @if (ViewBag.CustomFields != null)
+                            {
+                                var service = ViewBag.CamposService as SistemaERP.Areas.Admin.Services.ICamposPersonalizadosService;
+                                var dict = service.ParseDatosAdicionales(item.DatosAdicionales);
+                                @foreach (var campo in (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnReporte))
+                                {
+                                    dict.TryGetValue(campo.NombreCampo, out var val);
+                                    <td class="text-secondary">@(val?.ToString() ?? "N/A")</td>
+                                }
+                            }
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="@(12 + (ViewBag.CustomFields != null ? (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnReporte).Count() : 0))" class="text-center py-5 text-muted">
+                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
+                            <span class="fs-5 fw-semibold d-block">No se encontraron productos en el reporte</span>
+                            <span>Ajuste los filtros de búsqueda e intente nuevamente.</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model != null && Model.Any())
+            {
+                <tfoot class="bg-light fw-bold border-top border-2 border-secondary" style="font-size: 0.88rem; border-bottom: 2px solid #dee2e6;">
+                    <tr>
+                        <td colspan="@(6 + (ViewBag.CustomFields != null ? (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnReporte).Count() : 0))" class="text-end py-3 ps-3 text-dark font-uppercase">TOTALES GENERALES:</td>
+                        <td class="py-3 text-primary">@totalItems</td>
+                        <td class="py-3 text-secondary">@simb@totalPVF.ToString("N2")</td>
+                        <td class="py-3 text-dark">@simb@totalPVP.ToString("N2")</td>
+                        <td class="py-3 text-dark">@simb@totalPVPX.ToString("N2")</td>
+                        <td class="py-3 text-success" style="font-size: 0.95rem;">@simb@totalUtilidad.ToString("N2")</td>
+                        <td class="pe-3"></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+
+<script>
+    function exportStockExcel() {
+        var form = document.getElementById('stockFilterForm');
+        var originalAction = form.action;
+        form.action = '@Url.Action("StockReportExportExcel", "Reportes")';
+        form.target = '_blank';
+        form.submit();
+        
+        // Restore form defaults
+        form.action = originalAction;
+        form.target = '';
+    }
+</script>
+
+<style>
+    /* Styling elements to make it feel extremely premium */
+    .premium-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .bg-primary {
+        background-color: #4f46e5 !important; /* Premium Indigo theme */
+        border-color: #4f46e5 !important;
+    }
+    .text-primary {
+        color: #4f46e5 !important;
+    }
+    .btn-primary {
+        background-color: #4f46e5;
+        border-color: #4f46e5;
+    }
+    .btn-primary:hover, .btn-primary:focus {
+        background-color: #4338ca;
+        border-color: #4338ca;
+    }
+    .btn-success {
+        background-color: #10b981;
+        border-color: #10b981;
+    }
+    .btn-success:hover, .btn-success:focus {
+        background-color: #059669;
+        border-color: #059669;
+    }
+    .table-bordered th, .table-bordered td {
+        border-color: #e5e7eb !important;
+    }
+    .font-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    tfoot {
+        background-color: #f9fafb !important;
+    }
+</style>

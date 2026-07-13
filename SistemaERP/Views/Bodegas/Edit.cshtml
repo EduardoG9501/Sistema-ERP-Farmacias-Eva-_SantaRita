@@ -1,0 +1,67 @@
+@model SistemaERP.Models.Entities.Bodega
+
+@{
+    ViewData["Title"] = (Model?.Id > 0) ? "Editar Bodega" : "Nueva Bodega";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">@(Model?.Id > 0 ? "Editar Bodega" : "Registrar Bodega")</h2>
+        <p class="text-muted">Configure las propiedades del almacén.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-6">
+        <div class="premium-card">
+            <form asp-action="@(Model?.Id > 0 ? "Edit" : "Create")" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+
+                <div class="mb-4">
+                    <label asp-for="Nombre" class="form-label fw-semibold">Nombre de la Bodega</label>
+                    <input asp-for="Nombre" class="form-control" placeholder="Ej. Bodega Central" required />
+                    <span asp-validation-for="Nombre" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Direccion" class="form-label fw-semibold">Dirección</label>
+                    <textarea asp-for="Direccion" class="form-control" rows="2" placeholder="Ubicación física..."></textarea>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch custom-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="EsPrincipal">
+                            <label class="form-check-label fw-semibold" asp-for="EsPrincipal">Bodega Principal</label>
+                        </div>
+                        <small class="text-muted d-block mt-1">Se usará por defecto en las ventas.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch custom-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Estado" checked="@(Model == null || Model.Estado)">
+                            <label class="form-check-label fw-semibold" asp-for="Estado">Estado Activo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Bodega
+                    </button>
+                    <a asp-action="Index" class="btn btn-light border flex-grow-1">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

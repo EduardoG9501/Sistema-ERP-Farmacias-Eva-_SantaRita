@@ -1,0 +1,348 @@
+@model IEnumerable<SistemaERP.Areas.Admin.Models.BackupRegistro>
+@{
+    ViewData["Title"] = "Copias de Seguridad (Backups)";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .backup-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+        }
+
+        /* Card panels */
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            height: fit-content;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(10, 15, 30, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px var(--primary-glow);
+        }
+
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+        }
+
+        select.form-control option {
+            background-color: var(--bg-sidebar);
+        }
+
+        .btn-trigger-backup {
+            width: 100%;
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-trigger-backup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+            filter: brightness(1.1);
+        }
+
+        /* History list */
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .custom-table th {
+            padding: 16px 20px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .custom-table td {
+            padding: 20px;
+            font-size: 14px;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            vertical-align: middle;
+        }
+
+        .backup-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .backup-status.exitoso {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .backup-status.fallido {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .backup-status.proceso {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            animation: pulseState 1.5s infinite;
+        }
+
+        @@keyframes pulseState {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .btn-download {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-download:hover {
+            background: rgba(16, 185, 129, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .alert-success-custom {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            color: #34d399;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .alert-error-custom {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            color: #f87171;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+    </style>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success-custom">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>@TempData["SuccessMessage"]</span>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert-error-custom">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>@TempData["ErrorMessage"]</span>
+    </div>
+}
+
+<div class="backup-grid">
+    <!-- Panel Izquierdo: Lanzamiento -->
+    <div class="glass-panel">
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.3px;">Lanzar Respaldo</h3>
+        
+        <form asp-action="Crear" method="post" id="backupForm">
+            <div class="form-group">
+                <label for="empresaId">Empresa Cliente</label>
+                <select id="empresaId" name="empresaId" class="form-control" asp-items="ViewBag.Empresas" required>
+                    <option value="">-- Seleccione Empresa --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="observaciones">Observaciones / Nota</label>
+                <textarea id="observaciones" name="observaciones" class="form-control" rows="4" 
+                          placeholder="Ej: Respaldo mensual preventivo" style="resize: none; font-family: inherit;"></textarea>
+            </div>
+
+            <button type="submit" class="btn-trigger-backup" id="btn-backup-now">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <span>Respaldar Ahora</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Panel Derecho: Historial -->
+    <div class="glass-panel" style="padding: 0; overflow: hidden;">
+        <div style="padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="font-size: 18px; font-weight: 700; letter-spacing: -0.3px;">Historial de Copias de Seguridad</h3>
+            <select id="filterEmpresa" class="form-control" style="width: 250px; margin-bottom: 0;" asp-items="ViewBag.Empresas">
+                <option value="">-- Todas las Empresas --</option>
+            </select>
+        </div>
+
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Fecha y Hora</th>
+                    <th>Tamaño</th>
+                    <th style="text-align: center;">Estado</th>
+                    <th>Comentario</th>
+                    <th style="text-align: right;">Descarga</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 50px; color: var(--text-muted);">
+                            <i class="fa-solid fa-database" style="font-size: 32px; margin-bottom: 12px; display: block; color: rgba(255,255,255,0.06);"></i>
+                            <span>No hay respaldos ejecutados aún.</span>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var backup in Model)
+                    {
+                        var stateClass = backup.Estado.ToLower() switch
+                        {
+                            "exitoso" => "exitoso",
+                            "fallido" => "fallido",
+                            _ => "proceso"
+                        };
+
+                        var stateIcon = backup.Estado.ToLower() switch
+                        {
+                            "exitoso" => "fa-circle-check",
+                            "fallido" => "fa-circle-xmark",
+                            _ => "fa-spinner fa-spin"
+                        };
+
+                        <tr>
+                            <td style="font-weight: 600;">@backup.Empresa?.Nombre</td>
+                            <td style="font-size: 13px; color: var(--text-muted);">@backup.FechaBackup.ToString("dd MMM yyyy HH:mm:ss")</td>
+                            <td style="font-family: monospace; font-weight: 600;">@backup.TamanoMB MB</td>
+                            <td style="text-align: center;">
+                                <span class="backup-status @stateClass">
+                                    <i class="fa-solid @stateIcon"></i>
+                                    <span>@backup.Estado</span>
+                                </span>
+                            </td>
+                            <td style="font-size: 13px; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @backup.Observaciones
+                            </td>
+                            <td style="text-align: right;">
+                                @if (backup.Estado == "Exitoso")
+                                {
+                                    <a href="@Url.Action("Descargar", "Backups", new { area = "Admin", id = backup.Id })" class="btn-download">
+                                        <i class="fa-solid fa-download"></i>
+                                        <span>Bajar .BAK</span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span style="font-size: 12px; color: var(--text-muted);">No disponible</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Filtrar historial por empresa seleccionada
+            $('#filterEmpresa').change(function() {
+                var empresaId = $(this).val();
+                window.location.href = '@Url.Action("Index", "Backups", new { area = "Admin" })' + (empresaId ? '?empresaId=' + empresaId : '');
+            });
+
+            // Sincronizar selección de filtros
+            var urlParams = new URLSearchParams(window.location.search);
+            var empIdParam = urlParams.get('empresaId');
+            if (empIdParam) {
+                $('#filterEmpresa').val(empIdParam);
+                $('#empresaId').val(empIdParam);
+            }
+
+            // Mostrar spinner en trigger manual
+            $('#backupForm').submit(function() {
+                var btn = $('#btn-backup-now');
+                btn.prop('disabled', true);
+                btn.find('i').removeClass('fa-cloud-arrow-down').addClass('fa-spinner fa-spin');
+                btn.find('span').text('Respaldando Base de Datos...');
+            });
+        });
+    </script>
+}

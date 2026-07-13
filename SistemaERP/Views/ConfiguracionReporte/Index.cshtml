@@ -1,0 +1,149 @@
+@model IEnumerable<SistemaERP.Models.Entities.ConfiguracionEstadoResultados>
+
+@{
+    ViewData["Title"] = "Diseñador de Estado de Resultados";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-gear me-2"></i>Diseñador de Estado de Resultados</h2>
+        <p class="text-muted">Configure las filas del reporte de Estado de Resultados, asocie cuentas contables o defina fórmulas de cálculo.</p>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <a asp-controller="CuentasContables" asp-action="Index" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-journal-bookmark me-1"></i> Catálogo de Cuentas
+        </a>
+        <a asp-action="Create" class="btn btn-premium shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i> Nueva Fila
+        </a>
+    </div>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-secondary">
+                <tr>
+                    <th class="border-0 text-xs text-uppercase py-3" style="width: 80px;">Orden</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Descripción / Etiqueta</th>
+                    <th class="border-0 text-xs text-uppercase py-3" style="width: 150px;">Tipo Fila</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Detalle / Fórmula</th>
+                    <th class="border-0 text-xs text-uppercase py-3" style="width: 100px;">Formato</th>
+                    <th class="border-0 text-xs text-uppercase py-3 text-end" style="width: 120px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr id="row-@item.Id">
+                            <td class="font-monospace fw-bold text-center" style="font-size: 1.1rem; width: 80px;">
+                                @item.Orden
+                            </td>
+                            <td>
+                                <span class="@(item.EsNegrita ? "fw-bold text-dark" : "")">@item.Descripcion</span>
+                            </td>
+                            <td>
+                                <span class="badge @(item.TipoFila == "Cuenta" ? "bg-info-subtle text-info" : "bg-success-subtle text-success") px-3 py-2 rounded-pill">
+                                    @item.TipoFila
+                                </span>
+                            </td>
+                            <td>
+                                @if (item.TipoFila == "Cuenta" && item.CuentaContable != null)
+                                {
+                                    <span class="font-monospace badge bg-light text-secondary border">@item.CuentaContable.Codigo</span>
+                                    <span class="text-muted small ms-1">@item.CuentaContable.Nombre</span>
+                                }
+                                else if (item.TipoFila == "Formula")
+                                {
+                                    <code class="text-danger fw-bold fs-6">@item.Formula</code>
+                                    <span class="text-muted small ms-1">(Ej. Fila @item.Formula)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.EsNegrita)
+                                {
+                                    <span class="badge bg-dark text-white px-2 py-1 rounded">Negrita</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Normal</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-primary me-1" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-light border-0 text-danger" title="Eliminar" onclick="confirmDelete(@item.Id, '@item.Descripcion')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                            No hay filas configuradas para el reporte.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Reportes" asp-action="Index" class="text-decoration-none text-muted fw-medium">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+    </a>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Eliminarás la fila '" + name + "' del diseño del reporte.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("Delete", "ConfiguracionReporte")',
+                        type: 'POST',
+                        data: { id: id },
+                        success: function (response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Eliminada!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                                $("#row-" + id).fadeOut(500);
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}

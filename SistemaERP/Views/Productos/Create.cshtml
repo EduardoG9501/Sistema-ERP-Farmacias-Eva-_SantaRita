@@ -1,0 +1,230 @@
+@model SistemaERP.Models.Entities.Producto
+
+@{
+    ViewData["Title"] = (Model?.Id > 0) ? "Editar Producto" : "Nuevo Producto";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">@(Model?.Id > 0 ? "Editar Producto" : "Registrar Producto")</h2>
+        <p class="text-muted">Gestión de datos técnicos, costos y precios de venta.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-10">
+        <div class="premium-card">
+            <form asp-action="@(Model?.Id > 0 ? "Edit" : "Create")" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+
+                <div class="row">
+                    <div class="col-md-8 mb-4">
+                        <label asp-for="Nombre" class="form-label fw-semibold">Nombre del Producto</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-box-seam"></i></span>
+                            <input asp-for="Nombre" class="form-control border-start-0 ps-0" placeholder="Ej. Aspirina 100mg" required />
+                        </div>
+                        <span asp-validation-for="Nombre" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="CodigoBarra" class="form-label fw-semibold">Código de Barras</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-upc-scan"></i></span>
+                            <input asp-for="CodigoBarra" class="form-control border-start-0 ps-0" placeholder="786XXXXXXXXXX" />
+                        </div>
+                        <span asp-validation-for="CodigoBarra" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Id_Presentacion" class="form-label fw-semibold">Presentación / Categoría</label>
+                        <select asp-for="Id_Presentacion" class="form-select" asp-items="ViewBag.Presentaciones">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                        <span asp-validation-for="Id_Presentacion" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Id_Proveedor" class="form-label fw-semibold">Proveedor Principal</label>
+                        <select asp-for="Id_Proveedor" class="form-select" asp-items="ViewBag.Proveedores">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                        <span asp-validation-for="Id_Proveedor" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="RegistroSanitario" class="form-label fw-semibold">Registro Sanitario</label>
+                        <input asp-for="RegistroSanitario" class="form-control" placeholder="Ej. 1234-56-78" />
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-50" />
+
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="PVF" class="form-label fw-semibold">Costo (PVF)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@ViewBag.MonedaSimbolo</span>
+                            <input asp-for="PVF" class="form-control" type="number" step="0.0001" placeholder="0.0000" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="PVP" class="form-label fw-semibold">Precio Venta (PVP)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@ViewBag.MonedaSimbolo</span>
+                            <input asp-for="PVP" class="form-control" type="number" step="0.0001" placeholder="0.0000" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 mb-4">
+                        <label asp-for="IVA" class="form-label fw-semibold">IVA (%)</label>
+                        <input asp-for="IVA" class="form-control" type="number" step="0.01" value="@ViewBag.DefaultIva" />
+                    </div>
+
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Pvp_Iva" class="form-label fw-semibold d-block">¿PVP Incluye IVA?</label>
+                        <div class="form-check form-switch custom-switch pt-2">
+                            <input class="form-check-input" type="checkbox" asp-for="Pvp_Iva">
+                            <label class="form-check-label text-muted" for="Pvp_Iva">Si / No</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="Contiene" class="form-label fw-semibold">Uni. x Paquete</label>
+                        <input asp-for="Contiene" class="form-control" type="number" placeholder="1" />
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <label asp-for="Estado" class="form-label fw-semibold">Estado inicial</label>
+                        <select asp-for="Estado" class="form-select">
+                            <option value="Activo" selected>Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+
+                @await Html.PartialAsync("_CamposPersonalizados", Tuple.Create(ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>, ViewBag.CustomFieldValues as Dictionary<string, object>))
+
+                <hr class="my-4 opacity-50" />
+
+                <!-- Sección de Imágenes del Producto -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-bold"><i class="bi bi-images text-indigo me-2"></i>Imágenes del Producto</label>
+                        <p class="text-xs text-muted mb-3">Sube una o varias imágenes para el catálogo. La imagen que marques con el selector será la <strong>Imagen Principal</strong> (portada del catálogo).</p>
+                        
+                        <div class="input-group mb-3 shadow-sm" style="max-width: 500px;">
+                            <span class="input-group-text bg-white"><i class="bi bi-cloud-upload text-muted"></i></span>
+                            <input type="file" id="FotoFiles" name="FotoFiles" accept="image/*" multiple class="form-control" />
+                        </div>
+
+                        <!-- Input hidden para el índice de la foto principal -->
+                        <input type="hidden" name="FotoPrincipalIndex" id="FotoPrincipalIndex" value="0" />
+
+                        <!-- Contenedor de previsualización -->
+                        <div class="d-flex flex-wrap gap-3 mt-3" id="previewContainer">
+                            <div class="text-center py-4 px-3 border rounded border-dashed text-muted opacity-75 d-flex flex-column align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                                <i class="bi bi-image-fill fs-2 mb-1"></i>
+                                <span style="font-size:0.65rem;">Sin imágenes cargadas</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Producto
+                    </button>
+                    <a asp-action="Index" class="btn btn-light border flex-grow-1">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        document.getElementById('FotoFiles').addEventListener('change', function(event) {
+            const files = event.target.files;
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = ''; // Limpiar previsualizaciones previas
+            
+            if (files.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 px-3 border rounded border-dashed text-muted opacity-75 d-flex flex-column align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                        <i class="bi bi-image-fill fs-2 mb-1"></i>
+                        <span style="font-size:0.65rem;">Sin imágenes cargadas</span>
+                    </div>
+                `;
+                document.getElementById('FotoPrincipalIndex').value = '0';
+                return;
+            }
+
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'position-relative border rounded p-1 bg-white shadow-sm';
+                    col.style.width = '140px';
+                    col.style.height = '140px';
+                    col.style.transition = 'all 0.2s';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-100 h-100 rounded';
+                    img.style.objectFit = 'cover';
+                    
+                    // Radio button para marcar principal
+                    const radioWrapper = document.createElement('div');
+                    radioWrapper.className = 'position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-center text-white py-1';
+                    radioWrapper.style.fontSize = '0.65rem';
+                    radioWrapper.style.borderRadius = '0 0 4px 4px';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'principal_radio';
+                    radio.id = `principal_radio_${index}`;
+                    radio.className = 'form-check-input me-1';
+                    radio.value = index;
+                    if (index === 0) {
+                        radio.checked = true;
+                        document.getElementById('FotoPrincipalIndex').value = '0';
+                    }
+                    
+                    radio.addEventListener('change', function() {
+                        document.getElementById('FotoPrincipalIndex').value = this.value;
+                    });
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `principal_radio_${index}`;
+                    label.innerText = 'Principal';
+                    label.className = 'form-check-label fw-bold cursor-pointer';
+                    
+                    radioWrapper.appendChild(radio);
+                    radioWrapper.appendChild(label);
+                    
+                    col.appendChild(img);
+                    col.appendChild(radioWrapper);
+                    container.appendChild(col);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        });
+    </script>
+}

@@ -1,0 +1,222 @@
+@model SistemaERP.Models.Entities.Cliente
+
+@{
+    ViewData["Title"] = (Model?.Id > 0) ? "Editar Cliente" : "Nuevo Cliente";
+    bool esEdicion = Model?.Id > 0;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">
+            <i class="bi bi-person-plus-fill me-2 text-primary"></i>
+            @(esEdicion ? "Editar Cliente" : "Registrar Cliente")
+        </h2>
+        <p class="text-muted">Complete los datos de identificación y contacto del cliente.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-lg-8">
+        <div class="premium-card">
+            <form asp-action="@(esEdicion ? "Edit" : "Create")">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                @if (esEdicion)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+
+                <!-- TIPO DOCUMENTO -->
+                <div class="mb-4">
+                    <label asp-for="TipoDocumento" class="form-label fw-bold small text-muted text-uppercase">
+                        Tipo Documento <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="TipoDocumento" class="form-select" id="selTipoDoc" onchange="onTipoDocChange(this.value)" required>
+                        <option value="">-- Seleccione --</option>
+                        <option value="4">RUC</option>
+                        <option value="5">CÉDULA</option>
+                        <option value="7">PASAPORTE</option>
+                        <option value="9">VENTA A CONSUMIDOR FINAL *</option>
+                        <option value="8">IDENTIFICACIÓN DEL EXTERIOR *</option>
+                    </select>
+                    <span asp-validation-for="TipoDocumento" class="text-danger small"></span>
+                </div>
+
+                <!-- CÉDULA / RUC / PASAPORTE -->
+                <div class="row">
+                    <div class="col-md-6 mb-4" id="grupoCedula">
+                        <label asp-for="Cedula" class="form-label fw-bold small text-muted text-uppercase">
+                            Cédula <span class="text-danger" id="lblCedulaReq">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-card-text"></i>
+                            </span>
+                            <input asp-for="Cedula" id="txtCedula" class="form-control border-start-0 ps-0" placeholder="0XXXXXXXXX" maxlength="10" />
+                        </div>
+                        <span asp-validation-for="Cedula" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4" id="grupoRUC">
+                        <label asp-for="RUC" class="form-label fw-bold small text-muted text-uppercase">
+                            RUC <span class="text-danger" id="lblRucReq">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-briefcase"></i>
+                            </span>
+                            <input asp-for="RUC" id="txtRuc" class="form-control border-start-0 ps-0" placeholder="0XXXXXXXXX001" maxlength="13" />
+                        </div>
+                        <span asp-validation-for="RUC" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- NOMBRES Y APELLIDOS -->
+                <div class="mb-4">
+                    <label asp-for="Nombres_Apellidos" class="form-label fw-bold small text-muted text-uppercase">
+                        Nombres y Apellidos <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-person"></i>
+                        </span>
+                        <input asp-for="Nombres_Apellidos" class="form-control border-start-0 ps-0"
+                               placeholder="Ej. JUAN CARLOS PÉREZ López" style="text-transform:uppercase" required />
+                    </div>
+                    <span asp-validation-for="Nombres_Apellidos" class="text-danger small"></span>
+                </div>
+
+                <!-- CORREO / TELÉFONO -->
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Correo" class="form-label fw-bold small text-muted text-uppercase">
+                            Correo Electrónico
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-envelope"></i>
+                            </span>
+                            <input asp-for="Correo" type="email" class="form-control border-start-0 ps-0"
+                                   placeholder="cliente@correo.com" />
+                        </div>
+                        <span asp-validation-for="Correo" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Telefono" class="form-label fw-bold small text-muted text-uppercase">
+                            Teléfono
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-telephone"></i>
+                            </span>
+                            <input asp-for="Telefono" class="form-control border-start-0 ps-0"
+                                   placeholder="09XXXXXXXX" maxlength="15" />
+                        </div>
+                        <span asp-validation-for="Telefono" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- CIUDAD / DIRECCIÓN -->
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <label asp-for="Ciudad" class="form-label fw-bold small text-muted text-uppercase">Ciudad</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-geo-alt"></i>
+                            </span>
+                            <input asp-for="Ciudad" class="form-control border-start-0 ps-0" placeholder="Ej. Guayaquil" />
+                        </div>
+                        <span asp-validation-for="Ciudad" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-8 mb-4">
+                        <label asp-for="Direccion" class="form-label fw-bold small text-muted text-uppercase">Dirección</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-house"></i>
+                            </span>
+                            <input asp-for="Direccion" class="form-control border-start-0 ps-0"
+                                   placeholder="Calle, Intersección, Número" />
+                        </div>
+                        <span asp-validation-for="Direccion" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                @await Html.PartialAsync("_CamposPersonalizados", Tuple.Create(ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>, ViewBag.CustomFieldValues as Dictionary<string, object>))
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Cliente
+                    </button>
+                    <a asp-action="Index" class="btn btn-light border flex-grow-1">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Panel lateral informativo -->
+    <div class="col-lg-4">
+        <div class="premium-card">
+            <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Tipos de Documento SRI</h6>
+            <table class="table table-sm mb-0">
+                <tr><td><span class="badge bg-primary-soft text-primary">04</span></td><td class="small">RUC — Empresas / Personas con actividad económica</td></tr>
+                <tr><td><span class="badge bg-success-soft text-success">05</span></td><td class="small">Cédula — Personas naturales ecuatorianas</td></tr>
+                <tr><td><span class="badge bg-warning-soft text-warning">07</span></td><td class="small">Pasaporte — Extranjeros sin RUC</td></tr>
+                <tr><td><span class="badge bg-secondary-soft text-secondary">09</span></td><td class="small">Consumidor Final — Ventas sin identificación</td></tr>
+                <tr><td><span class="badge bg-info-soft text-info">08</span></td><td class="small">Identificación del Exterior</td></tr>
+            </table>
+            <div class="alert alert-warning mt-3 mb-0 small border-0 py-2">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Ventas a <strong>Consumidor Final</strong> mayores a @ViewBag.MonedaSimbolo50 deben identificar al comprador.
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        function onTipoDocChange(val) {
+            val = parseInt(val);
+            const grupoCed = document.getElementById('grupoCedula');
+            const grupoRuc = document.getElementById('grupoRUC');
+            const txtCed   = document.getElementById('txtCedula');
+            const txtRuc   = document.getElementById('txtRuc');
+
+            // Por defecto mostrar ambos
+            grupoCed.style.display = '';
+            grupoRuc.style.display = '';
+            txtCed.required = false;
+            txtRuc.required = false;
+
+            if (val === 4) { // RUC
+                grupoCed.style.display = 'none';
+                txtRuc.required = true;
+                txtRuc.placeholder = '0XXXXXXXXX001';
+                txtRuc.maxLength = 13;
+            } else if (val === 5) { // Cédula
+                grupoRuc.style.display = 'none';
+                txtCed.required = true;
+                txtCed.placeholder = '0XXXXXXXXX';
+                txtCed.maxLength = 10;
+            } else if (val === 7) { // Pasaporte
+                grupoRuc.style.display = 'none';
+                txtCed.placeholder = 'Número de Pasaporte';
+                txtCed.maxLength = 20;
+            } else if (val === 9) { // Consumidor Final
+                grupoCed.style.display = 'none';
+                grupoRuc.style.display = 'none';
+            } else if (val === 8) { // Identificación exterior
+                grupoRuc.style.display = 'none';
+                txtCed.placeholder = 'Identificación del Exterior';
+                txtCed.maxLength = 20;
+            }
+        }
+
+        // Ejecutar al cargar si ya hay un valor
+        document.addEventListener('DOMContentLoaded', function() {
+            const sel = document.getElementById('selTipoDoc');
+            if (sel.value) onTipoDocChange(sel.value);
+        });
+    </script>
+}

@@ -1,0 +1,102 @@
+@model SistemaERP.Models.Entities.ConfiguracionEstadoResultados
+
+@{
+    ViewData["Title"] = "Editar Fila de Reporte";
+    var cuentas = ViewBag.Cuentas as List<SistemaERP.Models.Entities.CuentaContable> ?? new List<SistemaERP.Models.Entities.CuentaContable>();
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-pencil-square me-2"></i>Editar Fila de Reporte</h2>
+        <p class="text-muted">Modificar los parámetros de la fila del reporte.</p>
+    </div>
+</div>
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="premium-card p-4">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                
+                <div class="mb-3">
+                    <label asp-for="Orden" class="form-label fw-bold small">Nro. de Orden (Posición)</label>
+                    <input asp-for="Orden" type="number" class="form-control" placeholder="Ej. 1" required />
+                    <span asp-validation-for="Orden" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Descripcion" class="form-label fw-bold small">Etiqueta / Descripción</label>
+                    <input asp-for="Descripcion" class="form-control" placeholder="Ej. UTILIDAD BRUTA" required />
+                    <span asp-validation-for="Descripcion" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="TipoFila" class="form-label fw-bold small">Tipo de Fila</label>
+                    <select asp-for="TipoFila" class="form-select" id="ddlTipoFila" required>
+                        <option value="">Seleccione el tipo...</option>
+                        <option value="Cuenta">Cuenta del Catálogo (Detalle/Suma)</option>
+                        <option value="Formula">Fórmula / Totalizador</option>
+                    </select>
+                    <span asp-validation-for="TipoFila" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3" id="secCuenta" style="display: none;">
+                    <label asp-for="CuentaContableId" class="form-label fw-bold small">Cuenta Contable Asociada</label>
+                    <select asp-for="CuentaContableId" class="form-select">
+                        <option value="">Seleccione una cuenta contable...</option>
+                        @foreach (var c in cuentas)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == Model.CuentaContableId)">@c.Codigo - @c.Nombre (@c.Tipo)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CuentaContableId" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3" id="secFormula" style="display: none;">
+                    <label asp-for="Formula" class="form-label fw-bold small">Fórmula de Cálculo</label>
+                    <input asp-for="Formula" class="form-control font-monospace" placeholder="Ej. {1} - {2}" />
+                    <span asp-validation-for="Formula" class="text-danger small"></span>
+                    <div class="form-text text-muted small mt-1">
+                        Utilice números entre llaves para referenciar el valor de filas anteriores. Ej: `{1} - {2}` o `{3} - {8}`.
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input asp-for="EsNegrita" class="form-check-input" type="checkbox" />
+                        <label asp-for="EsNegrita" class="form-check-label fw-bold small">Mostrar en Negrita</label>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-premium shadow-sm">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            function toggleFields() {
+                var tipo = $("#ddlTipoFila").val();
+                if (tipo === "Cuenta") {
+                    $("#secCuenta").slideDown(200);
+                    $("#secFormula").slideUp(200);
+                } else if (tipo === "Formula") {
+                    $("#secCuenta").slideUp(200);
+                    $("#secFormula").slideDown(200);
+                } else {
+                    $("#secCuenta").slideUp(200);
+                    $("#secFormula").slideUp(200);
+                }
+            }
+
+            $("#ddlTipoFila").change(toggleFields);
+            toggleFields();
+        });
+    </script>
+}

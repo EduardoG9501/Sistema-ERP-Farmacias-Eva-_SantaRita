@@ -1,0 +1,227 @@
+@model SistemaERP.Controllers.ReportesController.EstadoResultadosViewModel
+
+@{
+    ViewData["Title"] = "Estado de Resultados";
+    var simb = (ViewBag.MonedaSimbolo as string) ?? "$";
+    var parametros = ViewBag.Parametros as SistemaERP.Models.Entities.ParametrosSistema;
+}
+
+<!-- Animaciones premium -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+<!-- Estilos específicos de impresión y diseño premium -->
+<style>
+    .report-header-print {
+        display: none;
+    }
+    
+    @@media print {
+        body {
+            background-color: #fff !important;
+            color: #000 !important;
+            font-size: 11pt !important;
+        }
+        .no-print {
+            display: none !important;
+        }
+        .report-header-print {
+            display: block !important;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .print-full-width {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+        }
+        .table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+        .table th, .table td {
+            padding: 6px 10px !important;
+            border: 1px solid #ddd !important;
+        }
+        .table thead th {
+            background-color: #f2f2f2 !important;
+            color: #000 !important;
+            font-weight: bold !important;
+        }
+        .fw-bold {
+            font-weight: bold !important;
+        }
+        .bg-light-subtle {
+            background-color: #f9f9f9 !important;
+        }
+    }
+
+    .premium-table th {
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+
+    .premium-table td {
+        font-size: 0.9rem;
+    }
+
+    .row-negrita {
+        font-weight: 700;
+        background-color: rgba(99, 102, 241, 0.04);
+    }
+</style>
+
+<div class="print-full-width">
+    <!-- Header para Impresión -->
+    <div class="report-header-print text-center">
+        @if (parametros != null)
+        {
+            <h2 class="fw-bold mb-0">@parametros.NombreEmpresa</h2>
+            @if (!string.IsNullOrEmpty(parametros.RUC))
+            {
+                <div class="small fw-semibold text-muted">RUC: @parametros.RUC</div>
+            }
+            @if (!string.IsNullOrEmpty(parametros.Direccion))
+            {
+                <div class="small text-muted">@parametros.Direccion</div>
+            }
+            @if (!string.IsNullOrEmpty(parametros.Telefono))
+            {
+                <div class="small text-muted">Tel: @parametros.Telefono</div>
+            }
+        }
+        else
+        {
+            <h2 class="fw-bold mb-0">ESTADO DE RESULTADOS</h2>
+        }
+        <h3 class="fw-bold mt-3 mb-1">ESTADO DE RESULTADOS</h3>
+        <p class="mb-0 small fw-semibold">
+            Período: del @Model.Desde.ToString("dd/MM/yyyy") al @Model.Hasta.ToString("dd/MM/yyyy")
+        </p>
+        <div class="text-end small text-muted mt-2">
+            Fecha de Impresión: @DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
+        </div>
+    </div>
+
+    <!-- Encabezado de Pantalla (No Imprimir) -->
+    <div class="row mb-4 animate__animated animate__fadeIn no-print">
+        <div class="col">
+            <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-file-earmark-bar-graph me-2"></i>Estado de Resultados</h2>
+            <p class="text-muted">Consulte los ingresos, costos, gastos y utilidades operacionales según su estructura contable.</p>
+        </div>
+        <div class="col-auto">
+            <a asp-action="Index" class="btn btn-outline-secondary px-4 py-2 fw-medium d-flex align-items-center">
+                <i class="bi bi-arrow-left me-2"></i> Volver a Reportes
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros Superiores (No Imprimir) -->
+    <div class="premium-card mb-4 animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 p-4 no-print">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-bold text-uppercase text-secondary" style="font-size: 0.8rem;">Fecha Desde:</label>
+                <input type="date" name="desde" value="@ViewBag.Desde" class="form-control border border-secondary-subtle bg-light" required />
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label fw-bold text-uppercase text-secondary" style="font-size: 0.8rem;">Fecha Hasta:</label>
+                <input type="date" name="hasta" value="@ViewBag.Hasta" class="form-control border border-secondary-subtle bg-light" required />
+            </div>
+
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary shadow-sm fw-semibold flex-fill d-flex align-items-center justify-content-center py-2.5">
+                    <i class="bi bi-search me-2"></i> Generar Reporte
+                </button>
+                <button type="button" onclick="window.print();" class="btn btn-danger shadow-sm fw-semibold flex-fill d-flex align-items-center justify-content-center py-2.5">
+                    <i class="bi bi-printer me-2"></i> Imprimir
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Reporte Impreso y en Pantalla -->
+    <div class="premium-card animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 overflow-hidden p-4">
+        <!-- Título en Pantalla (Oculto en Impresión) -->
+        <div class="text-center mb-4 no-print">
+            <h4 class="fw-bold text-dark mb-1">@(parametros?.NombreEmpresa ?? "ESTADO DE RESULTADOS")</h4>
+            @if (parametros != null && !string.IsNullOrEmpty(parametros.RUC))
+            {
+                <span class="badge bg-secondary-subtle text-secondary mb-2">RUC: @parametros.RUC</span>
+            }
+            <h5 class="text-primary fw-semibold text-uppercase tracking-wider">Estado de Resultados</h5>
+            <div class="text-muted small">
+                Del <span class="fw-semibold">@Model.Desde.ToString("dd/MM/yyyy")</span> al <span class="fw-semibold">@Model.Hasta.ToString("dd/MM/yyyy")</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered premium-table align-middle mb-0">
+                <thead class="bg-primary text-white text-uppercase" style="border-bottom: 2px solid #dee2e6;">
+                    <tr>
+                        <th class="py-3 ps-4" style="width: 80px; text-align: center;">Orden</th>
+                        <th class="py-3" style="width: 150px; text-align: left;">Código</th>
+                        <th class="py-3" style="text-align: left;">Descripción</th>
+                        <th class="py-3 pe-4 text-end" style="width: 200px;">Monto (@simb)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Filas != null && Model.Filas.Any())
+                    {
+                        foreach (var item in Model.Filas)
+                        {
+                            var rowClass = item.EsNegrita ? "row-negrita fw-bold" : "";
+                            var amountClass = item.EsNegrita ? "fw-bold text-dark" : "text-secondary";
+                            if (item.EsNegrita && item.Monto < 0)
+                            {
+                                amountClass += " text-danger";
+                            }
+                            else if (item.EsNegrita && item.Monto > 0)
+                            {
+                                amountClass += " text-success";
+                            }
+
+                            <tr class="@rowClass">
+                                <td class="py-2.5 ps-4 text-center font-monospace text-muted small">@item.Orden</td>
+                                <td class="py-2.5 text-start font-monospace text-secondary">@item.Codigo</td>
+                                <td class="py-2.5 text-start">@item.Descripcion</td>
+                                <td class="py-2.5 pe-4 text-end font-monospace @amountClass">
+                                    @if (item.Monto < 0)
+                                    {
+                                        var absVal = Math.Abs(item.Monto);
+                                        <span>(@simb@absVal.ToString("N2"))</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@simb@item.Monto.ToString("N2")</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-file-earmark-spreadsheet fs-1 d-block mb-3 opacity-25"></i>
+                                <span class="fs-5 fw-semibold d-block">No se ha configurado la estructura del reporte</span>
+                                <span>Vaya al módulo de configuración de reporte para definir las filas y fórmulas del Estado de Resultados.</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-4 text-muted small no-print">
+            <i class="bi bi-info-circle me-1 text-primary"></i>
+            Las ventas y costos corresponden a la integración automática de facturas emitidas y compras recibidas en el periodo seleccionado. Los gastos corresponden a los registros realizados en el módulo de egresos.
+        </div>
+    </div>
+</div>

@@ -1,0 +1,260 @@
+@model SistemaERP.Models.Entities.Traslado
+
+@{
+    ViewData["Title"] = Model.Estado == "PENDIENTE" ? "Recepcionar Traslado de Inventario" : "Auditoría de Traslado de Inventario";
+    var detalles = (ViewBag.Detalles as List<SistemaERP.Models.Entities.Traslado_Producto>) ?? new List<SistemaERP.Models.Entities.Traslado_Producto>();
+    var bodegas = (ViewBag.Bodegas as Dictionary<int, string>) ?? new Dictionary<int, string>();
+    var usuarios = (ViewBag.Usuarios as Dictionary<int, string>) ?? new Dictionary<int, string>();
+
+    bodegas.TryGetValue(Model.Id_Bodega_Origen, out var bodegaOrg);
+    bodegas.TryGetValue(Model.Id_Bodega_Destino, out var bodegaDst);
+    usuarios.TryGetValue(Model.Id_Usuario_Envio, out var userEnvio);
+    usuarios.TryGetValue(Model.Id_Usuario_Recepcion ?? 0, out var userRec);
+
+    string statusBadgeClass = "bg-warning-subtle text-warning border-warning-subtle";
+    if (Model.Estado == "RECIBIDO")
+    {
+        statusBadgeClass = "bg-success-subtle text-success border-success-subtle";
+    }
+    else if (Model.Estado == "ANULADO")
+    {
+        statusBadgeClass = "bg-danger-subtle text-danger border-danger-subtle";
+    }
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary">
+            <i class="bi @(Model.Estado == "PENDIENTE" ? "bi-arrow-down-left-square" : "bi-eye") me-2"></i>
+            @(Model.Estado == "PENDIENTE" ? "Recepcionar Traslado" : "Detalle / Auditoría de Traslado")
+        </h2>
+        <p class="text-muted">Revise la orden de salida y confirme la recepción para actualizar el inventario físico.</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="Index" class="btn btn-outline-secondary px-4 py-2 fw-medium d-flex align-items-center">
+            <i class="bi bi-arrow-left me-2"></i> Volver a la Lista
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <!-- Panel Izquierdo: Resumen del Traslado -->
+    <div class="col-12 col-xl-4">
+        <div class="premium-card p-4 bg-white rounded-3 shadow-sm border-0 h-100">
+            <h5 class="fw-bold text-dark mb-4"><i class="bi bi-info-circle-fill text-muted me-2"></i>Datos Generales</h5>
+
+            <div class="mb-3">
+                <span class="text-muted text-xs fw-semibold text-uppercase d-block mb-1">Estado de la Orden</span>
+                <span class="badge @statusBadgeClass border px-3 py-2 rounded-pill fw-semibold" style="font-size: 0.85rem;">
+                    <i class="bi @(Model.Estado == "RECIBIDO" ? "bi-check-circle" : (Model.Estado == "ANULADO" ? "bi-x-circle" : "bi-truck")) me-1"></i>
+                    @Model.Estado
+                </span>
+            </div>
+
+            <div class="mb-3 mt-4">
+                <span class="text-muted text-xs fw-semibold text-uppercase d-block mb-1">Bodega de Salida (Origen)</span>
+                <div class="d-flex align-items-center fw-bold text-dark border rounded p-2.5 bg-light" style="font-size: 0.95rem;">
+                    <i class="bi bi-box-arrow-right text-danger me-2 fs-5"></i> @(bodegaOrg ?? "N/A")
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <span class="text-muted text-xs fw-semibold text-uppercase d-block mb-1">Bodega de Entrada (Destino)</span>
+                <div class="d-flex align-items-center fw-bold text-dark border rounded p-2.5 bg-light" style="font-size: 0.95rem;">
+                    <i class="bi bi-box-arrow-in-left text-success me-2 fs-5"></i> @(bodegaDst ?? "N/A")
+                </div>
+            </div>
+
+            <hr class="my-4 text-secondary-subtle" />
+
+            <div class="mb-3">
+                <span class="text-muted text-xs fw-semibold text-uppercase d-block">Fecha Envío</span>
+                <span class="fw-semibold text-secondary text-sm">@Model.Fecha_Envio.ToString("dd/MM/yyyy hh:mm tt")</span>
+            </div>
+            
+            <div class="mb-3">
+                <span class="text-muted text-xs fw-semibold text-uppercase d-block">Usuario que Envía</span>
+                <span class="fw-semibold text-secondary text-sm"><i class="bi bi-person-circle me-1 text-muted"></i> @(userEnvio ?? "N/A")</span>
+            </div>
+
+            @if (Model.Estado == "RECIBIDO" && Model.Fecha_Recepcion.HasValue)
+            {
+                <div class="mb-3 border-top pt-3">
+                    <span class="text-muted text-xs fw-semibold text-uppercase d-block">Fecha Recepción</span>
+                    <span class="fw-bold text-success text-sm">@Model.Fecha_Recepcion.Value.ToString("dd/MM/yyyy hh:mm tt")</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted text-xs fw-semibold text-uppercase d-block">Usuario que Recibió</span>
+                    <span class="fw-bold text-success text-sm"><i class="bi bi-person-check-fill me-1 text-success"></i> @(userRec ?? "N/A")</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Observacion))
+            {
+                <div class="mb-3 border-top pt-3">
+                    <span class="text-muted text-xs fw-semibold text-uppercase d-block">Observación</span>
+                    <p class="text-secondary small mb-0 font-italic">"@Model.Observacion"</p>
+                </div>
+            }
+
+            @if (Model.Estado == "PENDIENTE")
+            {
+                <div class="d-grid gap-2 mt-4 pt-3 border-top">
+                    <button onclick="confirmarRecepcion()" class="btn btn-success btn-lg py-2.5 fw-semibold d-flex align-items-center justify-content-center shadow-sm">
+                        <i class="bi bi-check-lg me-2 fs-5"></i> Aprobar y Recibir Stock
+                    </button>
+                    <button onclick="anularTraslado()" class="btn btn-outline-danger py-2 fw-semibold d-flex align-items-center justify-content-center">
+                        <i class="bi bi-x-lg me-2"></i> Anular Traslado
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Detalle de Artículos -->
+    <div class="col-12 col-xl-8">
+        <div class="premium-card p-4 bg-white rounded-3 shadow-sm border-0 h-100">
+            <h5 class="fw-bold text-dark mb-4"><i class="bi bi-list-check text-muted me-2"></i>Productos a Recepcionar</h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-uppercase" style="font-size: 0.8rem; font-weight: 600;">
+                        <tr>
+                            <th class="py-2.5 ps-3">Producto</th>
+                            <th class="py-2.5 text-center" style="width: 120px;">Tipo</th>
+                            <th class="py-2.5 text-center" style="width: 120px;">Cant. Transferida</th>
+                            <th class="py-2.5 text-center" style="width: 120px;">Total Unidades</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in detalles)
+                        {
+                            var totalUnits = item.EsCaja ? item.Cantidad * item.Contiene : item.Cantidad;
+                            <tr>
+                                <td class="ps-3 fw-bold text-dark">@item.Producto</td>
+                                <td class="text-center">
+                                    <span class="badge @(item.EsCaja ? "bg-info-subtle text-info border-info-subtle" : "bg-secondary-subtle text-secondary border-secondary-subtle") border px-3 py-1.5 rounded-pill fw-semibold" style="font-size: 0.72rem;">
+                                        @(item.EsCaja ? "Caja" : "Detalle")
+                                    </span>
+                                </td>
+                                <td class="text-center fw-bold text-secondary" style="font-size: 0.95rem;">@item.Cantidad</td>
+                                <td class="text-center fw-bold text-primary" style="font-size: 0.95rem;">@totalUnits unidades</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="alert alert-warning border-0 p-3 mt-4 rounded-3 d-flex align-items-start" style="background-color: #fffbeb; border-left: 4px solid #f59e0b !important; color: #78350f;">
+                <i class="bi bi-exclamation-triangle-fill me-3 fs-4" style="color: #f59e0b;"></i>
+                <div class="small">
+                    <strong>Aviso de Conciliación:</strong> Al hacer clic en <em>Aprobar y Recibir Stock</em>, el inventario se descontará inmediatamente de la bodega de origen y se cargará en la bodega de destino, generando movimientos de Kardex que no podrán revertirse automáticamente. Por favor, asegúrese de que el conteo físico de la mercancía sea correcto antes de continuar.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    function confirmarRecepcion() {
+        Swal.fire({
+            title: '¿Confirmar Recepción?',
+            text: "Esta acción transferirá la mercancía físicamente actualizando los stocks de ambas bodegas y cargando el Kardex.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, Recibir Stock',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("ConfirmarRecepcion", "Traslados")',
+                    type: 'POST',
+                    data: { id: @Model.Id },
+                    success: function(res) {
+                        if (res.success) {
+                            Swal.fire("Recibido", res.message, "success").then(() => {
+                                window.location.href = '@Url.Action("Index", "Traslados")';
+                            });
+                        } else {
+                            Swal.fire("Error", res.message, "error");
+                        }
+                    },
+                    error: function() {
+                        Swal.fire("Error", "Error de red al intentar recepcionar el traslado.", "error");
+                    }
+                });
+            }
+        });
+    }
+
+    function anularTraslado() {
+        Swal.fire({
+            title: '¿Está seguro de anular?',
+            text: "Esta acción cancelará permanentemente la orden de salida del traslado #@Model.Id.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, Anular',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("Anular", "Traslados")',
+                    type: 'POST',
+                    data: { id: @Model.Id },
+                    success: function(res) {
+                        if (res.success) {
+                            Swal.fire("Anulado", res.message, "success").then(() => {
+                                window.location.href = '@Url.Action("Index", "Traslados")';
+                            });
+                        } else {
+                            Swal.fire("Error", res.message, "error");
+                        }
+                    },
+                    error: function() {
+                        Swal.fire("Error", "Error de red al intentar anular el traslado.", "error");
+                    }
+                });
+            }
+        });
+    }
+</script>
+
+<style>
+    /* Styling elements to make it feel extremely premium */
+    .premium-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .bg-success-subtle {
+        background-color: #ecfdf5 !important;
+        color: #047857 !important;
+    }
+    .bg-warning-subtle {
+        background-color: #fffbeb !important;
+        color: #b45309 !important;
+    }
+    .bg-danger-subtle {
+        background-color: #fef2f2 !important;
+        color: #b91c1c !important;
+    }
+    .bg-info-subtle {
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+    }
+    .bg-secondary-subtle {
+        background-color: #f3f4f6 !important;
+        color: #4b5563 !important;
+    }
+    .text-xs {
+        font-size: 0.75rem;
+    }
+</style>

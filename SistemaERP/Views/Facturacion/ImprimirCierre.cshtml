@@ -1,0 +1,124 @@
+@model SistemaERP.Models.Entities.CierreCaja
+@{
+    Layout = null;
+    var moneda = ViewBag.MonedaSimbolo ?? "$";
+    var denomList = ViewBag.Denominaciones as List<SistemaERP.Models.Entities.Denominacion>;
+    var parametros = ViewBag.Parametros as SistemaERP.Models.Entities.ParametrosSistema;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Cierre de Caja</title>
+    <style>
+        @@page { margin: 10mm; size: 80mm auto; }
+        body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 10px; color: #000; }
+        h2 { text-align: center; font-size: 16px; margin: 5px 0; }
+        h3 { font-size: 13px; margin: 8px 0 4px; border-bottom: 1px dashed #000; padding-bottom: 3px; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .header .empresa { font-size: 14px; font-weight: bold; }
+        .line { border-top: 1px dashed #000; margin: 6px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { padding: 2px 4px; text-align: left; }
+        th { border-bottom: 1px solid #000; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .fw-bold { font-weight: bold; }
+        .total-row td { border-top: 1px solid #000; font-weight: bold; padding-top: 4px; }
+        .diferencia { font-size: 14px; text-align: center; margin: 8px 0; }
+        .footer { text-align: center; font-size: 10px; margin-top: 12px; border-top: 1px dashed #000; padding-top: 6px; }
+        .badge { display: inline-block; padding: 1px 5px; font-size: 10px; border: 1px solid #000; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="empresa">@(parametros?.NombreEmpresa ?? "SISTEMA ERP")</div>
+        <div>TICKET DE CIERRE DE CAJA</div>
+        <div>@Model.FechaCierre.ToString("dd/MM/yyyy hh:mm tt")</div>
+        <div>Cajero: @(Model.UsuarioCierra?.Login ?? "S/N")</div>
+    </div>
+
+    <div class="line"></div>
+
+    <h3>Resumen de Ingresos</h3>
+    <table>
+        <tr><td>Apertura (Fondo Fijo)</td><td class="text-right">@moneda@Model.Apertura?.MontoInicial.ToString("N2")</td></tr>
+    </table>
+
+    <h3>Métodos de Pago</h3>
+    @if (!string.IsNullOrEmpty(Model.MetodosPago))
+    {
+        var items = System.Text.Json.JsonSerializer.Deserialize<List<CierreMetodoItem>>(Model.MetodosPago);
+        if (items != null && items.Any())
+        {
+            <table>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@item.Metodo</td>
+                        <td class="text-right">@moneda@item.Monto.ToString("N2")</td>
+                    </tr>
+                }
+            </table>
+        }
+    }
+
+    <div class="line"></div>
+
+    <h3>Conteo de Denominaciones</h3>
+    @if (!string.IsNullOrEmpty(Model.DetalleDenominaciones))
+    {
+        var denomItems = System.Text.Json.JsonSerializer.Deserialize<List<CierreDenomItem>>(Model.DetalleDenominaciones);
+        if (denomItems != null && denomItems.Any() && denomList != null)
+        {
+            var denomDict = denomList.ToDictionary(d => d.Id);
+            <table>
+                <tr><th>Denominación</th><th class="text-right">Cant.</th><th class="text-right">Subtotal</th></tr>
+                @foreach (var item in denomItems)
+                {
+                    if (denomDict.TryGetValue(item.DenominacionId, out var denom))
+                    {
+                        var sub = denom.Valor * item.Cantidad;
+                        <tr>
+                            <td>@denom.Nombre</td>
+                            <td class="text-right">@item.Cantidad</td>
+                            <td class="text-right">@moneda@sub.ToString("N2")</td>
+                        </tr>
+                    }
+                }
+                <tr class="total-row">
+                    <td>Total Contado</td>
+                    <td></td>
+                    <td class="text-right">@moneda@Model.MontoFinal.ToString("N2")</td>
+                </tr>
+            </table>
+        }
+    }
+
+    <div class="line"></div>
+
+    <div class="diferencia">
+        DIFERENCIA: @moneda@Model.Diferencia.ToString("N2")
+        <br/>
+        <span style="font-size:11px;">@(Model.Diferencia >= 0 ? "SOBRANTE" : "FALTANTE")</span>
+    </div>
+
+    <div class="footer">
+        <div>--- Fin del Cierre ---</div>
+        <div>@DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")</div>
+    </div>
+</body>
+</html>
+
+@functions {
+    public class CierreDenomItem
+    {
+        public int DenominacionId { get; set; }
+        public int Cantidad { get; set; }
+    }
+    public class CierreMetodoItem
+    {
+        public string? Metodo { get; set; }
+        public decimal Monto { get; set; }
+    }
+}

@@ -1,0 +1,396 @@
+@model IEnumerable<SistemaERP.Areas.Admin.Models.AdminAuditLog>
+@{
+    ViewData["Title"] = "Monitoreo Global del ERP";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    
+    var rubrosDict = ViewBag.RubrosData as Dictionary<string, int> ?? new Dictionary<string, int>();
+    var dbPings = ViewBag.DatabasePings as Dictionary<string, bool> ?? new Dictionary<string, bool>();
+    var porVencer = ViewBag.PorVencer as List<SistemaERP.Areas.Admin.Models.Empresa> ?? new List<SistemaERP.Areas.Admin.Models.Empresa>();
+}
+
+@section Styles {
+    <style>
+        /* Premium Stat Cards Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+            top: -50px;
+            right: -50px;
+            opacity: 0.5;
+        }
+
+        .stat-card.active-card::before { background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%); }
+        .stat-card.backup-card::before { background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%); }
+        .stat-card.warning-card::before { background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%); }
+
+        .stat-info h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-info p {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--primary);
+        }
+
+        .stat-card.active-card .stat-icon { color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+        .stat-card.backup-card .stat-icon { color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
+        .stat-card.warning-card .stat-icon { color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+
+        /* Dashboard layout splits */
+        .dash-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            height: fit-content;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        /* DB list monitor */
+        .ping-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .ping-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ping-company h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .ping-company span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .ping-status {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ping-status.online { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); color: #34d399; }
+        .ping-status.offline { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        /* Audit logs styling */
+        .audit-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+        }
+
+        .audit-list::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: calc(100% - 24px);
+            background: rgba(255, 255, 255, 0.04);
+            left: 19px;
+            top: 12px;
+        }
+
+        .audit-item {
+            display: flex;
+            gap: 20px;
+            position: relative;
+        }
+
+        .audit-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 14px;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+
+        .audit-content {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 20px;
+            flex-grow: 1;
+        }
+
+        .audit-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .audit-meta h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .audit-meta span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .audit-detail {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+    </style>
+}
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <h3>Total Empresas</h3>
+            <p>@ViewBag.TotalEmpresas</p>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-building"></i>
+        </div>
+    </div>
+
+    <div class="stat-card active-card">
+        <div class="stat-info">
+            <h3>Clientes Activos</h3>
+            <p>@ViewBag.Activas</p>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+    </div>
+
+    <div class="stat-card backup-card">
+        <div class="stat-info">
+            <h3>Backups Exitosos</h3>
+            <p>@ViewBag.BackupsExitosos</p>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-database"></i>
+        </div>
+    </div>
+
+    <div class="stat-card warning-card">
+        <div class="stat-info">
+            <h3>Alertas de Expiración</h3>
+            <p>@porVencer.Count</p>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Splits -->
+<div class="dash-layout">
+    <!-- Panel 1: Salud de Bases de Datos & Alertas -->
+    <div style="display: flex; flex-direction: column; gap: 30px;">
+        
+        <!-- Pings DB -->
+        <div class="glass-panel">
+            <div class="panel-header">
+                <h3>Monitoreo de Bases de Datos en Vivo</h3>
+                <span style="font-size: 12px; color: var(--success); font-weight: 600;"><i class="fa-solid fa-circle-nodes me-1"></i>Auto-ping</span>
+            </div>
+            
+            <div class="ping-list">
+                @if (!dbPings.Any())
+                {
+                    <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0;">
+                        No hay empresas activas para monitorear.
+                    </div>
+                }
+                else
+                {
+                    foreach (var ping in dbPings)
+                    {
+                        <div class="ping-item">
+                            <div class="ping-company">
+                                <h4>@ping.Key</h4>
+                                <span>SQL Server DB Client</span>
+                            </div>
+                            <span class="ping-status @(ping.Value ? "online" : "offline")">
+                                <i class="fa-solid @(ping.Value ? "fa-circle-dot" : "fa-circle-xmark")"></i>
+                                <span>@(ping.Value ? "Online" : "Offline")</span>
+                            </span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Alertas de Licencias -->
+        <div class="glass-panel">
+            <div class="panel-header" style="border-bottom-color: rgba(239, 68, 68, 0.1);">
+                <h3 style="color: #ef4444;"><i class="fa-solid fa-key me-2"></i>Licencias por Expirar (Próximos 30 días)</h3>
+            </div>
+            
+            <div class="ping-list">
+                @if (!porVencer.Any())
+                {
+                    <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 10px 0;">
+                        ✅ Todas las licencias y vigencias se encuentran al día.
+                    </div>
+                }
+                else
+                {
+                    foreach (var emp in porVencer)
+                    {
+                        <div class="ping-item" style="border-color: rgba(239, 68, 68, 0.15); background: rgba(239, 68, 68, 0.02);">
+                            <div class="ping-company">
+                                <h4 style="color: #f87171;">@emp.Nombre</h4>
+                                <span>Contacto: @(emp.NombreContacto ?? "Sin contacto")</span>
+                            </div>
+                            <span style="font-size: 13px; font-weight: 700; color: #f87171;">
+                                Expira: @emp.FechaVencimiento?.ToString("dd MMM")
+                            </span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel 2: Logs de Auditoría SuperAdmin -->
+    <div class="glass-panel">
+        <div class="panel-header">
+            <h3>Historial de Auditoría Maestro</h3>
+            <i class="fa-solid fa-shield-halved" style="color: var(--text-muted);"></i>
+        </div>
+
+        <div class="audit-list">
+            @if (!Model.Any())
+            {
+                <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 0;">
+                    Aún no se registran auditorías en la base maestra.
+                </div>
+            }
+            else
+            {
+                foreach (var audit in Model)
+                {
+                    var actionIcon = audit.Accion.ToLower() switch
+                    {
+                        var a when a.Contains("backup") => "fa-database",
+                        var a when a.Contains("rubro") => "fa-store",
+                        var a when a.Contains("campo") => "fa-sliders",
+                        _ => "fa-gears"
+                    };
+
+                    <div class="audit-item">
+                        <div class="audit-dot">
+                            <i class="fa-solid @actionIcon"></i>
+                        </div>
+                        <div class="audit-content">
+                            <div class="audit-meta">
+                                <h4>@audit.AdminUsuario?.Nombre</h4>
+                                <span>@audit.FechaHora.ToString("dd MMM, HH:mm")</span>
+                            </div>
+                            <div class="audit-detail">
+                                <span style="color: #a78bfa; font-weight: 600; font-size: 11px; text-transform: uppercase; display: block; margin-bottom: 2px;">@audit.Accion</span>
+                                @audit.Detalle
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>

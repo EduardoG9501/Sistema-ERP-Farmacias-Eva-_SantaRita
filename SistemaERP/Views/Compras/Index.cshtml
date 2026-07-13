@@ -1,0 +1,120 @@
+@model IEnumerable<SistemaERP.Models.Entities.CargoCompra>
+
+@{
+    ViewData["Title"] = "Historial de Compras";
+    var proveedores = ViewBag.Proveedores as Dictionary<int, string>;
+    var totales = ViewBag.Totales as Dictionary<string, decimal>;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Compras / Cargos</h2>
+        <p class="text-muted">Registro de ingresos de mercancía al inventario.</p>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <button type="button" onclick="exportExcel()" class="btn btn-success shadow-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+        </button>
+        <button type="button" onclick="printPdf()" class="btn btn-info text-white shadow-sm">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+        <a asp-action="Create" class="btn btn-premium shadow-sm">
+            <i class="bi bi-cart-plus me-1"></i> Nueva Compra
+        </a>
+    </div>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="tableCompras">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 text-xs text-uppercase py-3">Fecha</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Factura #</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Proveedor</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Total</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Estado</th>
+                    <th class="border-0 text-xs text-uppercase py-3 text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="text-xs">@item.FechaHora_Reg?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="fw-bold text-primary">@item.Factura</td>
+                            <td>
+                                @(item.Id_Proveedor.HasValue && proveedores != null && proveedores.ContainsKey(item.Id_Proveedor.Value) ? proveedores[item.Id_Proveedor.Value] : "N/A")
+                            </td>
+                            <td class="fw-bold text-dark">
+                                @{
+                                    decimal total = 0;
+                                    if (totales != null && totales.ContainsKey(item.Id.ToString())) {
+                                        total = totales[item.Id.ToString()];
+                                    }
+                                }
+                                @ViewBag.MonedaSimbolo@total.ToString("N2")
+                            </td>
+                            <td>
+                                @{
+                                    var badgeClass = item.Estado switch {
+                                        "Pagado" => "bg-success-subtle text-success",
+                                        "Borrador" => "bg-primary-subtle text-primary",
+                                        _ => "bg-warning-subtle text-warning"
+                                    };
+                                }
+                                <span class="badge @badgeClass px-3 py-2 rounded-pill">@item.Estado</span>
+                            </td>
+                            <td class="text-end">
+                                @if (item.Estado == "Borrador")
+                                {
+                                    <a asp-action="EditarBorrador" asp-route-id="@item.Id"
+                                       class="btn btn-sm btn-outline-primary border-0 me-1" title="Continuar Borrador">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                }
+                                <a asp-action="Ticket" asp-route-id="@item.Id" target="_blank" class="btn btn-sm btn-light border-0 text-dark me-1" title="Imprimir Ticket">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-primary" title="Ver Detalle">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                            No hay registros de compras.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<div class="mt-4">
+    <a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted fw-medium">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+    </a>
+</div>
+
+@section Scripts {
+    <script>
+        function exportExcel() {
+            window.open('@Url.Action("ExportarExcel", "Compras")', '_blank');
+        }
+
+        function printPdf() {
+            window.open('@Url.Action("ComprasPrint", "Compras")', '_blank');
+        }
+    </script>
+}

@@ -1,0 +1,237 @@
+@model SistemaERP.Controllers.HomeController.DashboardViewModel
+@{
+    ViewData["Title"] = "Panel de Control";
+}
+
+<div class="container-fluid p-0">
+    <div class="row mb-4 animate__animated animate__fadeIn">
+        <div class="col">
+            <h2 class="fw-bold mb-1">Bienvenido de nuevo, @(User.Identity?.Name ?? "Admin")!</h2>
+            <p class="text-muted">Aquí tienes un resumen de lo que está pasando en tu ERP hoy.</p>
+        </div>
+        <div class="col-auto">
+            <a asp-controller="Facturacion" asp-action="POS" class="btn btn-premium shadow-sm px-4 py-2 fw-medium d-flex align-items-center">
+                <i class="bi bi-plus-lg me-2"></i> Nueva Venta
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-5 animate__animated animate__fadeInUp">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="premium-card h-100">
+                <div class="stat-icon bg-blue-soft">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <h6 class="text-muted fw-semibold text-xs text-uppercase mb-1">Ventas del Mes</h6>
+                <h3 class="fw-bold mb-0">@ViewBag.MonedaSimbolo@Model.VentasDelMes.ToString("N2")</h3>
+                @if (Model.CrecimientoVentas >= 0)
+                {
+                    <span class="text-success text-xs fw-medium mt-2 d-block">
+                        <i class="bi bi-arrow-up me-1"></i> +@Model.CrecimientoVentas.ToString("N1")% vs mes anterior
+                    </span>
+                }
+                else
+                {
+                    <span class="text-danger text-xs fw-medium mt-2 d-block">
+                        <i class="bi bi-arrow-down me-1"></i> @Model.CrecimientoVentas.ToString("N1")% vs mes anterior
+                    </span>
+                }
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="premium-card h-100">
+                <div class="stat-icon bg-green-soft">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h6 class="text-muted fw-semibold text-xs text-uppercase mb-1">Clientes Activos</h6>
+                <h3 class="fw-bold mb-0">@Model.ClientesActivos</h3>
+                <span class="text-success text-xs fw-medium mt-2 d-block">
+                    <i class="bi bi-people-fill me-1"></i> Total en Sistema
+                </span>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="premium-card h-100">
+                <div class="stat-icon bg-purple-soft">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <h6 class="text-muted fw-semibold text-xs text-uppercase mb-1">Stock Bajo</h6>
+                <h3 class="fw-bold mb-0">@Model.StockBajo @(Model.StockBajo == 1 ? "Ítem" : "Ítems")</h3>
+                <span class="text-danger text-xs fw-medium mt-2 d-block">
+                    <i class="bi bi-exclamation-triangle me-1"></i> Requiere atención
+                </span>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="premium-card h-100">
+                <div class="stat-icon bg-orange-soft">
+                    <i class="bi bi-bank"></i>
+                </div>
+                <h6 class="text-muted fw-semibold text-xs text-uppercase mb-1">Saldo Bancos</h6>
+                <h3 class="fw-bold mb-0">@ViewBag.MonedaSimbolo@Model.SaldoBancos.ToString("N2")</h3>
+                <span class="text-muted text-xs fw-medium mt-2 d-block">
+                    Actualizado hace un momento
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Recent Sales -->
+        <div class="col-12 col-lg-8">
+            <div class="premium-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">Ventas Recientes</h5>
+                    <a asp-controller="Facturacion" asp-action="Index" class="text-primary text-decoration-none text-xs fw-bold">Ver todo</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 text-xs text-uppercase py-3">ID Factura</th>
+                                <th class="border-0 text-xs text-uppercase py-3">Cliente</th>
+                                <th class="border-0 text-xs text-uppercase py-3">Estado</th>
+                                <th class="border-0 text-xs text-uppercase py-3 text-end">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.VentasRecientes != null && Model.VentasRecientes.Any())
+                            {
+                                foreach (var v in Model.VentasRecientes)
+                                {
+                                    string badgeClass = "bg-warning-subtle text-warning border-warning-subtle";
+                                    if (v.Estado.ToUpper().Contains("PAGADO") || v.Estado.ToUpper().Contains("AUTORIZADO"))
+                                    {
+                                        badgeClass = "bg-success-subtle text-success border-success-subtle";
+                                    }
+                                    else if (v.Estado.ToUpper().Contains("ERROR") || v.Estado.ToUpper().Contains("DEVUELTA") || v.Estado.ToUpper().Contains("RECHAZADO"))
+                                    {
+                                        badgeClass = "bg-danger-subtle text-danger border-danger-subtle";
+                                    }
+                                    
+                                    <tr>
+                                        <td class="fw-semibold">
+                                            <a asp-controller="Facturacion" asp-action="Details" asp-route-id="@v.Id" class="text-decoration-none text-dark hover-primary-text">
+                                                #@v.NumDoc
+                                            </a>
+                                        </td>
+                                        <td>@v.Cliente</td>
+                                        <td><span class="badge @badgeClass border px-3 py-2 rounded-pill fw-medium">@v.Estado</span></td>
+                                        <td class="text-end fw-bold text-dark">@ViewBag.MonedaSimbolo@v.Monto.ToString("N2")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-5">
+                                        <i class="bi bi-receipt fs-1 d-block mb-3 opacity-25"></i>
+                                        <span class="fs-6 fw-semibold d-block">No se han registrado ventas</span>
+                                        <span>Realice ventas en el POS para verlas reflejadas aquí.</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="col-12 col-lg-4">
+            <div class="premium-card h-100">
+                <h5 class="fw-bold mb-4">Acciones Rápidas</h5>
+                <div class="d-grid gap-3">
+                    <a asp-controller="Facturacion" asp-action="Index" class="list-group-item list-group-item-action border rounded-3 p-3 transition-all hover-translate-right">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-pdf fs-4 text-danger me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Reporte de Caja</h6>
+                                    <small class="text-muted">Generar PDF del día</small>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </div>
+                    </a>
+                    <a asp-controller="Bancos" asp-action="Index" class="list-group-item list-group-item-action border rounded-3 p-3 transition-all hover-translate-right">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-bank fs-4 text-primary me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Conciliación</h6>
+                                    <small class="text-muted">Revisar movimientos</small>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling elements to make it feel extremely premium */
+    .premium-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        padding: 24px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .premium-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        margin-bottom: 16px;
+    }
+    .bg-blue-soft {
+        background-color: #eff6ff;
+        color: #3b82f6;
+    }
+    .bg-green-soft {
+        background-color: #f0fdf4;
+        color: #22c55e;
+    }
+    .bg-purple-soft {
+        background-color: #faf5ff;
+        color: #a855f7;
+    }
+    .bg-orange-soft {
+        background-color: #fff7ed;
+        color: #f97316;
+    }
+    .btn-premium {
+        background-color: #4f46e5;
+        color: #ffffff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+    }
+    .btn-premium:hover {
+        background-color: #4338ca;
+        color: #ffffff;
+    }
+    .hover-translate-right:hover {
+        transform: translateX(4px);
+    }
+    .transition-all {
+        transition: all 0.2s ease-in-out;
+    }
+    .hover-primary-text:hover {
+        color: #4f46e5 !important;
+    }
+</style>

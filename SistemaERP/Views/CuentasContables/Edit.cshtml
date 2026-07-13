@@ -1,0 +1,74 @@
+@model SistemaERP.Models.Entities.CuentaContable
+
+@{
+    ViewData["Title"] = "Editar Cuenta Contable";
+    var cuentasPadre = ViewBag.CuentasPadre as List<SistemaERP.Models.Entities.CuentaContable> ?? new List<SistemaERP.Models.Entities.CuentaContable>();
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1 text-primary"><i class="bi bi-pencil-square me-2"></i>Editar Cuenta Contable</h2>
+        <p class="text-muted">Modificar los datos de la cuenta contable.</p>
+    </div>
+</div>
+
+<div class="row g-4 animate__animated animate__fadeInUp">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="premium-card p-4">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                
+                <div class="mb-3">
+                    <label asp-for="Codigo" class="form-label fw-bold small">Código de Cuenta</label>
+                    <input asp-for="Codigo" class="form-control" placeholder="Ej. 6.02.01" required />
+                    <span asp-validation-for="Codigo" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Nombre" class="form-label fw-bold small">Nombre de Cuenta</label>
+                    <input asp-for="Nombre" class="form-control" placeholder="Ej. SERVICIOS BASICOS" required />
+                    <span asp-validation-for="Nombre" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Tipo" class="form-label fw-bold small">Tipo de Cuenta</label>
+                    <select asp-for="Tipo" class="form-select" required>
+                        <option value="">Seleccione el tipo...</option>
+                        <option value="Ingreso">Ingreso (Ventas, etc.)</option>
+                        <option value="Costo">Costo (Compras, costo de venta)</option>
+                        <option value="Gasto">Gasto (Servicios, gastos administrativos, etc.)</option>
+                        <option value="Activo">Activo</option>
+                        <option value="Pasivo">Pasivo</option>
+                        <option value="Patrimonio">Patrimonio</option>
+                    </select>
+                    <span asp-validation-for="Tipo" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="IdPadre" class="form-label fw-bold small">Cuenta Padre (Opcional)</label>
+                    <select asp-for="IdPadre" class="form-select">
+                        <option value="">Ninguna (Cuenta Principal / Nivel 1)</option>
+                        @foreach (var c in cuentasPadre)
+                        {
+                            <!option value="@c.Id" @(c.Id == Model.IdPadre ? "selected" : "")>@c.Codigo - @c.Nombre</!option>
+                        }
+                    </select>
+                    <span asp-validation-for="IdPadre" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input asp-for="Activo" class="form-check-input" type="checkbox" />
+                        <label asp-for="Activo" class="form-check-label fw-bold small">Cuenta Activa</label>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-premium shadow-sm">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

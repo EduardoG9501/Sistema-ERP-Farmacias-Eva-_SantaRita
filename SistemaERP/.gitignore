@@ -1,0 +1,44 @@
+## Ignore Visual Studio temporary files, build results, and user settings
+.vs/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Re]leasePublic/
+x64/
+x86/
+build/
+bin/
+obj/
+
+## Ignore published output (we can keep this ignored if we build via CI/CD, or track a separate branch)
+publish/
+
+## Ignore system-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Ignore user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Ignore rider/resharper/omnisharp
+.idea/
+.rider/
+.recommenders/
+.omnisharp/
+
+## Ignore compiled files
+*.dll
+*.exe
+*.pdb
+*.config
+*.log
+!web.config # Keep web.config since it is needed for IIS deployment
+
+## Ignore sensitive configuration files (never commit real database passwords)
+# appsettings.json
+# appsettings.Development.json
+# Note: Keep appsettings.json in template format, but don't commit production passwords.

@@ -1,0 +1,723 @@
+@{
+    ViewData["Title"] = "Gestión de Cuentas por Cobrar (CxC)";
+    var clientes = ViewBag.ClientesList as List<SistemaERP.Models.Entities.Cliente> ?? new List<SistemaERP.Models.Entities.Cliente>();
+    var bancos = ViewBag.BancosList as List<SistemaERP.Models.Entities.Banco> ?? new List<SistemaERP.Models.Entities.Banco>();
+}
+
+<div class="container-fluid py-4" style="background: #f8fafc; min-height: calc(100vh - 100px);">
+    <!-- Cabecera de Página -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-slate-800 m-0"><i class="bi bi-wallet2 text-success me-2"></i> Gestión de Cuentas por Cobrar</h1>
+            <p class="text-muted small m-0">Monitorea créditos otorgados a clientes, registra abonos y gestiona la cartera vencida en tiempo real.</p>
+        </div>
+        <button class="btn btn-outline-primary btn-sm rounded-3" onclick="loadCuentas()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Datos
+        </button>
+    </div>
+
+    <!-- Indicadores / KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden border-start border-4 border-primary">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 me-3">
+                        <i class="bi bi-receipt fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-bold d-block text-uppercase tracking-wider">Total Cartera Registrada</span>
+                        <h3 class="fw-extrabold text-slate-800 m-0 mt-1" id="kpiTotalCartera">@ViewBag.MonedaSimbolo0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden border-start border-4 border-success">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 text-success rounded-4 p-3 me-3">
+                        <i class="bi bi-cash-stack fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-bold d-block text-uppercase tracking-wider">Total Recaudado (Abonado)</span>
+                        <h3 class="fw-extrabold text-slate-800 m-0 mt-1" id="kpiTotalCobrado">@ViewBag.MonedaSimbolo0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden border-start border-4 border-warning">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-4 p-3 me-3">
+                        <i class="bi bi-clock-history fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-bold d-block text-uppercase tracking-wider">Saldo Neto Pendiente</span>
+                        <h3 class="fw-extrabold text-slate-800 m-0 mt-1" id="kpiTotalSaldo">@ViewBag.MonedaSimbolo0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Filtros -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 bg-white rounded-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4 col-sm-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-person me-1"></i> Cliente</label>
+                    <input type="text" id="filterCliente" class="form-control rounded-3" placeholder="Buscar por nombre..." oninput="loadCuentas()">
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-file-earmark-text me-1"></i> Nº Documento / Factura</label>
+                    <input type="text" id="filterFactura" class="form-control rounded-3" placeholder="Ticket-... / Factura-..." oninput="loadCuentas()">
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-check-circle me-1"></i> Estado de Deuda</label>
+                    <select id="filterEstado" class="form-select rounded-3" onchange="loadCuentas()">
+                        <option value="">-- Todos los Estados --</option>
+                        <option value="PENDIENTE" selected>PENDIENTE</option>
+                        <option value="PAGADA">PAGADA</option>
+                    </select>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <button class="btn btn-secondary btn-sm w-100 rounded-3 py-2" onclick="clearFilters()">
+                        <i class="bi bi-trash me-1"></i> Limpiar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Cuentas -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="cuentasTable">
+                    <thead class="bg-light border-bottom text-slate-700">
+                        <tr>
+                            <th class="ps-4" style="font-size: 0.8rem; letter-spacing: 0.5px;">CLIENTE</th>
+                            <th style="font-size: 0.8rem; letter-spacing: 0.5px;">N° FACTURA</th>
+                            <th style="font-size: 0.8rem; letter-spacing: 0.5px;">EMISIÓN</th>
+                            <th style="font-size: 0.8rem; letter-spacing: 0.5px;">VENCIMIENTO</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">MONTO TICKET</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">ABONADO</th>
+                            <th class="text-end" style="font-size: 0.8rem; letter-spacing: 0.5px;">SALDO PENDIENTE</th>
+                            <th class="text-center" style="font-size: 0.8rem; letter-spacing: 0.5px;">ESTADO</th>
+                            <th class="text-center pe-4" style="font-size: 0.8rem; letter-spacing: 0.5px; width: 180px;">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuentasTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">Cargando cuentas por cobrar...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Abono (Bootstrap 5) -->
+<div class="modal fade" id="modalAbono" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom bg-light py-3">
+                <h5 class="modal-title fw-bold text-slate-800"><i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Abono</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="abonoForm">
+                    <input type="hidden" id="abonoVentaId" />
+                    
+                    <div class="p-3 bg-light rounded-4 border mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold">CLIENTE:</span>
+                            <span class="fw-bold text-slate-800 text-end" id="abonoClienteName">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold">FACTURA / TICKET:</span>
+                            <span class="badge bg-secondary rounded-pill" id="abonoFacturaNum">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-warning-emphasis small fw-bold">SALDO PENDIENTE:</span>
+                            <span class="fw-bold text-danger fs-5" id="abonoSaldoPendiente">@ViewBag.MonedaSimbolo0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted"><i class="bi bi-currency-dollar me-1"></i> MONTO A ABONAR</label>
+                        <input type="number" id="abonoMonto" class="form-control form-control-lg text-center fw-bold" placeholder="0.00" min="0.01" step="0.01" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted"><i class="bi bi-wallet2 me-1"></i> MÉTODO DE COBRO</label>
+                        <select id="abonoTipoPago" class="form-select" onchange="toggleBancoField()" required>
+                            <option value="1">Efectivo</option>
+                            <option value="2">Tarjeta de Crédito</option>
+                            <option value="3">Transferencia Bancaria</option>
+                            <option value="4">Depósito Bancario</option>
+                        </select>
+                    </div>
+
+                    <!-- Campos Condicionales de Banco y Referencia -->
+                    <div class="row g-2 mb-3 d-none" id="bancoDetailsRow">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted"><i class="bi bi-bank me-1"></i> BANCO</label>
+                            <select id="abonoBanco" class="form-select">
+                                <option value="">-- Seleccionar --</option>
+                                @foreach (var b in bancos)
+                                {
+                                    <option value="@b.Id">@b.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted"><i class="bi bi-info-circle me-1"></i> COMPROBANTE</label>
+                            <input type="text" id="abonoReferencia" class="form-control" placeholder="Nro. Referencia">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="adquirenteDetailsRow">
+                        <label class="form-label small fw-bold text-muted"><i class="bi bi-credit-card-2-front me-1"></i> ADQUIRENTE / OPERADOR</label>
+                        <input type="text" id="abonoAdquirente" class="form-control" placeholder="Ej: Visa Banco Guayaquil">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success rounded-3 px-4" onclick="submitAbono()">
+                    <i class="bi bi-check-circle me-1"></i> Guardar Abono
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Historial de Abonos (Bootstrap 5) -->
+<div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom bg-light py-3">
+                <h5 class="modal-title fw-bold text-slate-800"><i class="bi bi-clock-history text-primary me-2"></i> Historial de Abonos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light bg-opacity-25" style="max-height: 480px; overflow-y: auto;">
+                <div class="p-3 bg-white rounded-4 border mb-4">
+                    <div class="row text-center">
+                        <div class="col-4 border-end">
+                            <span class="text-muted small fw-bold d-block text-uppercase">Factura</span>
+                            <span class="fw-bold text-primary fs-5" id="historialFacturaNum">-</span>
+                        </div>
+                        <div class="col-4 border-end">
+                            <span class="text-muted small fw-bold d-block text-uppercase">Total Factura</span>
+                            <span class="fw-bold text-slate-800 fs-5" id="historialTotalMonto">@ViewBag.MonedaSimbolo0.00</span>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small fw-bold d-block text-uppercase">Saldo Pendiente</span>
+                            <span class="fw-bold text-danger fs-5" id="historialSaldoPendiente">@ViewBag.MonedaSimbolo0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline" id="abonosTimeline">
+                    <!-- Abonos Timeline list will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <style>
+        /* Estilos Premium para la línea de tiempo */
+        .timeline {
+            position: relative;
+            padding-left: 3rem;
+            margin-top: 1rem;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1.25rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e2e8f0;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.35rem;
+            top: 0.25rem;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 3px #10b98140;
+            z-index: 1;
+        }
+        .timeline-item.warning::before {
+            background: #f59e0b;
+            box-shadow: 0 0 0 3px #f59e0b40;
+        }
+        .bg-indigo-soft {
+            background-color: #f5f3ff;
+            color: #4f46e5;
+        }
+        .bg-warning-soft {
+            background-color: #fffbeb;
+        }
+        .text-warning-emphasis {
+            color: #854d0e;
+        }
+        .accordion-chevron {
+            transition: transform 0.25s ease;
+        }
+        .accordion-chevron.open {
+            transform: rotate(180deg);
+        }
+    </style>
+
+@section Scripts {
+    <script>
+        let cuentasList = [];
+        let modalAbonoInstance = null;
+        let modalHistorialInstance = null;
+
+        $(document).ready(function() {
+            modalAbonoInstance = new bootstrap.Modal(document.getElementById('modalAbono'));
+            modalHistorialInstance = new bootstrap.Modal(document.getElementById('modalHistorial'));
+            loadCuentas();
+        });
+
+        // ─── Cargar Lista de Cuentas por Cobrar ──────────────────────────────
+        function loadCuentas() {
+            const cli = $('#filterCliente').val().trim();
+            const fac = $('#filterFactura').val().trim();
+            const est = $('#filterEstado').val();
+
+            $.ajax({
+                url: '@Url.Action("GetCuentas", "Cobros")',
+                type: 'GET',
+                data: { cliente: cli, factura: fac, estado: est },
+                success: function(res) {
+                    cuentasList = res;
+                    renderTable();
+                    renderKPIs();
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'No se pudieron obtener las cuentas por cobrar.', 'error');
+                }
+            });
+        }
+
+        // ─── Renderizar Tabla de Facturas por Cobrar ───────────────────────────
+        function renderTable() {
+            const tbody = $('#cuentasTableBody');
+            tbody.empty();
+
+            if (cuentasList.length === 0) {
+                tbody.append('<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-slate-300"></i> No se encontraron cuentas por cobrar en el rango de filtros</td></tr>');
+                return;
+            }
+
+            cuentasList.forEach(c => {
+                const isVencida = new Date(c.fechaVencimiento) < new Date() && c.estado === 'PENDIENTE';
+                const statusBadge = c.estado === 'PAGADA' 
+                    ? '<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold" style="font-size:0.75rem;"><i class="bi bi-check-circle-fill me-1"></i> PAGADA</span>'
+                    : '<span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2 fw-bold" style="font-size:0.75rem;"><i class="bi bi-clock-history me-1"></i> PENDIENTE</span>';
+
+                tbody.append(`
+                    <tr class="${isVencida ? 'table-danger bg-opacity-10' : ''}">
+                        <td class="ps-4 fw-bold text-slate-800">${escapeHtml(c.clienteNombre)}</td>
+                        <td>
+                            <span class="badge bg-indigo-soft text-indigo rounded-pill bg-opacity-75" 
+                                  style="cursor: pointer; padding: 0.4rem 0.8rem; font-weight: 700; display: inline-flex; align-items: center;"
+                                  onclick="toggleAccordion(${c.num_Venta})"
+                                  title="Haga clic para expandir desglose">
+                                <i class="bi bi-file-earmark-text me-1"></i>${escapeHtml(c.factura || 'TICKET-' + c.num_Venta)}
+                                <i class="bi bi-chevron-down ms-2 transition-all accordion-chevron" id="chevron-${c.num_Venta}"></i>
+                            </span>
+                        </td>
+                        <td>${c.fechaEmision}</td>
+                        <td class="${isVencida ? 'text-danger fw-bold' : ''}">
+                            ${c.fechaVencimiento} 
+                            ${isVencida ? '<br><span style="font-size:0.68rem;" class="badge bg-danger rounded-pill"><i class="bi bi-exclamation-triangle"></i> VENCIDO</span>' : ''}
+                        </td>
+                        <td class="text-end fw-semibold">${MONEDA_SIMBOLO}${c.monto_Fact.toFixed(2)}</td>
+                        <td class="text-end text-success">${MONEDA_SIMBOLO}${c.monto_Abonado.toFixed(2)}</td>
+                        <td class="text-end fw-bold text-danger">${MONEDA_SIMBOLO}${c.monto_Saldo.toFixed(2)}</td>
+                        <td class="text-center">${statusBadge}</td>
+                        <td class="text-center pe-4">
+                            <div class="btn-group gap-1">
+                                ${c.estado === 'PENDIENTE' ? `
+                                    <button class="btn btn-success btn-sm rounded-3 py-1 px-2" onclick="openAbonoModal(${c.num_Venta}, '${escapeJs(c.clienteNombre)}', '${escapeJs(c.factura || 'TICKET-' + c.num_Venta)}', ${c.monto_Saldo})">
+                                        <i class="bi bi-cash"></i> Abonar
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-outline-primary btn-sm rounded-3 py-1 px-2" onclick="openHistorialModal(${c.num_Venta}, '${escapeJs(c.factura || 'TICKET-' + c.num_Venta)}', ${c.monto_Fact}, ${c.monto_Saldo})">
+                                    <i class="bi bi-clock-history"></i> Historial
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="detail-row-${c.num_Venta}" class="detail-row d-none bg-light bg-opacity-50">
+                        <td colspan="9" class="p-3" style="border-left: 4px solid #10b981 !important;">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border: 1px solid #a7f3d0 !important;">
+                                <div class="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center text-white" style="background-color: #065f46 !important; color: white !important;">
+                                    <span style="font-size: 0.8rem;"><i class="bi bi-receipt-cutoff me-1"></i> DETALLE DE COMPRA (DOCUMENTO: ${escapeHtml(c.factura || 'TICKET-' + c.num_Venta)})</span>
+                                    <span class="badge bg-white text-success fw-bold" style="color: #047857 !important; background-color: #d1fae5 !important; font-size: 0.78rem;">Total Facturado: ${MONEDA_SIMBOLO}${c.monto_Fact.toFixed(2)}</span>
+                                </div>
+                                <div class="card-body p-0 bg-white">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0" id="tblVentaItems_${c.num_Venta}">
+                                            <thead class="text-white text-uppercase text-nowrap" style="background-color: #059669 !important; font-size: 0.75rem; letter-spacing: 0.5px;">
+                                                <tr>
+                                                    <th class="ps-3 py-2">Código Barra</th>
+                                                    <th class="py-2">Producto</th>
+                                                    <th class="text-center py-2">Presentación</th>
+                                                    <th class="text-center py-2">Cantidad</th>
+                                                    <th class="text-center py-2">Bonif.</th>
+                                                    <th class="text-end py-2">P. Venta</th>
+                                                    <th class="text-end py-2">Subtotal</th>
+                                                    <th class="text-end py-2">IVA</th>
+                                                    <th class="text-end py-2">Descuento</th>
+                                                    <th class="text-end py-2">Total a Pagar</th>
+                                                    <th class="ps-3 pe-3 py-2">Factura</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td colspan="11" class="text-center py-4 text-muted">
+                                                        <div class="spinner-border spinner-border-sm text-success me-2"></div>Cargando artículos...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <!-- Panel de Totales de Pie (Dashboard Style) -->
+                                    <div class="row g-0 border-top mt-0 py-3 px-3 bg-light rounded-bottom-4" style="background: #f8fafc !important;">
+                                        <!-- Columna 1 (Rojo/Alerta) -->
+                                        <div class="col-md-3 border-end pe-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">SUBTOTAL:</span>
+                                                <span class="fw-bold text-danger" style="font-size: 0.95rem;" id="summarySubtotal_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">DESCUENTO:</span>
+                                                <span class="fw-bold text-danger" style="font-size: 0.95rem;" id="summaryDescuento_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                        </div>
+                                        <!-- Columna 2 (Azul/Información) -->
+                                        <div class="col-md-3 border-end px-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;" id="lblSummarySubIva_${c.num_Venta}">SUBTOTAL 15%:</span>
+                                                <span class="fw-bold text-primary" style="font-size: 0.95rem;" id="summarySubtotalGravado_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">SUBTOTAL 0%:</span>
+                                                <span class="fw-bold text-primary" style="font-size: 0.95rem;" id="summarySubtotalExento_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                        </div>
+                                        <!-- Columna 3 (Azul/Información) -->
+                                        <div class="col-md-3 border-end px-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;">SUBTOTAL SIN IMPUESTO:</span>
+                                                <span class="fw-bold text-primary" style="font-size: 0.95rem;" id="summarySubtotalSinImpuesto_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.78rem;" id="lblSummaryIva_${c.num_Venta}">IVA 15%:</span>
+                                                <span class="fw-bold text-success" style="font-size: 0.95rem;" id="summaryIva_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                            </div>
+                                        </div>
+                                        <!-- Columna 4 (Negrita/Contraste) -->
+                                        <div class="col-md-3 ps-3 d-flex flex-column justify-content-center align-items-end">
+                                            <span class="text-uppercase fw-bold text-slate-800 mb-1" style="font-size: 0.8rem; letter-spacing: 0.5px;">TOTAL A PAGAR:</span>
+                                            <span class="fw-extrabold text-success fs-4" id="summaryTotal_${c.num_Venta}">@ViewBag.MonedaSimbolo0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        // ─── Renderizar KPIs e Indicadores de Cartera ───────────────────────────
+        function renderKPIs() {
+            let totalCartera = 0;
+            let totalAbonado = 0;
+            let totalSaldo = 0;
+
+            cuentasList.forEach(c => {
+                totalCartera += c.monto_Fact;
+                totalAbonado += c.monto_Abonado;
+                totalSaldo += c.monto_Saldo;
+            });
+
+            $('#kpiTotalCartera').text(`${MONEDA_SIMBOLO}${totalCartera.toFixed(2)}`);
+            $('#kpiTotalCobrado').text(`${MONEDA_SIMBOLO}${totalAbonado.toFixed(2)}`);
+            $('#kpiTotalSaldo').text(`${MONEDA_SIMBOLO}${totalSaldo.toFixed(2)}`);
+        }
+
+        // ─── Limpiar Filtros ───────────────────────────────────────────────
+        function clearFilters() {
+            $('#filterCliente').val('');
+            $('#filterFactura').val('');
+            $('#filterEstado').val('');
+            loadCuentas();
+        }
+
+        // ─── Registrar Abono Modal Handler ──────────────────────────────────
+        function openAbonoModal(ventaId, clienteName, facturaNum, saldo) {
+            $('#abonoVentaId').val(ventaId);
+            $('#abonoClienteName').text(clienteName);
+            $('#abonoFacturaNum').text(facturaNum);
+            $('#abonoSaldoPendiente').text(`${MONEDA_SIMBOLO}${saldo.toFixed(2)}`);
+            $('#abonoMonto').val('');
+            $('#abonoTipoPago').val('1');
+            $('#abonoBanco').val('');
+            $('#abonoReferencia').val('');
+            $('#abonoAdquirente').val('');
+            
+            toggleBancoField();
+            modalAbonoInstance.show();
+        }
+
+        // ─── Activar / Ocultar campos de banco ─────────────────────────────────
+        function toggleBancoField() {
+            const tp = $('#abonoTipoPago').val();
+            const row = $('#bancoDetailsRow');
+            const adq = $('#adquirenteDetailsRow');
+
+            if (tp === '3' || tp === '4') { // Transferencia o Depósito
+                row.removeClass('d-none');
+                adq.addClass('d-none');
+            } else if (tp === '2') { // Tarjeta
+                row.addClass('d-none');
+                adq.removeClass('d-none');
+            } else { // Efectivo
+                row.addClass('d-none');
+                adq.addClass('d-none');
+            }
+        }
+
+        // ─── Enviar Abono al Backend ───────────────────────────────────────
+        function submitAbono() {
+            const ventaId = $('#abonoVentaId').val();
+            const monto = parseFloat($('#abonoMonto').val());
+            const tipo = parseInt($('#abonoTipoPago').val());
+            const ref = $('#abonoReferencia').val().trim();
+            const bancoId = $('#abonoBanco').val() ? parseInt($('#abonoBanco').val()) : null;
+            const adq = $('#abonoAdquirente').val().trim();
+
+            const saldo = parseFloat($('#abonoSaldoPendiente').text().replace(/[^0-9.-]/g, ''));
+
+            if (isNaN(monto) || monto <= 0) {
+                Swal.fire('Error', 'Por favor ingresa un monto válido a abonar.', 'warning');
+                return;
+            }
+
+            if (monto > saldo + 0.005) {
+                Swal.fire('Error', `El monto ingresado (${MONEDA_SIMBOLO}${monto.toFixed(2)}) supera el saldo de la deuda (${MONEDA_SIMBOLO}${saldo.toFixed(2)}).`, 'warning');
+                return;
+            }
+
+            Swal.fire({ title: 'Registrando abono...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+            let reqData = {
+                ventaId: parseInt(ventaId),
+                monto: monto,
+                tipoPago: tipo,
+                referencia: ref,
+                idBanco: bancoId,
+                adquirente: adq
+            };
+
+            $.ajax({
+                url: '@Url.Action("RegistrarAbono", "Cobros")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(reqData),
+                success: function(res) {
+                    if (res.success) {
+                        modalAbonoInstance.hide();
+                        Swal.fire('¡Éxito!', res.message, 'success');
+                        loadCuentas();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'Error en el servidor al registrar el cobro.', 'error');
+                }
+            });
+        }
+
+        // ─── Historial de Pagos Modal Handler ───────────────────────────────
+        function openHistorialModal(ventaId, facturaNum, total, saldo) {
+            $('#historialFacturaNum').text(facturaNum);
+            $('#historialTotalMonto').text(`${MONEDA_SIMBOLO}${total.toFixed(2)}`);
+            $('#historialSaldoPendiente').text(`${MONEDA_SIMBOLO}${saldo.toFixed(2)}`);
+
+            const timeline = $('#abonosTimeline');
+            timeline.empty().append('<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando abonos...</div>');
+
+            modalHistorialInstance.show();
+
+            $.ajax({
+                url: '@Url.Action("GetAbonos", "Cobros")',
+                type: 'GET',
+                data: { ventaId: ventaId },
+                success: function(res) {
+                    timeline.empty();
+
+                    if (res.length === 0) {
+                        timeline.append('<div class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> No se han registrado abonos para este crédito todavía.</div>');
+                        return;
+                    }
+
+                    res.forEach(a => {
+                        timeline.append(`
+                            <div class="timeline-item">
+                                <div class="bg-white p-3 border rounded-4 shadow-sm">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-success fs-5">+${MONEDA_SIMBOLO}${a.monto_Efectivo.toFixed(2)}</span>
+                                        <span class="text-muted small fw-semibold"><i class="bi bi-clock me-1"></i> ${a.fechaHoraReg}</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <span class="d-block"><strong>Cobrado por:</strong> ${escapeHtml(a.usuario)}</span>
+                                        <span class="d-block"><strong>Método:</strong> ${escapeHtml(a.tipoPagoDesc)}</span>
+                                        ${a.num_Doc ? `<span class="d-block"><strong>Referencia:</strong> ${escapeHtml(a.num_Doc)}</span>` : ''}
+                                        ${a.banco !== 'N/A' ? `<span class="d-block"><strong>Banco:</strong> ${escapeHtml(a.banco)}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    });
+                },
+                error: function() {
+                    timeline.empty().append('<div class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar abonos.</div>');
+                }
+            });
+        }
+
+        function toggleAccordion(ventaId) {
+            let detailRow = $(`#detail-row-${ventaId}`);
+            let chevron = $(`#chevron-${ventaId}`);
+            
+            if (detailRow.hasClass('d-none')) {
+                // Cerrar cualquier otro desglose abierto para mantener orden
+                $('.detail-row').addClass('d-none');
+                $('.accordion-chevron').removeClass('open');
+                
+                detailRow.removeClass('d-none');
+                chevron.addClass('open');
+                
+                let tbody = $(`#tblVentaItems_${ventaId} tbody`);
+                tbody.empty().append('<tr><td colspan="11" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-success me-2"></div>Cargando artículos...</td></tr>');
+                
+                $.ajax({
+                    url: '@Url.Action("GetVentaDetalle", "Cobros")',
+                    type: 'GET',
+                    data: { ventaId: ventaId },
+                    success: function(res) {
+                        tbody.empty();
+                        if (res.length === 0) {
+                            tbody.append('<tr><td colspan="11" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> No se encontraron detalles para este documento.</td></tr>');
+                            return;
+                        }
+
+                        let subtotalSum = 0;
+                        let descuentoSum = 0;
+                        let subtotalGravado = 0;
+                        let subtotalExento = 0;
+                        let subtotalSinImpuesto = 0;
+                        let ivaSum = 0;
+                        let totalSum = 0;
+                        let activeIvaRate = 15; // default fallback
+
+                        res.forEach(d => {
+                            // Sumas para el panel de totales
+                            descuentoSum += d.descuento;
+                            subtotalSinImpuesto += d.subtotal;
+                            ivaSum += d.iva;
+                            totalSum += d.total;
+
+                            if (d.iva > 0) {
+                                subtotalGravado += d.subtotal;
+                                // Estimar porcentaje de IVA si es posible
+                                if (d.subtotal > 0) {
+                                    let calculatedRate = Math.round((d.iva / d.subtotal) * 100);
+                                    if (calculatedRate > 0) {
+                                        activeIvaRate = calculatedRate;
+                                    }
+                                }
+                            } else {
+                                subtotalExento += d.subtotal;
+                            }
+
+                            tbody.append(`
+                                <tr>
+                                    <td class="ps-3 text-nowrap"><span class="badge bg-light text-secondary border px-2 py-1">${escapeHtml(d.codigoBarra)}</span></td>
+                                    <td>
+                                        <div class="fw-bold text-slate-800">${escapeHtml(d.producto)}</div>
+                                        ${d.lote && d.lote !== 'N/A' ? `<div style="font-size:0.7rem;" class="text-muted"><i class="bi bi-bookmark-fill me-1 text-success"></i>Lote: ${escapeHtml(d.lote)}</div>` : ''}
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-indigo bg-opacity-10 text-indigo border px-2 py-1" style="font-size: 0.72rem;">${escapeHtml(d.presentacion)}</span></td>
+                                    <td class="text-center fw-bold">${d.cantidad}</td>
+                                    <td class="text-center text-muted">${d.bonif}</td>
+                                    <td class="text-end fw-semibold">${MONEDA_SIMBOLO}${d.pvp.toFixed(2)}</td>
+                                    <td class="text-end">${MONEDA_SIMBOLO}${d.subtotal.toFixed(2)}</td>
+                                    <td class="text-end text-success">${MONEDA_SIMBOLO}${d.iva.toFixed(2)}</td>
+                                    <td class="text-end text-danger">-${MONEDA_SIMBOLO}${d.descuento.toFixed(2)}</td>
+                                    <td class="text-end fw-bold text-indigo">${MONEDA_SIMBOLO}${d.total.toFixed(2)}</td>
+                                    <td class="ps-3 pe-3 text-nowrap"><span class="badge bg-light text-dark border px-2 py-1">${escapeHtml(d.factura)}</span></td>
+                                </tr>
+                            `);
+                        });
+
+                        // Calcular subtotal general (subtotal bruto antes de descuento)
+                        subtotalSum = subtotalSinImpuesto + descuentoSum;
+
+                        // Actualizar etiquetas dinámicas de porcentaje de IVA
+                        $(`#lblSummarySubIva_${ventaId}`).text(`SUBTOTAL ${activeIvaRate}%:`);
+                        $(`#lblSummaryIva_${ventaId}`).text(`IVA ${activeIvaRate}%:`);
+
+                        // Inyectar sumatorias en las cajas de totales correspondientes
+                        $(`#summarySubtotal_${ventaId}`).text(`${MONEDA_SIMBOLO}${subtotalSum.toFixed(2)}`);
+                        $(`#summaryDescuento_${ventaId}`).text(`${MONEDA_SIMBOLO}${descuentoSum.toFixed(2)}`);
+                        $(`#summarySubtotalGravado_${ventaId}`).text(`${MONEDA_SIMBOLO}${subtotalGravado.toFixed(2)}`);
+                        $(`#summarySubtotalExento_${ventaId}`).text(`${MONEDA_SIMBOLO}${subtotalExento.toFixed(2)}`);
+                        $(`#summarySubtotalSinImpuesto_${ventaId}`).text(`${MONEDA_SIMBOLO}${subtotalSinImpuesto.toFixed(2)}`);
+                        $(`#summaryIva_${ventaId}`).text(`${MONEDA_SIMBOLO}${ivaSum.toFixed(2)}`);
+                        $(`#summaryTotal_${ventaId}`).text(`${MONEDA_SIMBOLO}${totalSum.toFixed(2)}`);
+                    },
+                    error: function() {
+                        tbody.empty().append('<tr><td colspan="11" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar los artículos.</td></tr>');
+                    }
+                });
+            } else {
+                detailRow.addClass('d-none');
+                chevron.removeClass('open');
+            }
+        }
+
+        // ─── Helpers de Escape de Caracteres ──────────────────────────────
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function escapeJs(str) {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+    </script>
+}

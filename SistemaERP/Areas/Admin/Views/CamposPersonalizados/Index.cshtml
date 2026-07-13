@@ -1,0 +1,423 @@
+@model IEnumerable<SistemaERP.Areas.Admin.Models.CampoPersonalizado>
+@{
+    ViewData["Title"] = "Gestión de Campos Dinámicos";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .page-header-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            border: none;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .form-control {
+            background: rgba(10, 15, 30, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s;
+            width: 240px;
+        }
+
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+        }
+
+        select.form-control option {
+            background-color: var(--bg-sidebar);
+        }
+
+        /* Tables grouping by Entity */
+        .entity-group {
+            margin-bottom: 40px;
+        }
+
+        .entity-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--primary);
+            padding-left: 12px;
+        }
+
+        .entity-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .custom-table th {
+            padding: 16px 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .custom-table td {
+            padding: 18px 20px;
+            font-size: 14px;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            vertical-align: middle;
+        }
+
+        /* Badges styling */
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+        }
+
+        .validation-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 4px;
+            display: inline-block;
+        }
+
+        .pill-req { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; }
+        .pill-uniq { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); color: #34d399; }
+        .pill-len { background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); color: #60a5fa; }
+
+        .destination-icon {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-right: 12px;
+            transition: color 0.2s;
+        }
+
+        .destination-icon.active {
+            color: var(--primary);
+            filter: drop-shadow(0 0 4px var(--primary-glow));
+        }
+
+        /* Action Buttons */
+        .action-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-action:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-1px);
+        }
+
+        .btn-action.edit:hover {
+            color: #60a5fa;
+            border-color: rgba(96, 165, 250, 0.3);
+            background: rgba(96, 165, 250, 0.08);
+        }
+
+        .btn-action.delete:hover {
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-custom {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            color: #34d399;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+    </style>
+}
+
+<div class="page-header-actions">
+    <div>
+        <p style="color: var(--text-muted); font-size: 14px; font-weight: 300;">Crea campos adicionales dinámicos para extender la lógica de tu negocio.</p>
+    </div>
+    <a href="@Url.Action("Crear", "CamposPersonalizados", new { area = "Admin" })" class="btn-primary-custom">
+        <i class="fa-solid fa-plus"></i>
+        <span>Agregar Campo</span>
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-custom">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>@TempData["SuccessMessage"]</span>
+    </div>
+}
+
+<!-- Panel de Filtros -->
+<div class="glass-panel" style="padding: 16px 24px;">
+    <div class="filter-row">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-filter" style="color: var(--text-muted);"></i>
+            <span style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Filtrar:</span>
+        </div>
+        <select id="filterRubro" class="form-control" asp-items="ViewBag.Rubros">
+            <option value="">-- Todos los Rubros --</option>
+        </select>
+        <select id="filterEmpresa" class="form-control" asp-items="ViewBag.Empresas">
+            <option value="">-- Todas las Empresas --</option>
+        </select>
+    </div>
+</div>
+
+<!-- Listado por Entidad -->
+@{
+    var entidades = Model.Select(c => c.Entidad).Distinct().OrderBy(e => e).ToList();
+}
+
+@if (!entidades.Any())
+{
+    <div class="glass-panel" style="text-align: center; padding: 60px; color: var(--text-muted);">
+        <i class="fa-solid fa-sliders" style="font-size: 40px; margin-bottom: 16px; display: block; color: rgba(255,255,255,0.06);"></i>
+        <h3 style="margin-bottom: 8px; color: var(--text-main);">Sin campos dinámicos</h3>
+        <p style="font-weight: 300;">No has registrado ningún campo dinámico aún. Haz clic en "Agregar Campo" para comenzar.</p>
+    </div>
+}
+else
+{
+    foreach (var entidad in entidades)
+    {
+        var camposEntidad = Model.Where(c => c.Entidad == entidad).OrderBy(c => c.OrdenVisualizacion).ToList();
+        var entidadIcon = entidad.ToLower() switch
+        {
+            "producto" => "fa-box-archive",
+            "cliente" => "fa-users",
+            "proveedor" => "fa-truck-field",
+            "venta" => "fa-cart-shopping",
+            "compra" => "fa-bag-shopping",
+            "traslado" => "fa-truck-ramp-box",
+            _ => "fa-folder"
+        };
+
+        <div class="entity-group">
+            <div class="entity-header">
+                <i class="fa-solid @entidadIcon" style="color: var(--primary);"></i>
+                <h3>Entidad: @entidad (@camposEntidad.Count campos)</h3>
+            </div>
+
+            <div class="glass-panel" style="padding: 0; overflow: hidden;">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 250px;">Clave / UI Label</th>
+                            <th>Tipo de Dato</th>
+                            <th>Validaciones</th>
+                            <th>Ámbito (Rubro / Empresa)</th>
+                            <th style="text-align: center; width: 220px;">Destinos (Form, List, Rep, Tag, SRI)</th>
+                            <th style="text-align: right; width: 120px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var campo in camposEntidad)
+                        {
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600; font-family: 'Outfit';">@campo.Etiqueta</div>
+                                    <div style="font-family: monospace; font-size: 12px; color: var(--text-muted);">@campo.NombreCampo</div>
+                                </td>
+                                <td>
+                                    <span class="type-badge">
+                                        @{
+                                            var typeIcon = campo.TipoDato.ToLower() switch
+                                            {
+                                                "texto" => "fa-font",
+                                                "numero" => "fa-hashtag",
+                                                "fecha" => "fa-calendar-days",
+                                                "booleano" => "fa-toggle-on",
+                                                "lista" => "fa-list-ul",
+                                                _ => "fa-circle"
+                                            };
+                                        }
+                                        <i class="fa-solid @typeIcon" style="font-size: 11px;"></i>
+                                        <span>@campo.TipoDato</span>
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (campo.Requerido)
+                                    {
+                                        <span class="validation-pill pill-req" title="Requerido">Requerido</span>
+                                    }
+                                    @if (campo.EsUnico)
+                                    {
+                                        <span class="validation-pill pill-uniq" title="Debe ser único">Único</span>
+                                    }
+                                    @if (campo.MaxLongitud.HasValue)
+                                    {
+                                        <span class="validation-pill pill-len" title="Max caracteres">Max @campo.MaxLongitud.Value chars</span>
+                                    }
+                                    @if (!campo.Requerido && !campo.EsUnico && !campo.MaxLongitud.HasValue)
+                                    {
+                                        <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">Sin validación</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (campo.EmpresaId.HasValue)
+                                    {
+                                        <span style="color: #60a5fa;"><i class="fa-solid fa-building" style="font-size: 12px; margin-right: 4px;"></i>@campo.Empresa?.Nombre</span>
+                                    }
+                                    else if (campo.RubroId.HasValue)
+                                    {
+                                        <span style="color: #f59e0b;"><i class="fa-solid fa-store" style="font-size: 12px; margin-right: 4px;"></i>Rubro: @campo.Rubro?.Nombre</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color: var(--text-muted); font-weight: 300;"><i class="fa-solid fa-globe" style="font-size: 12px; margin-right: 4px;"></i>Global (Todos)</span>
+                                    }
+                                </td>
+                                <td style="text-align: center;">
+                                    <i class="fa-solid fa-rectangle-list destination-icon @(campo.VisibleEnFormulario ? "active" : "")" title="Visible en Formulario (Crear/Editar)"></i>
+                                    <i class="fa-solid fa-table destination-icon @(campo.VisibleEnLista ? "active" : "")" title="Visible en Lista (Listados)"></i>
+                                    <i class="fa-solid fa-file-chart-column destination-icon @(campo.VisibleEnReporte ? "active" : "")" title="Visible en Reportes"></i>
+                                    <i class="fa-solid fa-barcode destination-icon @(campo.VisibleEnEtiqueta ? "active" : "")" title="Visible en Etiquetas de Barras"></i>
+                                    <i class="fa-solid fa-file-invoice-dollar destination-icon @(campo.VisibleEnFactura ? "active" : "")" title="Visible en XML SRI Factura"></i>
+                                </td>
+                                <td>
+                                    <div class="action-group" style="justify-content: flex-end;">
+                                        <a href="@Url.Action("Editar", "CamposPersonalizados", new { area = "Admin", id = campo.Id })" class="btn-action edit" title="Editar">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        <button class="btn-action delete btn-delete-campo" data-id="@campo.Id" title="Desactivar/Eliminar">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Filtrados AJAX
+            $('#filterRubro, #filterEmpresa').change(function() {
+                var rubroId = $('#filterRubro').val();
+                var empresaId = $('#filterEmpresa').val();
+                
+                var url = '@Url.Action("Index", "CamposPersonalizados", new { area = "Admin" })';
+                var params = [];
+                if (rubroId) params.push('rubroId=' + rubroId);
+                if (empresaId) params.push('empresaId=' + empresaId);
+                
+                window.location.href = url + (params.length > 0 ? '?' + params.join('&') : '');
+            });
+
+            // Sincronizar parámetros url
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('rubroId')) $('#filterRubro').val(urlParams.get('rubroId'));
+            if (urlParams.get('empresaId')) $('#filterEmpresa').val(urlParams.get('empresaId'));
+
+            // Eliminar campo dinámico
+            $('.btn-delete-campo').click(function() {
+                if (!confirm("¿Está seguro que desea desactivar/eliminar este campo dinámico? Los datos existentes en las tablas no se perderán pero el campo no volverá a mostrarse en los formularios.")) {
+                    return;
+                }
+
+                var btn = $(this);
+                var id = btn.data('id');
+
+                $.post('@Url.Action("Eliminar", "CamposPersonalizados", new { area = "Admin" })', { id: id }, function(response) {
+                    if (response.success) {
+                        btn.closest('tr').fadeOut(400, function() {
+                            $(this).remove();
+                            // Recargar página si no quedan elementos en el grupo
+                            location.reload();
+                        });
+                    } else {
+                        alert("Error al eliminar el campo.");
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,230 @@
+@model IEnumerable<SistemaERP.Models.Entities.VentaOperacion>
+
+@{
+    ViewData["Title"] = "Bandeja de Facturación";
+    var clientes = ViewBag.Clientes as Dictionary<long, string>;
+    var totales = ViewBag.Totales as Dictionary<long, decimal>;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Bandeja de Comprobantes</h2>
+        <p class="text-muted">Gestiona el envío de tus facturas al SRI y correos electrónicos.</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="POS" class="btn btn-premium shadow-sm">
+            <i class="bi bi-cpu me-1"></i> Ir al Terminal POS
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <div class="premium-card py-3 px-4">
+            <form id="filterForm" asp-action="Index" method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label fw-bold small text-uppercase text-muted p-0 m-0">Estado SRI:</label>
+                    <select name="sriEstado" class="form-select border-0 bg-light" onchange="this.form.submit()">
+                        <option value="">Cualquier Estado</option>
+                        <option value="PENDIENTE" selected="@(ViewBag.CurrentEstado == "PENDIENTE")">Pendiente de Envío</option>
+                        <option value="AUTORIZADO" selected="@(ViewBag.CurrentEstado == "AUTORIZADO")">Autorizados</option>
+                        <option value="ERROR" selected="@(ViewBag.CurrentEstado == "ERROR")">Con Error</option>
+                    </select>
+                </div>
+                <div class="col-auto ms-3">
+                    <label class="form-label fw-bold small text-uppercase text-muted p-0 m-0">Método de Pago:</label>
+                    <select name="tipoPago" class="form-select border-0 bg-light" onchange="this.form.submit()">
+                        <option value="">Todos los Métodos</option>
+                        <option value="1" selected="@(ViewBag.CurrentTipoPago == 1)">Efectivo</option>
+                        <option value="2" selected="@(ViewBag.CurrentTipoPago == 2)">Tarjeta de Crédito</option>
+                        <option value="6" selected="@(ViewBag.CurrentTipoPago == 6)">Tarjeta de Débito</option>
+                        <option value="3" selected="@(ViewBag.CurrentTipoPago == 3)">Transferencia Bancaria</option>
+                        <option value="5" selected="@(ViewBag.CurrentTipoPago == 5)">Depósito</option>
+                        <option value="4" selected="@(ViewBag.CurrentTipoPago == 4)">Cheque</option>
+                    </select>
+                </div>
+                <div class="col-auto pt-4">
+                    <button type="submit" class="btn btn-light border-0 shadow-sm" title="Filtrar">
+                        <i class="bi bi-filter"></i>
+                    </button>
+                    @if (!string.IsNullOrEmpty(ViewBag.CurrentEstado) || ViewBag.CurrentTipoPago != null)
+                    {
+                        <a asp-action="Index" class="btn btn-link text-muted text-decoration-none small">Limpiar Filtros</a>
+                    }
+                </div>
+                <div class="col text-end pt-4">
+                    <button type="button" onclick="exportExcel()" class="btn btn-success px-3 shadow-sm fw-medium">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                    </button>
+                    <button type="button" onclick="printPdf()" class="btn btn-info text-white px-3 shadow-sm fw-medium ms-1">
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="tableVentas">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 text-xs text-uppercase py-3">Fecha</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Ticket #</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Cliente</th>
+                    <th class="border-0 text-xs text-uppercase py-3 text-center">Estado SRI</th>
+                    <th class="border-0 text-xs text-uppercase py-3 text-end">Total</th>
+                    <th class="border-0 text-xs text-uppercase py-3 text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="text-xs">@item.FechaHora_Registro?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="fw-bold text-primary">@item.NumDoc</td>
+                            <td>
+                                @(item.Id_Cliente.HasValue && clientes != null && clientes.ContainsKey(item.Id_Cliente.Value) ? clientes[item.Id_Cliente.Value] : "Consumidor Final")
+                            </td>
+                            <td class="text-center">
+                                @{ string st = (item.SRI_Estado ?? "").Trim().ToUpper(); }
+                                @if (st == "AUTORIZADO" || st == "RECIBIDO")
+                                {
+                                    <span class="badge bg-success rounded-pill px-3" title="Autorizado por SRI">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Autorizado
+                                    </span>
+                                }
+                                else if (st == "ERROR" || st == "DEVUELTA")
+                                {
+                                    <span class="badge bg-danger rounded-pill px-3" title="@item.SRI_Error">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Error / Devuelta
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary rounded-pill px-3 opacity-50">
+                                        <i class="bi bi-clock me-1"></i> Pendiente
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end fw-bold">
+                                @{
+                                    decimal total = 0;
+                                    if (totales != null && totales.ContainsKey(item.Id)) {
+                                        total = totales[item.Id];
+                                    }
+                                }
+                                @ViewBag.MonedaSimbolo@total.ToString("N2")
+                            </td>
+                            <td class="text-end">
+                                @if (st != "AUTORIZADO" && st != "RECIBIDO")
+                                {
+                                    <button onclick="transmitirSRI(@item.Id)" class="btn btn-sm btn-indigo text-white shadow-sm" title="Transmitir al SRI">
+                                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                                    </button>
+                                }
+                                @if (st == "AUTORIZADO" || st == "RECIBIDO")
+                                {
+                                    <a asp-action="RIDE" asp-route-id="@item.Id" target="_blank" class="btn btn-sm btn-light border-0 text-indigo ms-1" title="Ver RIDE (PDF)">
+                                        <i class="bi bi-file-pdf-fill"></i>
+                                    </a>
+                                    <a asp-action="DescargarXml" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-success ms-1" title="Descargar XML">
+                                        <i class="bi bi-file-earmark-code-fill"></i>
+                                    </a>
+                                }
+                                <a asp-action="Ticket" asp-route-id="@item.Id" target="_blank" class="btn btn-sm btn-light border-0 text-dark ms-1" title="Imprimir Ticket">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-primary ms-1" title="Ver Detalle">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
+                            No hay comprobantes en este estado.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted fw-medium">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+    </a>
+</div>
+
+@section Scripts {
+    <script>
+        function exportExcel() {
+            var form = document.getElementById('filterForm');
+            var originalAction = form.action;
+            form.action = '@Url.Action("ExportarVentasExcel", "Facturacion")';
+            form.target = '_blank';
+            form.submit();
+            form.action = originalAction;
+            form.target = '';
+        }
+
+        function printPdf() {
+            var form = document.getElementById('filterForm');
+            var originalAction = form.action;
+            form.action = '@Url.Action("VentasPrint", "Facturacion")';
+            form.target = '_blank';
+            form.submit();
+            form.action = originalAction;
+            form.target = '';
+        }
+
+        function transmitirSRI(ventaId) {
+            Swal.fire({
+                title: "Transmitir factura al SRI",
+                text: "¿Estás seguro de enviar este comprobante al SRI y al correo del cliente?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "#1e3a8a",
+                cancelButtonColor: "#6c757d",
+                confirmButtonText: "Sí, transmitir ahora",
+                cancelButtonText: "Cancelar",
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch(`/Facturacion/TransmitirSRI?id=${ventaId}`, {
+                        method: "GET"
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            throw new Error(data.message)
+                        }
+                        return data;
+                    })
+                    .catch(error => {
+                        Swal.showValidationMessage(`Error: ${error}`);
+                    });
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "Procesado",
+                        text: result.value.message,
+                        icon: "success"
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            });
+        }
+    </script>
+}

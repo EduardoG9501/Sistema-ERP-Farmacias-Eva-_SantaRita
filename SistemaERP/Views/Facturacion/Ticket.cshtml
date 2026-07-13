@@ -1,0 +1,219 @@
+@model SistemaERP.Models.Entities.VentaOperacion
+
+@{
+    Layout = null;
+    var cliente = ViewBag.Cliente as SistemaERP.Models.Entities.Cliente;
+    var detalles = ViewBag.Detalles as List<SistemaERP.Models.Entities.Venta_Producto>;
+    var p = ViewBag.Parametros as SistemaERP.Models.Entities.ParametrosSistema;
+    var cajero = ViewBag.Cajero as string;
+    decimal total = detalles?.Sum(d => d.Total_Pagar ?? 0) ?? 0;
+    decimal subtotal = detalles?.Sum(d => d.Subtotal ?? 0) ?? 0;
+    decimal iva = detalles?.Sum(d => d.IVA ?? 0) ?? 0;
+    decimal descuento = detalles?.Sum(d => d.Descuento ?? 0) ?? 0;
+    string anchoMm = (p?.TicketAncho ?? 80) + "mm";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Ticket #@Model.NumDoc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            width: @anchoMm;
+            margin: 0 auto;
+            padding: 4mm 3mm;
+            font-size: 11px;
+            color: #111;
+        }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .left { text-align: left; }
+        .bold { font-weight: bold; }
+        .line-dash { border: none; border-top: 1px dashed #000; margin: 5px 0; }
+        .line-solid { border: none; border-top: 1px solid #000; margin: 5px 0; }
+        .logo-img { max-width: 100%; max-height: 30mm; object-fit: contain; }
+        table { width: 100%; border-collapse: collapse; }
+        table th, table td { vertical-align: top; padding: 1px 2px; }
+        .empresa-nombre { font-size: 14px; font-weight: bold; letter-spacing: 0.5px; }
+        .info-linea { font-size: 10px; color: #333; }
+        .total-row { font-size: 14px; font-weight: bold; border-top: 2px solid #000; padding-top: 3px; }
+        .footer-text { font-size: 9px; color: #555; margin-top: 4px; }
+        .nota-aviso { font-size: 9px; color: #444; border: 1px dashed #999; padding: 4px; margin-top: 6px; }
+        @@media print {
+            .no-print { display: none !important; }
+            body { width: @anchoMm; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <!-- Toolbar (hidden on print) -->
+    <div class="no-print" style="margin-bottom: 12px; padding: 6px; background: #f5f5f5; border-radius: 6px;">
+        <button onclick="window.print()" style="margin-right: 8px; padding: 4px 12px; cursor: pointer;">🖨 Imprimir</button>
+        <button onclick="window.close()" style="padding: 4px 12px; cursor: pointer;">✕ Cerrar</button>
+    </div>
+
+    <!-- ===== ENCABEZADO ===== -->
+    <div class="center">
+        @if (p?.TicketMostrarLogo == true && !string.IsNullOrEmpty(p?.LogoPath))
+        {
+            <img src="@(p.LogoPath.Split('?')[0])" alt="Logo" class="logo-img" style="margin-bottom: 4px;" />
+            <br />
+        }
+
+        <div class="empresa-nombre">@(p?.NombreEmpresa ?? "EMPRESA")</div>
+        @if (!string.IsNullOrEmpty(p?.AliasEmpresa))
+        {
+            <div class="info-linea">@p.AliasEmpresa</div>
+        }
+        @if (!string.IsNullOrEmpty(p?.Direccion))
+        {
+            <div class="info-linea">@p.Direccion</div>
+        }
+        @if (!string.IsNullOrEmpty(p?.Telefono))
+        {
+            <div class="info-linea">Tel: @p.Telefono@(!string.IsNullOrEmpty(p?.Telefono2) ? " / " + p.Telefono2 : "")</div>
+        }
+        @if (!string.IsNullOrEmpty(p?.RUC))
+        {
+            <div class="info-linea bold">RUC: @p.RUC</div>
+        }
+        @if (!string.IsNullOrEmpty(p?.Correo))
+        {
+            <div class="info-linea">@p.Correo</div>
+        }
+        @if (!string.IsNullOrEmpty(p?.SitioWeb))
+        {
+            <div class="info-linea">@p.SitioWeb</div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(p?.TicketEncabezado))
+    {
+        <hr class="line-dash" />
+        <div class="center">
+            @foreach (var line in p.TicketEncabezado.Split('\n'))
+            {
+                <div>@line</div>
+            }
+        </div>
+    }
+
+    <hr class="line-solid" />
+
+    <!-- ===== DATOS TRANSACCIÓN ===== -->
+    <div>
+        <div><span class="bold">FACTURA: </span>@Model.NumDoc</div>
+        @if (p?.TicketMostrarFecha == true)
+        {
+            <div><span class="bold">FECHA: </span>@Model.FechaHora_Registro?.ToString("dd/MM/yyyy HH:mm")</div>
+        }
+        <div><span class="bold">CLIENTE: </span>@(cliente?.Nombres_Apellidos ?? "CONSUMIDOR FINAL")</div>
+        @if (cliente != null && (!string.IsNullOrEmpty(cliente.Cedula) || !string.IsNullOrEmpty(cliente.RUC)))
+        {
+            <div><span class="bold">CI/RUC: </span>@(cliente.RUC ?? cliente.Cedula)</div>
+        }
+        @if (p?.TicketMostrarCajero == true && !string.IsNullOrEmpty(cajero))
+        {
+            <div><span class="bold">CAJERO: </span>@cajero</div>
+        }
+    </div>
+
+    <hr class="line-dash" />
+
+    <!-- ===== DETALLE PRODUCTOS ===== -->
+    <table>
+        <thead>
+            <tr>
+                <th class="left" style="width:8%">CANT</th>
+                <th class="left" style="width:60%">DESCRIPCIÓN</th>
+                <th class="right" style="width:16%">P.U.</th>
+                <th class="right" style="width:16%">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (detalles != null)
+            {
+                @foreach (var item in detalles)
+                {
+                    <tr>
+                        <td class="left">@item.Cantidad</td>
+                        <td class="left">@item.Producto</td>
+                        <td class="right">@item.PVP?.ToString("N2")</td>
+                        <td class="right">@item.Total_Pagar?.ToString("N2")</td>
+                    </tr>
+                    @if (item.Descuento > 0)
+                    {
+                        <tr>
+                            <td></td>
+                            <td class="left info-linea">  Desc: -@item.Descuento?.ToString("N2")</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+
+    <hr class="line-dash" />
+
+    <!-- ===== TOTALES ===== -->
+    <table>
+        @if (subtotal > 0 && subtotal != total)
+        {
+            <tr>
+                <td class="left bold">SUBTOTAL:</td>
+                <td class="right">@ViewBag.MonedaSimbolo@subtotal.ToString("N2")</td>
+            </tr>
+        }
+        @if (descuento > 0)
+        {
+            <tr>
+                <td class="left bold">DESCUENTO:</td>
+                <td class="right">-@ViewBag.MonedaSimbolo@descuento.ToString("N2")</td>
+            </tr>
+        }
+        @if (iva > 0)
+        {
+            <tr>
+                <td class="left bold">IVA:</td>
+                <td class="right">@ViewBag.MonedaSimbolo@iva.ToString("N2")</td>
+            </tr>
+        }
+        <tr class="total-row">
+            <td class="left">TOTAL A PAGAR:</td>
+            <td class="right">@ViewBag.MonedaSimbolo@total.ToString("N2")</td>
+        </tr>
+    </table>
+
+    <!-- ===== PIE ===== -->
+    @if (!string.IsNullOrEmpty(p?.TicketPie))
+    {
+        <hr class="line-dash" />
+        <div class="center footer-text">
+            @foreach (var line in p.TicketPie.Split('\n'))
+            {
+                <div>@line</div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(p?.TicketNotaAviso))
+    {
+        <div class="nota-aviso center">
+            @foreach (var line in p.TicketNotaAviso.Split('\n'))
+            {
+                <div>@line</div>
+            }
+        </div>
+    }
+
+    <hr class="line-dash" />
+    <div class="center footer-text" style="margin-top: 6px; margin-bottom: 10px;">
+        ¡Gracias por su compra!
+    </div>
+</body>
+</html>

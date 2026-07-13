@@ -1,0 +1,587 @@
+@model SistemaERP.Models.Entities.Usuario
+
+@{
+    ViewData["Title"] = "Editar Usuario";
+    var modulos = (List<SistemaERP.Models.Entities.ModuloWeb>)(ViewBag.Modulos ?? new List<SistemaERP.Models.Entities.ModuloWeb>());
+    var privilegios = (List<SistemaERP.Models.Entities.PrivilegioWeb>)(ViewBag.Privilegios ?? new List<SistemaERP.Models.Entities.PrivilegioWeb>());
+    var userPrivilegios = (Dictionary<int, bool>)(ViewBag.UserPrivilegios ?? new Dictionary<int, bool>());
+}
+
+<style>
+    .folder-header {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        border-radius: 12px !important;
+        user-select: none;
+    }
+    .folder-header:hover {
+        background-color: rgba(99, 102, 241, 0.06) !important;
+        border-color: rgba(99, 102, 241, 0.25) !important;
+        transform: translateY(-1px);
+    }
+    .folder-header.expanded {
+        border-radius: 12px 12px 0 0 !important;
+        background-color: rgba(99, 102, 241, 0.04) !important;
+        border-color: rgba(99, 102, 241, 0.15) !important;
+    }
+    .folder-content {
+        border-radius: 0 0 12px 12px !important;
+        border-top: none !important;
+        display: none;
+    }
+    .chevron-icon {
+        transition: transform 0.2s ease-in-out;
+    }
+    .folder-header.expanded .chevron-icon {
+        transform: rotate(90deg);
+    }
+    .transition-all {
+        transition: all 0.2s ease-in-out;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .bg-indigo-soft {
+        background-color: rgba(99, 102, 241, 0.08) !important;
+    }
+    .text-indigo {
+        color: rgb(99, 102, 241) !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.08) !important;
+    }
+    .hover-bg-light:hover {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1"><i class="bi bi-pencil-square text-primary me-2"></i>Modificar Usuario</h2>
+        <p class="text-muted">Actualiza los datos de acceso, contraseña o privilegios granulares de @Model.Login.</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="Index" class="btn btn-light border shadow-sm rounded-pill px-4">
+            <i class="bi bi-arrow-left me-1"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="premium-card animate__animated animate__zoomIn p-4 shadow-lg border-0" style="backdrop-filter: blur(15px); background: rgba(255, 255, 255, 0.85); border-radius: 16px;">
+            <form asp-action="Edit" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4 py-2 text-xs" style="border-radius: 8px;"></div>
+                <input type="hidden" asp-for="Id" />
+                
+                <div class="row g-4">
+                    <!-- Columna Izquierda: Información de Cuenta -->
+                    <div class="col-lg-4 border-end pe-lg-4">
+                        <h5 class="fw-bold text-dark mb-4 border-bottom pb-2 text-uppercase text-xs tracking-wider text-muted">Datos de Cuenta</h5>
+                        
+                        <!-- Foto de perfil -->
+                        <div class="mb-4 text-center">
+                            <div class="position-relative d-inline-block">
+                                <div id="fotoPreviewWrapper" class="rounded-circle overflow-hidden border border-3 border-indigo shadow-sm mx-auto" style="width: 100px; height: 100px; background: rgba(99,102,241,0.08);">
+                                    @if (!string.IsNullOrEmpty(Model.FotoPath))
+                                    {
+                                        <img id="fotoPreview" src="@Model.FotoPath" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <div id="fotoPlaceholder" class="d-flex align-items-center justify-content-center h-100" style="display: none !important;"></div>
+                                    }
+                                    else
+                                    {
+                                        <img id="fotoPreview" src="" alt="Foto" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+                                        <div id="fotoPlaceholder" class="d-flex align-items-center justify-content-center h-100">
+                                            <i class="bi bi-person-circle text-indigo" style="font-size: 3.5rem; opacity: 0.5;"></i>
+                                        </div>
+                                    }
+                                </div>
+                                <label for="FotoFile" class="btn btn-sm btn-primary rounded-circle shadow position-absolute bottom-0 end-0" style="width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Cambiar foto">
+                                    <i class="bi bi-camera-fill" style="font-size: 0.75rem;"></i>
+                                </label>
+                            </div>
+                            <input type="file" id="FotoFile" name="FotoFile" accept="image/*" class="d-none" />
+                            <input type="hidden" name="RemoveFoto" id="removeFotoInput" value="false" />
+                            <div class="mt-2">
+                                <div class="text-xs text-muted">Foto de perfil (JPG, PNG, WEBP)</div>
+                                @if (!string.IsNullOrEmpty(Model.FotoPath))
+                                {
+                                    <button type="button" id="removeFotoBtn" class="btn btn-xs btn-outline-danger mt-1 py-0 px-2" style="font-size: 0.7rem;">
+                                        <i class="bi bi-trash me-1"></i>Quitar foto
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Login" class="form-label fw-semibold text-xs text-uppercase text-muted mb-1">Usuario / Login <span class="text-danger">*</span></label>
+                            <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                <input asp-for="Login" class="form-control bg-light border-start-0 text-uppercase" placeholder="ej: EGUEVARAA" required style="border-radius: 0 8px 8px 0;" readonly />
+                            </div>
+                            <span asp-validation-for="Login" class="text-danger text-xs d-block mt-1"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Password" class="form-label fw-semibold text-xs text-uppercase text-muted mb-1">Contraseña <span class="text-danger">*</span></label>
+                            <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-key text-muted"></i></span>
+                                <input asp-for="Password" type="password" id="passwordInput" class="form-control border-start-0 border-end-0 bg-light" placeholder="Ingrese contraseña" required style="letter-spacing: 0.12em;" />
+                                <button class="btn btn-outline-secondary border-start-0 border-end-0 bg-white hover-bg-light" type="button" id="togglePasswordBtn" title="Mostrar/Ocultar contraseña" style="border-color: #dee2e6;">
+                                    <i class="bi bi-eye-slash" id="togglePasswordIcon"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary border-start-0 bg-white hover-bg-light" type="button" id="copyPasswordBtn" title="Copiar contraseña" style="border-color: #dee2e6;">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Password" class="text-danger text-xs d-block mt-1"></span>
+                            <div class="form-text text-xxs text-muted mt-1">Puedes ver y copiar la contraseña actual con los botones o escribir una nueva para actualizarla de inmediato.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Tipo_Usuario" class="form-label fw-semibold text-xs text-uppercase text-muted mb-1">Tipo de Usuario</label>
+                            <select asp-for="Tipo_Usuario" class="form-select bg-light shadow-sm" style="border-radius: 8px;" id="tipoUsuarioSelect">
+                                <option value="CIERTO ACCESO">CIERTO ACCESO</option>
+                                <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+                            </select>
+                            <span asp-validation-for="Tipo_Usuario" class="text-danger text-xs"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check form-switch pt-2">
+                                <input type="hidden" name="Estado" id="estadoHidden" value="@(Model.Estado?.Trim().ToUpper() == "ACTIVO" ? "ACTIVO" : "NO ACTIVO")" />
+                                <input class="form-check-input shadow-sm" type="checkbox" id="estadoSwitch" @(Model.Estado?.Trim().ToUpper() == "ACTIVO" ? "checked" : "") style="width: 2.8em; height: 1.5em; cursor: pointer;">
+                                <label class="form-check-label fw-bold text-dark ms-2" for="estadoSwitch" style="cursor: pointer; padding-top: 2px;">ESTADO ACTIVO</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Asignación de Permisos (Pestañas) -->
+                    <div class="col-lg-8 ps-lg-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                            <h5 class="fw-bold text-dark mb-0 text-uppercase text-xs tracking-wider text-muted">Control de Privilegios</h5>
+                            <div class="input-group" style="max-width: 220px;">
+                                <span class="input-group-text bg-white py-1 border-end-0 text-muted" style="font-size: 0.8rem;"><i class="bi bi-search"></i></span>
+                                <input type="text" id="perm-search" class="form-control py-1 border-start-0 text-xs" placeholder="Buscar módulo o acción..." style="font-size: 0.8rem; border-radius: 0 8px 8px 0;" />
+                            </div>
+                        </div>
+
+                        <!-- Tabs de Permisos -->
+                        <ul class="nav nav-tabs border-0 bg-light p-1 mb-3" id="permsTabs" role="tablist" style="border-radius: 8px;">
+                            <li class="nav-item col text-center" role="presentation">
+                                <button class="nav-link active border-0 text-xs fw-semibold py-2 w-100" id="asignar-tab" data-bs-toggle="tab" data-bs-target="#asignar-panel" type="button" role="tab" style="border-radius: 6px; font-size: 0.75rem;">
+                                    <i class="bi bi-check2-square me-1"></i> Asignar privilegios
+                                </button>
+                            </li>
+                            <li class="nav-item col text-center" role="presentation">
+                                <button class="nav-link border-0 text-xs fw-semibold py-2 w-100" id="heredar-tab" data-bs-toggle="tab" data-bs-target="#heredar-panel" type="button" role="tab" style="border-radius: 6px; font-size: 0.75rem;">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i> Heredar privilegios
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Contenedor Tab Content -->
+                        <div class="tab-content border p-3 bg-white" style="border-radius: 12px; min-height: 400px; max-height: 480px; overflow-y: auto;">
+                            <!-- Panel 1: Asignar permisos -->
+                            <div class="tab-pane fade show active" id="asignar-panel" role="tabpanel">
+                                <div class="text-xs text-muted mb-3 d-flex align-items-center justify-content-between border-bottom pb-2">
+                                    <span>Define específicamente a qué opciones y privilegios tendrá acceso.</span>
+                                    <div class="d-flex gap-3">
+                                        <button type="button" class="btn btn-link text-xxs text-secondary p-0 border-0" id="collapseAllAsignar"><i class="bi bi-dash-square me-1"></i>Contraer Todos</button>
+                                        <button type="button" class="btn btn-link text-xxs text-secondary p-0 border-0" id="expandAllAsignar"><i class="bi bi-plus-square me-1"></i>Expandir Todos</button>
+                                        <button type="button" class="btn btn-link text-xxs text-primary p-0 border-0 fw-semibold" id="selectAllAsignar">Marcar Todos</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="asignar-list" class="d-flex flex-column gap-2 mt-2">
+                                    @foreach (var mod in modulos)
+                                    {
+                                        var modPrivs = privilegios.Where(p => p.Id_Modulo == mod.Id).ToList();
+                                        if (modPrivs.Any())
+                                        {
+                                            var checkedCount = modPrivs.Count(p => userPrivilegios.ContainsKey(p.Id));
+                                            
+                                            <div class="perm-card-group" data-name="@mod.DisplayName" id="group_asignar_@mod.Id">
+                                                <!-- Header de Carpeta -->
+                                                <div class="folder-header d-flex align-items-center px-3 py-2 bg-light border border-light shadow-sm transition-all cursor-pointer" data-target="#coll_asignar_@mod.Id">
+                                                    <div class="d-flex align-items-center justify-content-center border border-2 border-success rounded-3 me-3 toggle-state-icon" style="width: 24px; height: 24px; background-color: rgba(25, 135, 84, 0.08);">
+                                                        <i class="bi bi-plus text-success fw-bold fs-5 plus-minus-icon"></i>
+                                                    </div>
+                                                    <span class="fw-semibold text-dark text-xs text-uppercase m-0">@mod.DisplayName</span>
+                                                    <span class="badge @(checkedCount > 0 ? "bg-primary text-white" : "bg-indigo-soft text-indigo") text-xxs ms-2 px-2 rounded-pill selected-count">@checkedCount seleccionados</span>
+                                                    <button type="button" class="btn btn-link text-xxxs text-primary ms-3 p-0 border-0 check-group-btn" data-group-class="check-asignar-@mod.Id" onclick="event.stopPropagation();">Marcar Grupo</button>
+                                                </div>
+                                                
+                                                <!-- Contenido de Carpeta (Colapsable) -->
+                                                <div class="folder-content px-3 py-2 border border-top-0 border-light bg-white" id="coll_asignar_@mod.Id">
+                                                    <div class="row g-2 py-1">
+                                                        @foreach (var priv in modPrivs)
+                                                        {
+                                                            bool isChecked = userPrivilegios.ContainsKey(priv.Id);
+                                                            <div class="col-sm-6 col-md-4 perm-item-box" data-action="@priv.DisplayName">
+                                                                <div class="form-check py-1">
+                                                                    <input class="form-check-input check-asignar check-asignar-@mod.Id" type="checkbox" name="selectedPrivilegios" value="@priv.Id" id="priv_@priv.Id" @(isChecked ? "checked" : "") style="cursor: pointer;" />
+                                                                    <label class="form-check-label text-xs @(isChecked ? "fw-bold text-primary" : "fw-medium text-dark") ms-1" for="priv_@priv.Id" style="cursor: pointer;">
+                                                                        @priv.DisplayName
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Panel 2: Heredar permisos -->
+                            <div class="tab-pane fade" id="heredar-panel" role="tabpanel">
+                                <div class="text-xs text-muted mb-3 d-flex align-items-center justify-content-between border-bottom pb-2">
+                                    <span>Habilita qué privilegios puede delegar este usuario a otros perfiles.</span>
+                                    <div class="d-flex gap-3">
+                                        <button type="button" class="btn btn-link text-xxs text-secondary p-0 border-0" id="collapseAllHeredar"><i class="bi bi-dash-square me-1"></i>Contraer Todos</button>
+                                        <button type="button" class="btn btn-link text-xxs text-secondary p-0 border-0" id="expandAllHeredar"><i class="bi bi-plus-square me-1"></i>Expandir Todos</button>
+                                        <button type="button" class="btn btn-link text-xxs text-primary p-0 border-0 fw-semibold" id="selectAllHeredar">Marcar Todos</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="heredar-list" class="d-flex flex-column gap-2 mt-2">
+                                    @foreach (var mod in modulos)
+                                    {
+                                        var modPrivs = privilegios.Where(p => p.Id_Modulo == mod.Id).ToList();
+                                        if (modPrivs.Any())
+                                        {
+                                            var checkedCount = modPrivs.Count(p => userPrivilegios.TryGetValue(p.Id, out bool hereda) && hereda);
+                                            
+                                            <div class="perm-card-group" data-name="@mod.DisplayName" id="group_heredar_@mod.Id">
+                                                <!-- Header de Carpeta -->
+                                                <div class="folder-header d-flex align-items-center px-3 py-2 bg-light border border-light shadow-sm transition-all cursor-pointer" data-target="#coll_heredar_@mod.Id">
+                                                    <div class="d-flex align-items-center justify-content-center border border-2 border-success rounded-3 me-3 toggle-state-icon" style="width: 24px; height: 24px; background-color: rgba(25, 135, 84, 0.08);">
+                                                        <i class="bi bi-plus text-success fw-bold fs-5 plus-minus-icon"></i>
+                                                    </div>
+                                                    <span class="fw-semibold text-dark text-xs text-uppercase m-0">@mod.DisplayName</span>
+                                                    <span class="badge @(checkedCount > 0 ? "bg-success text-white" : "bg-success-soft text-success") text-xxs ms-2 px-2 rounded-pill selected-count">@checkedCount seleccionados</span>
+                                                    <button type="button" class="btn btn-link text-xxxs text-primary ms-3 p-0 border-0 check-group-btn" data-group-class="check-heredar-@mod.Id" onclick="event.stopPropagation();">Marcar Grupo</button>
+                                                </div>
+                                                
+                                                <!-- Contenido de Carpeta (Colapsable) -->
+                                                <div class="folder-content px-3 py-2 border border-top-0 border-light bg-white" id="coll_heredar_@mod.Id">
+                                                    <div class="row g-2 py-1">
+                                                        @foreach (var priv in modPrivs)
+                                                        {
+                                                            bool isHeredar = userPrivilegios.TryGetValue(priv.Id, out bool hereda) && hereda;
+                                                            <div class="col-sm-6 col-md-4 perm-item-box" data-action="@priv.DisplayName">
+                                                                <div class="form-check py-1">
+                                                                    <input class="form-check-input check-heredar check-heredar-@mod.Id" type="checkbox" name="heredarPrivilegios" value="@priv.Id" id="her_@priv.Id" @(isHeredar ? "checked" : "") style="cursor: pointer;" />
+                                                                    <label class="form-check-label text-xs @(isHeredar ? "fw-bold text-success" : "fw-medium text-muted") ms-1" for="her_@priv.Id" style="cursor: pointer;">
+                                                                        @priv.DisplayName
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-top mt-4 pt-3 text-end">
+                    <button type="submit" class="btn btn-premium px-5 py-2 shadow-sm rounded-pill">
+                        <i class="bi bi-save me-1"></i> Actualizar Usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Switch de Estado
+            $('#estadoSwitch').on('change', function() {
+                var isChecked = $(this).is(':checked');
+                $('#estadoHidden').val(isChecked ? 'ACTIVO' : 'NO ACTIVO');
+            });
+
+            // Toggle de contraseña (Mostrar/Ocultar)
+            $('#togglePasswordBtn').click(function() {
+                var passwordInput = $('#passwordInput');
+                var type = passwordInput.attr('type') === 'password' ? 'text' : 'password';
+                passwordInput.attr('type', type);
+                $('#togglePasswordIcon').toggleClass('bi-eye-slash bi-eye');
+            });
+
+            // Copiar contraseña al portapapeles
+            $('#copyPasswordBtn').click(function() {
+                var passwordValue = $('#passwordInput').val();
+                if (!passwordValue) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Campo vacío',
+                        text: 'No hay ninguna contraseña para copiar.',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    return;
+                }
+                
+                navigator.clipboard.writeText(passwordValue).then(function() {
+                    var copyBtn = $('#copyPasswordBtn');
+                    var icon = copyBtn.find('i');
+                    icon.removeClass('bi-clipboard').addClass('bi-clipboard-check text-success');
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Copiado',
+                        text: 'Contraseña copiada al portapapeles.',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    
+                    setTimeout(function() {
+                        icon.removeClass('bi-clipboard-check text-success').addClass('bi-clipboard');
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('Error al copiar: ', err);
+                });
+            });
+
+             // Toggle de Carpeta al hacer clic en el cabecero
+             $('.folder-header').click(function() {
+                 var targetSelector = $(this).attr('data-target');
+                 var target = $(targetSelector);
+                 var header = $(this);
+                 
+                 header.toggleClass('expanded');
+                 target.slideToggle(200);
+                 
+                 // Animación de los iconos (+ a -)
+                 var icon = header.find('.plus-minus-icon');
+                 var iconWrapper = header.find('.toggle-state-icon');
+                 if (header.hasClass('expanded')) {
+                     icon.removeClass('bi-plus text-success').addClass('bi-dash text-danger');
+                     iconWrapper.removeClass('border-success').addClass('border-danger').css('background-color', 'rgba(220, 53, 69, 0.08)');
+                 } else {
+                     icon.removeClass('bi-dash text-danger').addClass('bi-plus text-success');
+                     iconWrapper.removeClass('border-danger').addClass('border-success').css('background-color', 'rgba(25, 135, 84, 0.08)');
+                 }
+             });
+
+            // Expandir / Contraer Todos en Asignar
+            $('#expandAllAsignar').click(function(e) {
+                e.preventDefault();
+                $('#asignar-list .folder-header').not('.expanded').trigger('click');
+            });
+            $('#collapseAllAsignar').click(function(e) {
+                e.preventDefault();
+                $('#asignar-list .folder-header.expanded').trigger('click');
+            });
+
+            // Expandir / Contraer Todos en Heredar
+            $('#expandAllHeredar').click(function(e) {
+                e.preventDefault();
+                $('#heredar-list .folder-header').not('.expanded').trigger('click');
+            });
+            $('#collapseAllHeredar').click(function(e) {
+                e.preventDefault();
+                $('#heredar-list .folder-header.expanded').trigger('click');
+            });
+
+            // Función auxiliar para actualizar contadores seleccionados dinámicamente
+            function updateSelectedCount(groupClass, containerId) {
+                var container = $('#' + containerId);
+                var header = container.find('.folder-header');
+                var checkboxes = container.find('.' + groupClass);
+                var total = checkboxes.length;
+                var checked = checkboxes.filter(':checked').length;
+                
+                var badge = header.find('.selected-count');
+                badge.text(checked + ' seleccionados');
+                
+                if (checked > 0) {
+                    badge.removeClass('bg-indigo-soft text-indigo bg-success-soft text-success').addClass(groupClass.includes('asignar') ? 'bg-primary text-white' : 'bg-success text-white');
+                } else {
+                    badge.removeClass('bg-primary bg-success text-white').addClass(groupClass.includes('asignar') ? 'bg-indigo-soft text-indigo' : 'bg-success-soft text-success');
+                }
+            }
+
+            // Buscador predictivo inteligente (Módulo o Acción)
+            $('#perm-search').on('input', function() {
+                var filter = $(this).val().toLowerCase().trim();
+                $('.perm-card-group').each(function() {
+                    var modName = $(this).attr('data-name').toLowerCase();
+                    var matchModulo = modName.includes(filter);
+                    var matchAccion = false;
+                    
+                    $(this).find('.perm-item-box').each(function() {
+                        var actionName = $(this).attr('data-action').toLowerCase();
+                        if (actionName.includes(filter) || matchModulo) {
+                            $(this).show();
+                            matchAccion = true;
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                    
+                    if (matchModulo || matchAccion) {
+                        $(this).show();
+                        // Auto-expandir si hay coincidencia de búsqueda y no está expandido
+                        var header = $(this).find('.folder-header');
+                        var content = $(this).find('.folder-content');
+                        if (filter.length > 0 && !header.hasClass('expanded')) {
+                            header.addClass('expanded');
+                            content.slideDown(150);
+                            var icon = header.find('.plus-minus-icon');
+                            var iconWrapper = header.find('.toggle-state-icon');
+                            icon.removeClass('bi-plus text-success').addClass('bi-dash text-danger');
+                            iconWrapper.removeClass('border-success').addClass('border-danger').css('background-color', 'rgba(220, 53, 69, 0.08)');
+                        }
+                    } else {
+                        $(this).hide();
+                    }
+                });
+                
+                // Si la búsqueda se limpia, contraer todo para mantener el orden
+                if (filter.length === 0) {
+                    $('.folder-header.expanded').trigger('click');
+                }
+            });
+
+            // Seleccionar/Deseleccionar Todos en Asignar
+            var allAsignarSelected = $('.check-asignar:checked').length === $('.check-asignar').length;
+            $('#selectAllAsignar').text(allAsignarSelected ? 'Desmarcar Todos' : 'Marcar Todos');
+            $('#selectAllAsignar').click(function(e) {
+                e.preventDefault();
+                allAsignarSelected = !allAsignarSelected;
+                $('.check-asignar').prop('checked', allAsignarSelected).trigger('change');
+                $(this).text(allAsignarSelected ? 'Desmarcar Todos' : 'Marcar Todos');
+            });
+
+            // Seleccionar/Deseleccionar Todos en Heredar
+            var allHeredarSelected = $('.check-heredar:checked').length === $('.check-heredar').length;
+            $('#selectAllHeredar').text(allHeredarSelected ? 'Desmarcar Todos' : 'Marcar Todos');
+            $('#selectAllHeredar').click(function(e) {
+                e.preventDefault();
+                allHeredarSelected = !allHeredarSelected;
+                $('.check-heredar').prop('checked', allHeredarSelected).trigger('change');
+                $(this).text(allHeredarSelected ? 'Desmarcar Todos' : 'Marcar Todos');
+            });
+
+            // Seleccionar Grupo (Módulo entero)
+            $('.check-group-btn').click(function(e) {
+                e.preventDefault();
+                var targetClass = $(this).attr('data-group-class');
+                var checkboxes = $('.' + targetClass);
+                var allChecked = true;
+                checkboxes.each(function() {
+                    if (!$(this).is(':checked')) allChecked = false;
+                });
+                
+                checkboxes.prop('checked', !allChecked).trigger('change');
+                $(this).text(!allChecked ? 'Desmarcar Grupo' : 'Marcar Grupo');
+            });
+
+            // Cambiar estilos de etiquetas al marcar/desmarcar & actualizar contadores en tiempo real
+            $(document).on('change', '.check-asignar', function() {
+                var isChecked = $(this).is(':checked');
+                var label = $(this).siblings('label');
+                if (isChecked) {
+                    label.removeClass('fw-medium text-dark').addClass('fw-bold text-primary');
+                } else {
+                    label.removeClass('fw-bold text-primary').addClass('fw-medium text-dark');
+                }
+                
+                // Obtener ID del módulo a partir de la clase check-asignar-X
+                var classes = $(this).attr('class').split(' ');
+                var groupClass = classes.find(c => c.startsWith('check-asignar-'));
+                if (groupClass) {
+                    var modId = groupClass.split('-')[2];
+                    updateSelectedCount(groupClass, 'group_asignar_' + modId);
+                }
+            });
+
+            $(document).on('change', '.check-heredar', function() {
+                var isChecked = $(this).is(':checked');
+                var label = $(this).siblings('label');
+                if (isChecked) {
+                    label.removeClass('fw-medium text-muted').addClass('fw-bold text-success');
+                } else {
+                    label.removeClass('fw-bold text-success').addClass('fw-medium text-muted');
+                }
+                
+                // Obtener ID del módulo a partir de la clase check-heredar-X
+                var classes = $(this).attr('class').split(' ');
+                var groupClass = classes.find(c => c.startsWith('check-heredar-'));
+                if (groupClass) {
+                    var modId = groupClass.split('-')[2];
+                    updateSelectedCount(groupClass, 'group_heredar_' + modId);
+                }
+            });
+
+            // Al seleccionar ADMINISTRADOR, ofrecer activar todos los privilegios
+            $('#tipoUsuarioSelect').on('change', function() {
+                if ($(this).val() === 'ADMINISTRADOR') {
+                    Swal.fire({
+                        title: '¿Asignar todos los privilegios?',
+                        text: "Has seleccionado rol ADMINISTRADOR. ¿Deseas marcar automáticamente todos los privilegios y acciones del sistema?",
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Sí, asignar todos',
+                        cancelButtonText: 'No, mantener los actuales'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('.check-asignar').prop('checked', true).trigger('change');
+                            allAsignarSelected = true;
+                            $('#selectAllAsignar').text('Desmarcar Todos');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    <script>
+        // Photo preview for Edit form
+        document.getElementById('FotoFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    document.getElementById('fotoPreview').src = ev.target.result;
+                    document.getElementById('fotoPreview').style.display = 'block';
+                    var ph = document.getElementById('fotoPlaceholder');
+                    if (ph) ph.style.display = 'none';
+                    // Reset remove flag since user is uploading a new photo
+                    document.getElementById('removeFotoInput').value = 'false';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Remove photo button
+        var removeFotoBtn = document.getElementById('removeFotoBtn');
+        if (removeFotoBtn) {
+            removeFotoBtn.addEventListener('click', function() {
+                document.getElementById('removeFotoInput').value = 'true';
+                document.getElementById('fotoPreview').src = '';
+                document.getElementById('fotoPreview').style.display = 'none';
+                var ph = document.getElementById('fotoPlaceholder');
+                if (ph) { ph.style.display = 'flex'; }
+                removeFotoBtn.style.display = 'none';
+            });
+        }
+    </script>
+}

@@ -1,0 +1,4 @@
+
+Server=38.247.140.172,10433;Database=FERRETERIA_JENY;User Id=sa;Password=Farc0inf$info$;TrustServerCertificate=True;Connect Timeout=60;
+
+

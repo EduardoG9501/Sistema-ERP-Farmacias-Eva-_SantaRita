@@ -1,0 +1,240 @@
+@model IEnumerable<SistemaERP.Models.Entities.Producto>
+@{
+    Layout = "_LayoutPublico";
+    var sysParams = ViewBag.SysParams as SistemaERP.Models.Entities.ParametrosSistema;
+    var presentaciones = ViewBag.Presentaciones as Dictionary<long, string>;
+    var marcas = ViewBag.Marcas as Dictionary<long, string>;
+    var categorias = ViewBag.Categorias as List<SistemaERP.Models.Entities.Presentacion>;
+    
+    // Resolver teléfono
+    string rawPhone = sysParams?.CatalogoWhatsApp ?? ViewBag.EmpresaCentral?.Telefono ?? "";
+    string waPhone = new string(rawPhone.Where(char.IsDigit).ToArray());
+    if (waPhone.StartsWith("09") && waPhone.Length == 10) waPhone = "593" + waPhone.Substring(1);
+}
+
+<!-- Hero Banner -->
+<section class="hero-section text-center">
+    <div class="container py-3">
+        <h1 class="display-5 fw-bold mb-2 font-display animate__animated animate__fadeInDown">@(sysParams?.CatalogoTitulo ?? ViewBag.EmpresaCentral?.Nombre ?? "Catálogo Digital")</h1>
+        <p class="lead mb-0 text-white-50 small animate__animated animate__fadeInUp">Explora nuestros productos disponibles y haz tus pedidos directamente por WhatsApp.</p>
+    </div>
+</section>
+
+<!-- Main Catalog Container -->
+<div class="container my-5 animate__animated animate__fadeIn">
+    <div class="row g-4">
+        
+        <!-- Sidebar Filtros (Desktop) -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="filter-sidebar shadow-xs">
+                <h6 class="fw-bold mb-3 font-display text-uppercase text-xs tracking-wider" style="color:var(--dark-color);">Categorías</h6>
+                <div class="d-flex flex-column">
+                    <a href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, buscar = ViewBag.Buscar })" 
+                       class="filter-link @(ViewBag.CategoriaId == null ? "active" : "")">
+                        <span>Todos los Productos</span>
+                        <i class="bi bi-chevron-right text-xs"></i>
+                    </a>
+                    
+                    @if (categorias != null)
+                    {
+                        @foreach (var cat in categorias)
+                        {
+                            <a href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, categoriaId = cat.Id, buscar = ViewBag.Buscar })" 
+                               class="filter-link @(ViewBag.CategoriaId != null && (long)ViewBag.CategoriaId == cat.Id ? "active" : "")">
+                                <span>@cat.Nombre</span>
+                                <i class="bi bi-chevron-right text-xs"></i>
+                            </a>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Catalog Area -->
+        <div class="col-lg-9">
+            
+            <!-- Toolbar: Buscador y Filtro Móvil -->
+            <div class="bg-white p-3 border rounded shadow-xs mb-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3" style="border-radius:12px;">
+                <!-- Buscador -->
+                <form method="get" class="w-100" style="max-width: 450px;">
+                    <input type="hidden" name="categoriaId" value="@ViewBag.CategoriaId" />
+                    <div class="input-group shadow-xs">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control border-start-0 ps-0 text-sm" placeholder="Buscar por nombre o código..." />
+                        @if (!string.IsNullOrEmpty(ViewBag.Buscar))
+                        {
+                            <a href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, categoriaId = ViewBag.CategoriaId })" class="btn btn-light border-start-0 border text-muted d-flex align-items-center"><i class="bi bi-x-circle-fill"></i></a>
+                        }
+                        <button type="submit" class="btn btn-detail px-4 text-xs font-display">Buscar</button>
+                    </div>
+                </form>
+
+                <!-- Desplegable Categorías (Móvil y Tablet) -->
+                <div class="w-100 d-lg-none" style="max-width: 250px;">
+                    <select class="form-select text-sm shadow-xs" onchange="location = this.value;">
+                        <option value="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, buscar = ViewBag.Buscar })">Todas las categorías</option>
+                        @if (categorias != null)
+                        {
+                            @foreach (var cat in categorias)
+                            {
+                                <option value="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, categoriaId = cat.Id, buscar = ViewBag.Buscar })"
+                                        selected="@(ViewBag.CategoriaId != null && (long)ViewBag.CategoriaId == cat.Id ? "selected" : null)">
+                                    @cat.Nombre
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Info resultados -->
+                <div class="text-xs text-muted fw-medium text-end">
+                    @ViewBag.TotalItems resultados encontrados
+                </div>
+            </div>
+
+            <!-- Grid de productos -->
+            @if (Model != null && Model.Any())
+            {
+                <div class="row g-4">
+                    @foreach (var prod in Model)
+                    {
+                        var categoria = (prod.Id_Presentacion.HasValue && presentaciones.ContainsKey(prod.Id_Presentacion.Value)) ? presentaciones[prod.Id_Presentacion.Value] : null;
+                        var marca = (prod.Id_Proveedor.HasValue && marcas.ContainsKey(prod.Id_Proveedor.Value)) ? marcas[prod.Id_Proveedor.Value] : null;
+                        
+                        <div class="col-sm-6 col-md-4">
+                            <div class="product-card shadow-xs">
+                                <!-- Imagen -->
+                                <div class="product-img-wrapper">
+                                    @if (!string.IsNullOrEmpty(prod.Foto))
+                                    {
+                                        <img src="@prod.Foto" alt="@prod.Nombre" class="product-img" />
+                                    }
+                                    else
+                                    {
+                                        <div class="position-absolute inset-0 d-flex flex-column align-items-center justify-content-center bg-light text-muted opacity-50">
+                                            <i class="bi bi-box-seam fs-1 mb-1"></i>
+                                            <span class="text-xs">Imagen No Disponible</span>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <!-- Contenido de la Tarjeta -->
+                                <div class="p-3 d-flex flex-column flex-grow-1">
+                                    <!-- Categoría y Marca Badges -->
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        @if (categoria != null)
+                                        {
+                                            <span class="badge-category">@categoria</span>
+                                        }
+                                        @if (marca != null)
+                                        {
+                                            <span class="badge-brand">@marca</span>
+                                        }
+                                    </div>
+                                    
+                                    <!-- Nombre y Código -->
+                                    <h6 class="fw-bold text-dark mb-1 text-sm font-display" style="line-height:1.4; height: 38px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                        @prod.Nombre
+                                    </h6>
+                                    <span class="text-xs text-muted mb-2 d-block">Código: @prod.CodigoBarra</span>
+
+                                    <!-- Precio -->
+                                    @if (sysParams != null && sysParams.CatalogoMostrarPrecios)
+                                    {
+                                        <div class="mt-auto mb-3">
+                                            @{
+                                                bool tieneDescuento = prod.Descuento.HasValue && prod.Descuento.Value > 0 &&
+                                                                     (!prod.Descuento_Desde.HasValue || prod.Descuento_Desde.Value <= DateTime.Today) &&
+                                                                     (!prod.Descuento_Hasta.HasValue || prod.Descuento_Hasta.Value >= DateTime.Today);
+                                                
+                                                decimal precioOriginal = prod.PVP ?? 0;
+                                                decimal precioFinal = precioOriginal;
+                                                if (tieneDescuento)
+                                                {
+                                                    precioFinal = precioOriginal - (precioOriginal * (prod.Descuento.Value / 100));
+                                                }
+                                            }
+                                            @if (tieneDescuento)
+                                            {
+                                                <span class="text-xs text-decoration-line-through text-muted me-1">@ViewBag.MonedaSimbolo@precioOriginal.ToString("N2")</span>
+                                                <span class="fs-5 fw-bold text-danger">@ViewBag.MonedaSimbolo@precioFinal.ToString("N2")</span>
+                                                <span class="badge bg-danger text-white text-xs py-0.5 px-1.5 ms-1" style="font-size:0.6rem; border-radius:4px;">-@prod.Descuento.Value.ToString("0")%</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="fs-5 fw-bold text-indigo" style="color:var(--primary-color);">@ViewBag.MonedaSimbolo@precioOriginal.ToString("N2")</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mt-auto mb-3 text-xs text-muted fst-italic">
+                                            Precios no disponibles al público.
+                                        </div>
+                                    }
+
+                                    <!-- Acciones -->
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <a href="@Url.Action("Detalle", "CatalogoPublico", new { alias = ViewBag.Alias, id = prod.Id })" class="btn btn-detail w-100 py-2 text-xs">
+                                                <i class="bi bi-info-circle me-1"></i> Detalles
+                                            </a>
+                                        </div>
+                                        <div class="col-6">
+                                            @{
+                                                string msgText = $"Hola, estoy interesado en el producto: {prod.Nombre} (Código: {prod.CodigoBarra})";
+                                                if (sysParams != null && sysParams.CatalogoMostrarPrecios && prod.PVP.HasValue)
+                                                {
+                                                    msgText += $" con precio de {ViewBag.MonedaSimbolo}{prod.PVP.Value.ToString("N2")}";
+                                                }
+                                                string waLink = $"https://wa.me/{waPhone}?text={Uri.EscapeDataString(msgText)}";
+                                            }
+                                            <a href="@waLink" target="_blank" class="btn btn-whatsapp w-100 py-2 text-xs">
+                                                <i class="bi bi-whatsapp me-1"></i> WhatsApp
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Paginación -->
+                @if (ViewBag.TotalPaginas > 1)
+                {
+                    <nav class="d-flex justify-content-center mt-5">
+                        <ul class="pagination pagination-sm shadow-xs" style="border-radius:10px; overflow:hidden;">
+                            <!-- Anterior -->
+                            <li class="page-item @(ViewBag.PaginaActual == 1 ? "disabled" : "")">
+                                <a class="page-link py-2 px-3" href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, categoriaId = ViewBag.CategoriaId, buscar = ViewBag.Buscar, pagina = ViewBag.PaginaActual - 1 })"><i class="bi bi-chevron-left"></i></a>
+                            </li>
+                            
+                            <!-- Páginas -->
+                            @for (int p = 1; p <= ViewBag.TotalPaginas; p++)
+                            {
+                                <li class="page-item @(ViewBag.PaginaActual == p ? "active" : "")">
+                                    <a class="page-link py-2 px-3 fw-bold @(ViewBag.PaginaActual == p ? "bg-indigo border-indigo text-white" : "text-muted")" href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, categoriaId = ViewBag.CategoriaId, buscar = ViewBag.Buscar, pagina = p })" style="@(ViewBag.PaginaActual == p ? "background-color: var(--primary-color) !important; border-color: var(--primary-color) !important;" : "")">@p</a>
+                                </li>
+                            }
+
+                            <!-- Siguiente -->
+                            <li class="page-item @(ViewBag.PaginaActual == ViewBag.TotalPaginas ? "disabled" : "")">
+                                <a class="page-link py-2 px-3" href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias, categoriaId = ViewBag.CategoriaId, buscar = ViewBag.Buscar, pagina = ViewBag.PaginaActual + 1 })"><i class="bi bi-chevron-right"></i></a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            }
+            else
+            {
+                <div class="bg-white p-5 text-center border rounded shadow-xs my-5" style="border-radius:16px;">
+                    <i class="bi bi-boxes fs-1 d-block mb-3 opacity-25"></i>
+                    <h5 class="fw-bold mb-2">No se encontraron productos</h5>
+                    <p class="text-muted small px-3">Prueba con otros términos de búsqueda o selecciona otra categoría.</p>
+                    <a href="@Url.Action("Index", "CatalogoPublico", new { alias = ViewBag.Alias })" class="btn btn-sm btn-outline-primary mt-2 px-4 py-2" style="border-radius:10px;"><i class="bi bi-arrow-left me-1"></i> Ver Todo el Catálogo</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>

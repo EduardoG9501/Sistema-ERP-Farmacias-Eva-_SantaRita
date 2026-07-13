@@ -1,0 +1,986 @@
+@model SistemaERP.Models.Entities.ParametrosSistema
+
+@{
+    ViewData["Title"] = "Parámetros del Sistema";
+}
+
+<style>
+    .params-tab-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: stretch;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    .params-tab-nav::-webkit-scrollbar {
+        height: 8px;
+    }
+    .params-tab-nav::-webkit-scrollbar-thumb {
+        background: rgba(99,102,241,0.35);
+        border-radius: 999px;
+    }
+    .params-tab-nav .nav-item {
+        flex: 1 1 auto;
+        min-width: 150px;
+    }
+    .params-tab-nav .nav-link {
+        border-radius: 10px 10px 0 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted, #6c757d);
+        border: 2px solid transparent;
+        padding: 0.6rem 1rem;
+        transition: all 0.2s;
+        white-space: nowrap;
+        text-align: center;
+    }
+    .params-tab-nav .nav-link.active {
+        color: rgb(99,102,241);
+        border-color: rgba(99,102,241,0.25);
+        border-bottom-color: #fff;
+        background: #fff;
+        box-shadow: 0 -2px 8px rgba(99,102,241,0.08);
+    }
+    .params-tab-nav .nav-link:hover:not(.active) {
+        background: rgba(99,102,241,0.06);
+        color: rgb(99,102,241);
+        transform: translateY(-1px);
+        box-shadow: 0 -4px 12px rgba(99,102,241,0.1);
+    }
+    .params-section-title {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        color: #6c757d;
+        border-bottom: 2px solid rgba(99,102,241,0.15);
+        padding-bottom: 0.4rem;
+        margin-bottom: 1.2rem;
+    }
+    .params-section-title i {
+        color: rgb(99,102,241);
+    }
+    .logo-preview-wrapper {
+        width: 160px;
+        max-width: 100%;
+        min-width: 0;
+        height: 100px;
+        border: 2px dashed rgba(99,102,241,0.3);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99,102,241,0.04);
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+    .logo-preview-wrapper:hover {
+        border-color: rgba(99,102,241,0.6);
+        background: rgba(99,102,241,0.08);
+    }
+    .logo-preview-wrapper img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .logo-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(99,102,241,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        border-radius: 10px;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .logo-preview-wrapper:hover .logo-overlay {
+        opacity: 1;
+    }
+    .vigencia-card {
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.06) 100%);
+        border: 1.5px solid rgba(99,102,241,0.15);
+        padding: 2rem;
+    }
+    .vigencia-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 1rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    .tab-content-box {
+        background: #fff;
+        border: 2px solid rgba(99,102,241,0.15);
+        border-top: none;
+        border-radius: 0 0 16px 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .switch-label {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .badge-active { background: rgba(25,135,84,0.1); color: #198754; border: 1px solid rgba(25,135,84,0.2); }
+    .badge-expired { background: rgba(220,53,69,0.1); color: #dc3545; border: 1px solid rgba(220,53,69,0.2); }
+    @@media (max-width: 992px) {
+        .params-tab-nav .nav-item {
+            min-width: 140px;
+        }
+        .params-tab-nav .nav-link {
+            font-size: 0.76rem;
+            padding: 0.55rem 0.85rem;
+        }
+    }
+    @@media (max-width: 768px) {
+        .params-tab-nav {
+            gap: 0.35rem;
+        }
+        .tab-content-box {
+            padding: 1.5rem 1rem;
+        }
+        .logo-preview-wrapper,
+        #bgWrapper {
+            width: 100% !important;
+            height: auto !important;
+            min-height: 100px;
+        }
+        .logo-preview-wrapper img,
+        #bgWrapper img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+        .params-section-title {
+            font-size: 0.68rem;
+        }
+        .form-label {
+            font-size: 0.82rem;
+        }
+        .form-text {
+            font-size: 0.75rem;
+        }
+    }
+    .btn-premium {
+        background: linear-gradient(135deg, rgb(99,102,241), rgb(79,70,229));
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        padding: 0.65rem 2rem;
+        transition: all 0.25s ease;
+        letter-spacing: 0.3px;
+        position: relative;
+        overflow: hidden;
+    }
+    .btn-premium::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+        background-size: 200% 100%;
+        animation: shimmer 3s ease-in-out infinite;
+        pointer-events: none;
+    }
+    @@keyframes shimmer {
+        0%, 100% { background-position: 200% 0; }
+        50% { background-position: -200% 0; }
+    }
+    .btn-premium:hover {
+        background: linear-gradient(135deg, rgb(79,70,229), rgb(67,56,202));
+        color: #fff;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(99,102,241,0.35);
+    }
+    .btn-premium:active {
+        transform: translateY(0);
+    }
+    .btn-premium:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    .premium-card {
+        background: #fff;
+        border: 1.5px solid rgba(99,102,241,0.12);
+        border-radius: 12px;
+        transition: all 0.25s ease;
+    }
+    .premium-card:hover {
+        border-color: rgba(99,102,241,0.25);
+        box-shadow: 0 4px 16px rgba(99,102,241,0.08);
+        transform: translateY(-1px);
+    }
+</style>
+
+<!-- Header -->
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <div class="d-flex align-items-center gap-3 mb-1">
+            <div style="width:44px; height:44px; border-radius:12px; background: linear-gradient(135deg, rgb(99,102,241), rgb(79,70,229)); display:flex; align-items:center; justify-content:center;">
+                <i class="bi bi-sliders text-white fs-5"></i>
+            </div>
+            <div>
+                <h2 class="fw-bold mb-0" style="font-size:1.5rem;">Parámetros del Sistema</h2>
+                <p class="text-muted mb-0" style="font-size:0.85rem;">Configuración global de la empresa, documentos, tickets e impresión.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-auto d-flex align-items-center gap-2">
+        @if (Model.UltimaActualizacion.HasValue)
+        {
+            <span class="badge bg-light text-muted border px-3 py-2" style="font-size:0.75rem; border-radius:8px;"><i class="bi bi-clock-history me-1"></i>Actualizado: @Model.UltimaActualizacion.Value.ToString("dd/MM/yyyy HH:mm")</span>
+        }
+    </div>
+</div>
+
+<form asp-action="Index" method="post" enctype="multipart/form-data" id="paramsForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" value="1" />
+    <input type="hidden" name="RemoveLogo" id="removeLogoInput" value="false" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3 text-xs" style="border-radius: 8px;"></div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav params-tab-nav mb-0 border-bottom-0" id="paramsTabs" role="tablist" style="border-bottom: 2px solid rgba(99,102,241,0.15);">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-general" data-bs-toggle="tab" data-bs-target="#panel-general" type="button" role="tab">
+                <i class="bi bi-building me-2"></i>Parámetros Generales
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-docs" data-bs-toggle="tab" data-bs-target="#panel-docs" type="button" role="tab">
+                <i class="bi bi-receipt me-2"></i>Documentos y Tickets
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-vigencia" data-bs-toggle="tab" data-bs-target="#panel-vigencia" type="button" role="tab">
+                <i class="bi bi-shield-check me-2"></i>Vigencia del Sistema
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-catalogo" data-bs-toggle="tab" data-bs-target="#panel-catalogo" type="button" role="tab">
+                <i class="bi bi-globe me-2"></i>Catálogo Público Web
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content-box animate__animated animate__fadeIn">
+        <div class="tab-content">
+
+            <!-- ==================== TAB 1: PARÁMETROS GENERALES ==================== -->
+            <div class="tab-pane fade show active" id="panel-general" role="tabpanel">
+                <div class="row g-4">
+
+                    <!-- Logo de la Empresa -->
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-image me-2"></i>Logo de la Empresa</p>
+                        <div class="d-flex align-items-start gap-4">
+                            <div>
+                                <label for="LogoFile" class="logo-preview-wrapper" id="logoWrapper" title="Haz clic para subir tu logo">
+                                    @if (!string.IsNullOrEmpty(Model.LogoPath))
+                                    {
+                                        <img id="logoPreview" src="@(Model.LogoPath.Split('?')[0])" alt="Logo empresa" />
+                                    }
+                                    else
+                                    {
+                                        <div id="logoPlaceholder" class="text-center">
+                                            <i class="bi bi-image text-indigo" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                                            <div class="text-xs text-muted mt-1">Subir Logo</div>
+                                        </div>
+                                        <img id="logoPreview" src="" alt="Logo" style="display:none; max-width:100%; max-height:100%; object-fit:contain;" />
+                                    }
+                                    <div class="logo-overlay"><i class="bi bi-camera-fill me-1"></i>Cambiar logo</div>
+                                </label>
+                                <input type="file" id="LogoFile" name="LogoFile" accept="image/*" class="d-none" />
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted mb-2">El logo aparecerá en todos los documentos del sistema: tickets de venta, reportes PDF, facturas electrónicas y encabezados.</p>
+                                <p class="text-xs text-muted mb-3">Formatos aceptados: <strong>JPG, PNG, SVG, WEBP</strong> — Tamaño recomendado: <strong>300×120 px</strong></p>
+                                @if (!string.IsNullOrEmpty(Model.LogoPath))
+                                {
+                                    <button type="button" id="removeLogoBtn" class="btn btn-sm btn-outline-danger py-1 px-3">
+                                        <i class="bi bi-trash me-1"></i> Quitar logo
+                                    </button>
+                                }
+                                <div class="mt-2 d-flex align-items-center gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" asp-for="MostrarLogoEnDocumentos" id="MostrarLogoEnDocumentos" style="width:2.2em; height:1.2em;">
+                                        <label class="switch-label" for="MostrarLogoEnDocumentos">Mostrar logo en todos los documentos</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Fondo de Pantalla de Bienvenida (no-admins) -->
+                    <div class="col-12 mt-4">
+                        <p class="params-section-title"><i class="bi bi-file-image me-2"></i>Fondo de Pantalla (Bienvenida No-Administradores)</p>
+                        <div class="d-flex align-items-start gap-4">
+                            <div>
+                                @{
+                                    var bgUrl = "";
+                                    var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
+                                    if (!string.IsNullOrEmpty(empresaIdClaim))
+                                    {
+                                        var dirPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads", "empresa");
+                                        if (System.IO.Directory.Exists(dirPath))
+                                        {
+                                            var bgFiles = System.IO.Directory.GetFiles(dirPath, $"welcome_bg_{empresaIdClaim}.*");
+                                            if (bgFiles.Length > 0)
+                                            {
+                                                bgUrl = $"/uploads/empresa/{System.IO.Path.GetFileName(bgFiles[0])}?v={DateTime.Now.Ticks}";
+                                            }
+                                        }
+                                    }
+                                }
+                                <label for="WelcomeBgFile" class="logo-preview-wrapper" id="bgWrapper" title="Haz clic para subir imagen de fondo" style="width: 240px; height: 135px;">
+                                    @if (!string.IsNullOrEmpty(bgUrl))
+                                    {
+                                        <img id="bgPreview" src="@bgUrl" alt="Fondo de bienvenida" style="width: 100%; height: 100%; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div id="bgPlaceholder" class="text-center">
+                                            <i class="bi bi-images text-indigo" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                                            <div class="text-xs text-muted mt-1">Subir Imagen de Fondo</div>
+                                        </div>
+                                        <img id="bgPreview" src="" alt="Fondo" style="display:none; width: 100%; height: 100%; object-fit: cover;" />
+                                    }
+                                    <div class="logo-overlay"><i class="bi bi-camera-fill me-1"></i>Cambiar fondo</div>
+                                </label>
+                                <input type="file" id="WelcomeBgFile" name="WelcomeBgFile" accept="image/*" class="d-none" />
+                                <input type="hidden" name="RemoveWelcomeBg" id="removeWelcomeBgInput" value="false" />
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted mb-2">Este fondo de pantalla se mostrará a los usuarios no administradores cuando inicien sesión y entren al sistema.</p>
+                                <p class="text-xs text-muted mb-3">Formatos aceptados: <strong>JPG, PNG, WEBP</strong> — Se recomienda una imagen horizontal de alta resolución (mínimo 1920×1080 px).</p>
+                                @if (!string.IsNullOrEmpty(bgUrl))
+                                {
+                                    <button type="button" id="removeBgBtn" class="btn btn-sm btn-outline-danger py-1 px-3">
+                                        <i class="bi bi-trash me-1"></i> Quitar fondo de pantalla
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos de la Empresa -->
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-building-fill me-2"></i>Datos de la Empresa</p>
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Nombre de la Empresa <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-building text-muted"></i></span>
+                                    <input asp-for="NombreEmpresa" class="form-control border-start-0 bg-light" placeholder="Ej: DISTRIBUIDORA XYZ S.A." />
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Alias / Nombre Comercial</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-tag text-muted"></i></span>
+                                    <input asp-for="AliasEmpresa" class="form-control border-start-0 bg-light" placeholder="Ej: XYZ Centro Norte" />
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">RUC</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-upc text-muted"></i></span>
+                                    <input asp-for="RUC" class="form-control border-start-0 bg-light" placeholder="0000000000001" />
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Teléfono Principal</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-telephone text-muted"></i></span>
+                                    <input asp-for="Telefono" class="form-control border-start-0 bg-light" placeholder="04-2797240" />
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Teléfono Secundario</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-telephone-fill text-muted"></i></span>
+                                    <input asp-for="Telefono2" class="form-control border-start-0 bg-light" placeholder="099-0000000" />
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Correo Electrónico</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                    <input asp-for="Correo" class="form-control border-start-0 bg-light" placeholder="empresa@correo.com" />
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Sitio Web</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-globe text-muted"></i></span>
+                                    <input asp-for="SitioWeb" class="form-control border-start-0 bg-light" placeholder="www.empresa.com" />
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Dirección</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt text-muted"></i></span>
+                                    <input asp-for="Direccion" class="form-control border-start-0 bg-light" placeholder="Calle principal, ciudad, país" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formato de Impresión -->
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-printer me-2"></i>Formato de Impresión</p>
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Nº de Ítems pre-impresos en factura</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-list-ol text-muted"></i></span>
+                                    <input asp-for="NumItemsFactura" type="number" min="1" max="50" class="form-control border-start-0 bg-light" />
+                                </div>
+                                <div class="form-text text-xs text-muted">Define cuántas líneas tiene la hoja pre-impresa para facturas.</div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Alto de Impresión</label>
+                                <select asp-for="AltoImpresion" class="form-select bg-light shadow-sm">
+                                    <option value="Automatico">Automático</option>
+                                    <option value="Formato18_5">Formato 18,5 alto</option>
+                                    <option value="Formato21_5">Formato 21,5 alto</option>
+                                    <option value="LogicControlLr2000">Logic Control Lr2000</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Impresora Predeterminada</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-printer-fill text-muted"></i></span>
+                                    <input asp-for="ImpresoraPredeterminada" class="form-control border-start-0 bg-light" placeholder="Ej: EPSON TM-T20III" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Moneda Oficial -->
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-currency-exchange me-2"></i>Moneda Oficial del Sistema</p>
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Moneda oficial <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-cash-coin text-muted"></i></span>
+                                    <select asp-for="MonedaOficial" class="form-select border-start-0 bg-light">
+                                        <option value="">-- Seleccione la moneda oficial --</option>
+                                        @if (ViewBag.Monedas != null)
+                                        {
+                                            foreach (var m in ViewBag.Monedas)
+                                            {
+                                                <option value="@m.Codigo">@m.Codigo - @m.Nombre (@m.Simbolo) - @m.Pais</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="form-text text-xs text-muted">Define la moneda con la que opera el sistema. Todos los módulos (ventas, compras, inventarios, reportes) usarán esta moneda.</div>
+                            </div>
+                            <div class="col-lg-6 d-flex align-items-end pb-1">
+                                <div class="border-start ps-4">
+                                    <div class="text-xs text-uppercase fw-bold text-muted mb-1">Moneda actual</div>
+                                    @if (!string.IsNullOrEmpty(Model.MonedaOficial))
+                                    {
+                                        <div class="fw-bold fs-5">@Model.MonedaOficial</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted fst-italic">No configurada</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas y Ventas -->
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-exclamation-triangle me-2"></i>Alertas y Ventana de Ventas</p>
+                        <div class="row g-3">
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Alerta vencimiento (días)</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-calendar-x text-warning"></i></span>
+                                    <input asp-for="DiasAlertaVencimiento" type="number" min="1" class="form-control border-start-0 bg-light" />
+                                </div>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Stock mínimo para cargar en venta</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-boxes text-muted"></i></span>
+                                    <input asp-for="StockMinimoCargar" type="number" min="0" class="form-control border-start-0 bg-light" />
+                                </div>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Nº ventanas de venta simultáneas</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-grid text-muted"></i></span>
+                                    <input asp-for="NumVentanasSimultaneas" type="number" min="1" max="10" class="form-control border-start-0 bg-light" />
+                                </div>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Clave Aprobación Vencidos</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-key text-danger"></i></span>
+                                    <input asp-for="ClaveAprobacionVencido" type="text" class="form-control border-start-0 bg-light" placeholder="Ej: admin123" />
+                                </div>
+                            </div>
+                            <div class="col-lg-3 d-flex align-items-end pb-1">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="MostrarAlertaStock" id="MostrarAlertaStock" style="width:2.2em; height:1.2em;">
+                                    <label class="switch-label ms-2" for="MostrarAlertaStock">Activar alertas de stock</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Diseño y Visualización del POS -->
+                    <div class="col-12 mt-4">
+                        <p class="params-section-title"><i class="bi bi-display me-2"></i>Diseño y Visualización del POS</p>
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Diseño de Productos en POS</label>
+                                <select id="selPosEstilo" class="form-select bg-light shadow-sm" onchange="syncPosLayoutValue()">
+                                    <option value="imagenes">Vista de Imágenes / Tarjetas</option>
+                                    <option value="tablas">Vista de Tabla / Lista (Sin imágenes)</option>
+                                </select>
+                                <div class="form-text text-xs text-muted">Elige el estilo visual de los productos en la cuadrícula de búsqueda.</div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Posición del Carrito y Totales</label>
+                                <select id="selPosUbicacion" class="form-select bg-light shadow-sm" onchange="syncPosLayoutValue()">
+                                    <option value="derecha">Lado Derecho (Diseño Tradicional)</option>
+                                    <option value="abajo">Lado Izquierdo - Abajo de Búsqueda (Doble Columna)</option>
+                                </select>
+                                <div class="form-text text-xs text-muted">Configura dónde deseas colocar el listado del carrito y el desglose de totales.</div>
+                            </div>
+                            <input type="hidden" asp-for="PosLayout" id="hdnPosLayout" />
+
+                            <script>
+                                document.addEventListener("DOMContentLoaded", function() {
+                                    var val = document.getElementById("hdnPosLayout").value || "imagenes_derecha";
+                                    var parts = val.split("_");
+                                    var estilo = parts[0] || "imagenes";
+                                    var ubicacion = parts[1] || "derecha";
+                                    
+                                    // Validar valores heredados antiguos
+                                    if (val === "pos_columnar") {
+                                        estilo = "tablas";
+                                        ubicacion = "abajo";
+                                    } else if (val === "imagenes" || val === "tablas") {
+                                        ubicacion = "derecha";
+                                    }
+
+                                    document.getElementById("selPosEstilo").value = estilo;
+                                    document.getElementById("selPosUbicacion").value = ubicacion;
+                                    syncPosLayoutValue();
+                                });
+
+                                function syncPosLayoutValue() {
+                                    var estilo = document.getElementById("selPosEstilo").value;
+                                    var ubicacion = document.getElementById("selPosUbicacion").value;
+                                    document.getElementById("hdnPosLayout").value = estilo + "_" + ubicacion;
+                                }
+                            </script>
+                        </div>
+                    </div>
+
+                    <!-- Especificación del IVA (Configuración Global) -->
+                    <div class="col-12 mt-4">
+                        <p class="params-section-title"><i class="bi bi-percent me-2"></i>Especificación del IVA (Configuración Global)</p>
+                        <div class="row g-3">
+                            <div class="col-lg-3 col-md-4">
+                                <label asp-for="IvaCodigoSri" class="form-label fw-semibold text-xs text-uppercase text-muted">Código SRI</label>
+                                <input asp-for="IvaCodigoSri" class="form-control bg-light shadow-sm" type="text" placeholder="2" />
+                                <div class="form-text text-xs text-muted">Código del SRI (ej: 2 para IVA).</div>
+                            </div>
+                            <div class="col-lg-3 col-md-4">
+                                <label asp-for="IvaCodPorcentajeSri" class="form-label fw-semibold text-xs text-uppercase text-muted">Cod. Porcentaje SRI</label>
+                                <input asp-for="IvaCodPorcentajeSri" class="form-control bg-light shadow-sm" type="text" placeholder="4" />
+                                <div class="form-text text-xs text-muted">Tarifa SRI (ej: 4 para 15%, 2 para 12%, 0 para 0%).</div>
+                            </div>
+                            <div class="col-lg-3 col-md-4">
+                                <label asp-for="IvaTarifa" class="form-label fw-semibold text-xs text-uppercase text-muted">IVA (%)</label>
+                                <div class="input-group">
+                                    <input asp-for="IvaTarifa" class="form-control bg-light shadow-sm" type="number" step="0.01" min="0" placeholder="15.00" />
+                                    <span class="input-group-text bg-white fw-bold">%</span>
+                                </div>
+                                <div class="form-text text-xs text-muted">Porcentaje del IVA que aplica el sistema.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ==================== TAB 2: DOCUMENTOS Y TICKETS ==================== -->
+            <div class="tab-pane fade" id="panel-docs" role="tabpanel">
+                <div class="row g-4">
+
+                    <!-- Ticket de Venta -->
+                    <div class="col-lg-6">
+                        <p class="params-section-title"><i class="bi bi-receipt me-2"></i>Ticket de Venta (POS)</p>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Encabezado del Ticket</label>
+                                <textarea asp-for="TicketEncabezado" class="form-control bg-light font-monospace" rows="3" placeholder="Ej: BIENVENIDO A XYZ&#10;Guayaquil - Ecuador&#10;Gracias por su compra"></textarea>
+                                <div class="form-text text-xs text-muted">Se imprime arriba del ticket, debajo del logo.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Pie del Ticket</label>
+                                <textarea asp-for="TicketPie" class="form-control bg-light font-monospace" rows="2" placeholder="Ej: Conserve su ticket. No se aceptan devoluciones."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Nota de Aviso / Leyenda</label>
+                                <textarea asp-for="TicketNotaAviso" class="form-control bg-light font-monospace" rows="3" placeholder="Ej: En caso de devolución presentar factura original dentro de 8 días."></textarea>
+                                <div class="form-text text-xs text-muted">Texto legal o aviso que aparece al final del ticket.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Ancho del ticket (mm)</label>
+                                <div class="input-group shadow-sm" style="max-width: 160px;">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-arrows-expand text-muted"></i></span>
+                                    <input asp-for="TicketAncho" type="number" min="58" max="112" class="form-control border-start-0 bg-light" />
+                                    <span class="input-group-text bg-white">mm</span>
+                                </div>
+                                <div class="form-text text-xs text-muted">Estándar: 80mm. Microimpresoras pequeñas: 58mm.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opciones del Ticket -->
+                    <div class="col-lg-6">
+                        <p class="params-section-title"><i class="bi bi-toggles me-2"></i>Opciones del Ticket</p>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="premium-card p-3" style="border-radius: 12px;">
+                                    <div class="d-flex flex-column gap-3">
+                                        <label class="switch-label">
+                                            <input type="checkbox" class="form-check-input" asp-for="TicketMostrarLogo" style="width:1.8em; height:1.8em;">
+                                            <div>
+                                                <div class="fw-semibold text-sm">Mostrar logo en ticket</div>
+                                                <div class="text-xs text-muted">Imprime el logo de la empresa en la cabecera</div>
+                                            </div>
+                                        </label>
+                                        <hr class="my-0">
+                                        <label class="switch-label">
+                                            <input type="checkbox" class="form-check-input" asp-for="TicketMostrarFecha" style="width:1.8em; height:1.8em;">
+                                            <div>
+                                                <div class="fw-semibold text-sm">Mostrar fecha y hora</div>
+                                                <div class="text-xs text-muted">Fecha y hora de la transacción en el ticket</div>
+                                            </div>
+                                        </label>
+                                        <hr class="my-0">
+                                        <label class="switch-label">
+                                            <input type="checkbox" class="form-check-input" asp-for="TicketMostrarCajero" style="width:1.8em; height:1.8em;">
+                                            <div>
+                                                <div class="fw-semibold text-sm">Mostrar nombre del cajero</div>
+                                                <div class="text-xs text-muted">Nombre del usuario que realizó la venta</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Vista previa del ticket -->
+                            <div class="col-12 mt-2">
+                                <p class="params-section-title"><i class="bi bi-eye me-2"></i>Vista Previa Ticket</p>
+                                <div class="border rounded p-2 bg-white font-monospace text-center" style="font-size: 0.65rem; max-width: 200px; border-style: dashed !important; line-height: 1.6;">
+                                    @if (!string.IsNullOrEmpty(Model.LogoPath))
+                                    {
+                                        <img src="@(Model.LogoPath.Split('?')[0])" alt="logo" style="height: 30px; object-fit: contain;" class="d-block mx-auto mb-1" />
+                                    }
+                                    <div class="fw-bold" style="font-size:0.7rem;">@(Model.NombreEmpresa ?? "NOMBRE EMPRESA")</div>
+                                    @if (!string.IsNullOrEmpty(Model.AliasEmpresa)) { <div>@Model.AliasEmpresa</div> }
+                                    @if (!string.IsNullOrEmpty(Model.Direccion)) { <div>@Model.Direccion</div> }
+                                    @if (!string.IsNullOrEmpty(Model.Telefono)) { <div>Tel: @Model.Telefono</div> }
+                                    <hr style="border-top: 1px dashed #ccc; margin: 4px 0;" />
+                                    @if (!string.IsNullOrEmpty(Model.TicketEncabezado))
+                                    {
+                                        foreach (var line in Model.TicketEncabezado.Split('\n'))
+                                        {
+                                            <div>@line</div>
+                                        }
+                                    }
+                                    <hr style="border-top: 1px dashed #ccc; margin: 4px 0;" />
+                                    <div class="text-muted">Producto 1 ........ @ViewBag.MonedaSimbolo0.00</div>
+                                    <div class="text-muted">Producto 2 ........ @ViewBag.MonedaSimbolo0.00</div>
+                                    <hr style="border-top: 1px dashed #ccc; margin: 4px 0;" />
+                                    <div class="fw-bold">TOTAL: @ViewBag.MonedaSimbolo0.00</div>
+                                    @if (!string.IsNullOrEmpty(Model.TicketPie))
+                                    {
+                                        <hr style="border-top: 1px dashed #ccc; margin: 4px 0;" />
+                                        foreach (var line in Model.TicketPie.Split('\n'))
+                                        {
+                                            <div class="text-muted" style="font-size:0.6rem;">@line</div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reportes -->
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-bar-chart-line me-2"></i>Configuración de Reportes y PDFs</p>
+                        <div class="row g-3">
+                            <div class="col-lg-8">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Encabezado de Reportes</label>
+                                <textarea asp-for="ReporteEncabezado" class="form-control bg-light" rows="2" placeholder="Ej: Reporte generado por: NOMBRE EMPRESA | RUC: 000000 | www.empresa.com"></textarea>
+                                <div class="form-text text-xs text-muted">Se incluye en el encabezado de todos los reportes PDF.</div>
+                            </div>
+                            <div class="col-lg-8">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Pie de Reportes</label>
+                                <textarea asp-for="ReportePie" class="form-control bg-light" rows="2" placeholder="Ej: Documento generado automáticamente el @DateTime.Now | Confidencial"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="switch-label">
+                                    <input type="checkbox" class="form-check-input" asp-for="ReporteMostrarLogo" style="width:1.8em; height:1.8em;">
+                                    <div>
+                                        <div class="fw-semibold text-sm">Mostrar logo en reportes PDF</div>
+                                        <div class="text-xs text-muted">El logo de la empresa aparece en la esquina superior de todos los reportes</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ==================== TAB 3: VIGENCIA ==================== -->
+            <div class="tab-pane fade" id="panel-vigencia" role="tabpanel">
+                <div class="row justify-content-center">
+                    <div class="col-lg-7">
+                        @{
+                            bool vigente = Model.FechaVigenciaHasta.HasValue && Model.FechaVigenciaHasta.Value >= DateTime.Today;
+                            int diasRestantes = Model.FechaVigenciaHasta.HasValue ? (int)(Model.FechaVigenciaHasta.Value - DateTime.Today).TotalDays : -1;
+                        }
+                        <div class="vigencia-card text-center">
+                            <div class="mb-4">
+                                @if (vigente)
+                                {
+                                    <span class="vigencia-badge badge-active fs-6 px-4 py-2 mb-3">
+                                        <i class="bi bi-shield-fill-check"></i> LICENCIA ACTIVA
+                                    </span>
+                                    <div class="display-6 fw-bold text-success mt-2">@diasRestantes días</div>
+                                    <div class="text-muted">restantes de vigencia</div>
+                                }
+                                else
+                                {
+                                    <span class="vigencia-badge badge-expired fs-6 px-4 py-2 mb-3">
+                                        <i class="bi bi-shield-fill-x"></i> LICENCIA VENCIDA
+                                    </span>
+                                }
+                            </div>
+
+                            <div class="row justify-content-center g-4 mt-2">
+                                <div class="col-auto">
+                                    <label class="form-label fw-bold text-muted text-xs text-uppercase">Vigente Desde</label>
+                                    <input asp-for="FechaVigenciaDesde" type="date" class="form-control shadow-sm text-center fw-bold" style="max-width: 180px; border-radius: 10px;" />
+                                </div>
+                                <div class="col-auto d-flex align-items-end pb-1">
+                                    <i class="bi bi-arrow-right fs-3 text-muted"></i>
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label fw-bold text-muted text-xs text-uppercase">Vigente Hasta</label>
+                                    <input asp-for="FechaVigenciaHasta" type="date" class="form-control shadow-sm text-center fw-bold" style="max-width: 180px; border-radius: 10px;" />
+                                </div>
+                            </div>
+
+                            @if (Model.FechaVigenciaDesde.HasValue && Model.FechaVigenciaHasta.HasValue)
+                            {
+                                <div class="mt-4 text-muted text-sm">
+                                    <i class="bi bi-calendar-range me-2"></i>
+                                    Del <strong>@Model.FechaVigenciaDesde.Value.ToString("dd/MM/yyyy")</strong>
+                                    al <strong>@Model.FechaVigenciaHasta.Value.ToString("dd/MM/yyyy")</strong>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TAB 4: CATÁLOGO PÚBLICO WEB ==================== -->
+            <div class="tab-pane fade" id="panel-catalogo" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-12">
+                        <p class="params-section-title"><i class="bi bi-globe me-2"></i>Catálogo de Productos para Público Externo</p>
+                        <p class="text-xs text-muted mb-4">
+                            Configure un micro-sitio web público e independiente para que sus clientes puedan ver el catálogo de productos y contactar por WhatsApp.
+                            Este sitio se accede mediante la URL pública de la empresa y no requiere inicio de sesión.
+                        </p>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="premium-card p-4 mb-4" style="border-radius: 12px; border: 1.5px solid rgba(99,102,241,0.15);">
+                            <div class="d-flex flex-column gap-3">
+                                <label class="switch-label">
+                                    <input type="checkbox" class="form-check-input" asp-for="CatalogoPublicoActivo" style="width:1.8em; height:1.8em;">
+                                    <div>
+                                        <div class="fw-semibold text-sm">Activar Catálogo Web</div>
+                                        <div class="text-xs text-muted">Habilita el sitio web público del catálogo para esta empresa</div>
+                                    </div>
+                                </label>
+                                <hr class="my-0">
+                                <label class="switch-label">
+                                    <input type="checkbox" class="form-check-input" asp-for="CatalogoMostrarPrecios" style="width:1.8em; height:1.8em;">
+                                    <div>
+                                        <div class="fw-semibold text-sm">Mostrar Precios (PVP)</div>
+                                        <div class="text-xs text-muted">Permite a los usuarios externos ver los precios oficiales de los productos</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Enlace de Vista Previa -->
+                        @if (!string.IsNullOrEmpty(ViewBag.Subdominio))
+                        {
+                            var link = $"{Context.Request.Scheme}://{Context.Request.Host}/catalogo/{ViewBag.Subdominio}";
+                            <div class="alert alert-info border-0 shadow-sm p-3" style="border-radius: 12px;">
+                                <div class="d-flex gap-2">
+                                    <i class="bi bi-info-circle-fill text-info fs-5"></i>
+                                    <div>
+                                        <div class="fw-bold text-sm">Dirección de su Catálogo Público:</div>
+                                        <code class="text-xs d-block my-2" style="background: rgba(255,255,255,0.6); padding: 4px 8px; border-radius: 4px;">@link</code>
+                                        <a href="@link" target="_blank" class="btn btn-xs btn-primary text-xs mt-1 text-white py-1 px-3" style="border-radius:6px; font-weight:600;">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i> Ir al Sitio Web Público
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning border-0 shadow-sm p-3" style="border-radius: 12px;">
+                                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                                <span class="text-xs">Para generar el enlace de acceso público, la empresa debe tener un <strong>Alias de Subdominio</strong> configurado en la administración central.</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Título del Catálogo Web</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-card-heading text-muted"></i></span>
+                                    <input asp-for="CatalogoTitulo" class="form-control border-start-0 bg-light" placeholder="Ej: Catálogo Digital - Repuestos y Rodamientos" />
+                                </div>
+                                <div class="form-text text-xs text-muted">Aparece en el banner superior y pestaña del navegador.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-xs text-uppercase text-muted">Número de WhatsApp para Pedidos</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0 text-success"><i class="bi bi-whatsapp"></i></span>
+                                    <input asp-for="CatalogoWhatsApp" class="form-control border-start-0 bg-light" placeholder="Ej: +593991234567" />
+                                </div>
+                                <div class="form-text text-xs text-muted">Los botones de compra redirigen a este WhatsApp. Si se deja en blanco, se utilizará el <strong>Teléfono Principal</strong> de la empresa.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end tab-content -->
+
+        <!-- Footer Botones -->
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-light border shadow-sm rounded-pill px-4">
+                <i class="bi bi-arrow-left me-1"></i> Cancelar
+            </a>
+            <button type="submit" class="btn btn-premium px-5 shadow" id="saveBtn">
+                <i class="bi bi-check-circle-fill me-2"></i> Guardar Parámetros
+            </button>
+        </div>
+
+    </div><!-- end tab-content-box -->
+</form>
+
+@section Scripts {
+    <script>
+        // ---- Logo preview ----
+        document.getElementById('LogoFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var prev = document.getElementById('logoPreview');
+                prev.src = ev.target.result;
+                prev.style.display = 'block';
+                var ph = document.getElementById('logoPlaceholder');
+                if (ph) ph.style.display = 'none';
+                document.getElementById('removeLogoInput').value = 'false';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ---- Remove logo ----
+        var removeLogoBtn = document.getElementById('removeLogoBtn');
+        if (removeLogoBtn) {
+            removeLogoBtn.addEventListener('click', function() {
+                document.getElementById('removeLogoInput').value = 'true';
+                var prev = document.getElementById('logoPreview');
+                prev.src = ''; prev.style.display = 'none';
+                var ph = document.getElementById('logoPlaceholder');
+                if (ph) ph.style.display = 'block';
+                this.style.display = 'none';
+            });
+        }
+
+        // ---- Welcome background preview ----
+        document.getElementById('WelcomeBgFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var prev = document.getElementById('bgPreview');
+                prev.src = ev.target.result;
+                prev.style.display = 'block';
+                var ph = document.getElementById('bgPlaceholder');
+                if (ph) ph.style.display = 'none';
+                document.getElementById('removeWelcomeBgInput').value = 'false';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ---- Remove welcome bg ----
+        var removeBgBtn = document.getElementById('removeBgBtn');
+        if (removeBgBtn) {
+            removeBgBtn.addEventListener('click', function() {
+                document.getElementById('removeWelcomeBgInput').value = 'true';
+                var prev = document.getElementById('bgPreview');
+                prev.src = ''; prev.style.display = 'none';
+                var ph = document.getElementById('bgPlaceholder');
+                if (ph) ph.style.display = 'block';
+                this.style.display = 'none';
+            });
+        }
+
+        // ---- Save button spinner ----
+        document.getElementById('paramsForm').addEventListener('submit', function() {
+            var btn = document.getElementById('saveBtn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+            btn.disabled = true;
+        });
+    </script>
+}
+

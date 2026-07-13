@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = $"Nuevo Elemento - {ViewBag.LabelVisual}";
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Registrar Elemento en @ViewBag.LabelVisual</h2>
+        <p class="text-muted">Complete la información requerida para el catálogo.</p>
+    </div>
+</div>
+
+<div class="row animate__animated animate__fadeInUp">
+    <div class="col-md-8 col-lg-6">
+        <div class="premium-card">
+            <form asp-action="Create" asp-route-tabla="@ViewBag.Tabla" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                <div class="mb-4">
+                    <label for="nombreInput" class="form-label fw-semibold">Nombre del Elemento</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-tag"></i></span>
+                        <input name="nombre" id="nombreInput" class="form-control border-start-0 ps-0" placeholder="Ej. Elemento Nuevo" required />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                    <button type="submit" class="btn btn-premium flex-grow-1 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Cambios
+                    </button>
+                    <a asp-action="Index" asp-route-tabla="@ViewBag.Tabla" class="btn btn-light border flex-grow-1">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

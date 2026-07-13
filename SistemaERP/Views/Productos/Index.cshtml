@@ -1,0 +1,276 @@
+@model IEnumerable<SistemaERP.Models.Entities.Producto>
+
+@{
+    ViewData["Title"] = "Maestro de Productos";
+    var presentaciones = ViewBag.Presentaciones as Dictionary<long, string>;
+    var proveedores = ViewBag.Proveedores as Dictionary<long, string>;
+}
+
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Maestro de Productos</h2>
+        <p class="text-muted">Control de inventario, precios y especificaciones técnicas.</p>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <a href="@Url.Action("DescargarPlantilla", "ImportacionMasiva", new { catalogo = "productos" })" class="btn btn-outline-primary shadow-sm" title="Descargar Plantilla Excel">
+            <i class="bi bi-download me-1"></i> Plantilla
+        </a>
+        <button type="button" class="btn btn-outline-success shadow-sm" onclick="abrirModalImportacion('productos')" title="Cargar Datos desde Excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Cargar Excel
+        </button>
+        <a asp-action="BatchIva" class="btn btn-outline-indigo shadow-sm" title="Aplicación Masiva de IVA y PVP">
+            <i class="bi bi-percent me-1"></i> Aplicar IVA Masivo
+        </a>
+        <a asp-action="Create" class="btn btn-premium shadow-sm">
+            <i class="bi bi-box-seam me-1"></i> Nuevo Producto
+        </a>
+    </div>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-danger border-0 shadow-sm mb-4 animate__animated animate__shakeX" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @ViewBag.Error
+    </div>
+}
+
+<!-- Buscador premium -->
+<div class="premium-card mb-4 animate__animated animate__fadeInUp shadow-sm border-0 bg-white rounded-3 p-4">
+    <form method="get" asp-action="Index" class="row g-3 align-items-end">
+        <div class="col-md-9">
+            <label class="form-label fw-bold text-uppercase text-secondary" style="font-size: 0.8rem;">Buscar Producto:</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-secondary-subtle"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="search" value="@ViewBag.SearchQuery" class="form-control border border-secondary-subtle bg-light" placeholder="Buscar por Nombre, Código de Barra, ID, Proveedor o '*' para listar todos..." />
+            </div>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary shadow-sm fw-semibold flex-fill py-2 d-flex align-items-center justify-content-center">
+                <i class="bi bi-search me-2"></i> Buscar
+            </button>
+            @if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary shadow-sm fw-semibold flex-fill py-2 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-x-circle me-2"></i> Limpiar
+                </a>
+            }
+        </div>
+    </form>
+</div>
+
+<div class="premium-card animate__animated animate__fadeInUp">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 text-xs text-uppercase py-3">Código / Barra</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Producto</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Stock Dispo.</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Precio (PVP)</th>
+                    <th class="border-0 text-xs text-uppercase py-3">Proveedor</th>
+                    @if (ViewBag.CustomFields != null)
+                    {
+                        @foreach (var campo in (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnLista))
+                        {
+                            <th class="border-0 text-xs text-uppercase py-3">@campo.Etiqueta</th>
+                        }
+                    }
+                    <th class="border-0 text-xs text-uppercase py-3 text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr id="row-@item.Id">
+                            <td class="fw-medium text-muted text-xs">@item.CodigoBarra</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-blue-soft rounded d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        @if (!string.IsNullOrEmpty(item.Foto)) {
+                                            <img src="@item.Foto" class="rounded w-100 h-100" style="object-fit: cover;" />
+                                        } else {
+                                            <i class="bi bi-image fs-5 text-muted opacity-50"></i>
+                                        }
+                                    </div>
+                                    <div>
+                                        <span class="fw-bold text-dark d-block">@item.Nombre</span>
+                                        <span class="text-xs text-muted">Presentación: @(item.Id_Presentacion.HasValue && presentaciones.ContainsKey(item.Id_Presentacion.Value) ? presentaciones[item.Id_Presentacion.Value] : "N/A")</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @{
+                                    var stockClass = item.Disponible <= 10 ? "text-danger fw-bold" : (item.Disponible <= 50 ? "text-warning fw-bold" : "text-success fw-bold");
+                                }
+                                <div class="@stockClass fs-5">
+                                    @item.Disponible
+                                    @if(item.Disponible <= 10) { <i class="bi bi-exclamation-circle ms-1"></i> }
+                                </div>
+                                <div class="text-xs text-muted">Unidades</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">@ViewBag.MonedaSimbolo@item.PVP?.ToString("N2")</div>
+                                <div class="text-xs text-muted">Costo: @ViewBag.MonedaSimbolo@item.PVF?.ToString("N2")</div>
+                            </td>
+                            <td class="text-sm">
+                                @(item.Id_Proveedor.HasValue && proveedores.ContainsKey(item.Id_Proveedor.Value) ? proveedores[item.Id_Proveedor.Value] : "Sin Proveedor")
+                            </td>
+                            @if (ViewBag.CustomFields != null)
+                            {
+                                var service = ViewBag.CamposService as SistemaERP.Areas.Admin.Services.ICamposPersonalizadosService;
+                                var dict = service.ParseDatosAdicionales(item.DatosAdicionales);
+                                @foreach (var campo in (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnLista))
+                                {
+                                    dict.TryGetValue(campo.NombreCampo, out var val);
+                                    <td class="text-sm fw-medium">@(val?.ToString() ?? "N/A")</td>
+                                }
+                            }
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-light border-0 text-primary me-1" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-light border-0 text-danger" title="Eliminar" onclick="confirmDelete(@item.Id, '@item.Nombre')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="@(6 + (ViewBag.CustomFields != null ? (ViewBag.CustomFields as List<SistemaERP.Areas.Admin.Models.CampoPersonalizado>).Where(c => c.VisibleEnLista).Count() : 0))" class="text-center py-5 text-muted">
+                            <i class="bi bi-boxes fs-1 d-block mb-2 opacity-25"></i>
+                            No se encontraron productos registrados.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación dinámica -->
+    <div class="d-flex justify-content-between align-items-center mt-4 no-print border-top pt-3">
+        <div class="text-muted small">
+            @if (ViewBag.TotalRecords > 0)
+            {
+                <span>Mostrando registros del <span class="fw-bold">@(((ViewBag.CurrentPage - 1) * ViewBag.PageSize) + 1)</span> al 
+                <span class="fw-bold">@(Math.Min((int)(ViewBag.CurrentPage * ViewBag.PageSize), (int)ViewBag.TotalRecords))</span> de un total de 
+                <span class="fw-bold">@ViewBag.TotalRecords</span></span>
+            }
+            else
+            {
+                <span>No hay registros para mostrar</span>
+            }
+        </div>
+        @if (ViewBag.TotalPages > 1)
+        {
+            <nav aria-label="Paginación de productos">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { search = ViewBag.SearchQuery, page = ViewBag.CurrentPage - 1 })" aria-label="Anterior">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    
+                    @{
+                        int maxPagesToShow = 5;
+                        int startPage = Math.Max(1, ViewBag.CurrentPage - 2);
+                        int endPage = Math.Min(ViewBag.TotalPages, startPage + maxPagesToShow - 1);
+                        if (endPage - startPage + 1 < maxPagesToShow)
+                        {
+                            startPage = Math.Max(1, endPage - maxPagesToShow + 1);
+                        }
+                    }
+
+                    @if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new { search = ViewBag.SearchQuery, page = 1 })">1</a>
+                        </li>
+                        @if (startPage > 2)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                    }
+
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        <li class="page-item @(ViewBag.CurrentPage == i ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { search = ViewBag.SearchQuery, page = i })">@i</a>
+                        </li>
+                    }
+
+                    @if (endPage < ViewBag.TotalPages)
+                    {
+                        @if (endPage < ViewBag.TotalPages - 1)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new { search = ViewBag.SearchQuery, page = ViewBag.TotalPages })">@ViewBag.TotalPages</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { search = ViewBag.SearchQuery, page = ViewBag.CurrentPage + 1 })" aria-label="Siguiente">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted fw-medium">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+    </a>
+</div>
+
+@await Html.PartialAsync("_ImportacionMasivaModal")
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Eliminarás el producto '" + name + "'. Esta acción afectará el inventario histórico.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, eliminar permanentemente',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("Delete", "Productos")',
+                        type: 'POST',
+                        data: { id: id },
+                        success: function (response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Eliminado!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                                $("#row-" + id).fadeOut(500);
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}

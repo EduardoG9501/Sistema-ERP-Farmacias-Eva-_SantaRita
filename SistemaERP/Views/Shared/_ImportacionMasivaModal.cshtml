@@ -1,0 +1,241 @@
+<!-- Modal de Carga Masiva (Excel) -->
+<div class="modal fade" id="modalImportacionMasiva" tabindex="-1" aria-labelledby="modalImportacionMasivaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <!-- Cabecera Premium -->
+            <div class="modal-header bg-slate-900 border-0 py-3" style="background-color: #1e293b; color: #fff;">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalImportacionMasivaLabel">
+                    <i class="bi bi-file-earmark-excel-fill text-success me-2 fs-4"></i>
+                    <span>Cargar Catálogo desde Excel</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <!-- Cuerpo del Modal -->
+            <div class="modal-body p-4 bg-white">
+                <form id="formImportacionMasiva" enctype="multipart/form-data">
+                    <input type="hidden" id="importCatalogo" name="catalogo" value="" />
+                    <input type="hidden" id="importTabla" name="tabla" value="" />
+                    
+                    <div class="text-center mb-4">
+                        <p class="text-muted small">
+                            Suba el archivo Excel de plantilla rellenado con sus datos. Los campos serán validados antes de guardarse en el sistema.
+                        </p>
+                    </div>
+
+                    <!-- Zona de arrastre de archivos (Drag & Drop) -->
+                    <div id="dropZone" class="border border-2 border-dashed rounded-3 p-4 text-center cursor-pointer mb-3" 
+                         style="border-color: #cbd5e1 !important; background-color: #f8fafc; transition: all 0.3s; cursor: pointer;">
+                        <i class="bi bi-cloud-arrow-up text-primary fs-1 mb-2 d-block"></i>
+                        <span class="fw-semibold text-dark d-block">Arrastra tu archivo aquí</span>
+                        <span class="text-muted text-xs d-block mb-3">o haz clic para explorar tu dispositivo</span>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="document.getElementById('importFile').click()">
+                            Seleccionar Archivo
+                        </button>
+                        <input type="file" id="importFile" name="file" accept=".xlsx" class="d-none" onchange="onFileSelected(this)" />
+                    </div>
+
+                    <!-- Información del archivo seleccionado -->
+                    <div id="fileInfoContainer" class="d-none alert alert-light border d-flex align-items-center justify-content-between p-2 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark-spreadsheet text-success fs-3 me-2"></i>
+                            <div style="line-height: 1.2;">
+                                <span id="fileNameText" class="fw-bold text-dark text-sm text-truncate d-inline-block" style="max-width: 200px;">archivo.xlsx</span>
+                                <span id="fileSizeText" class="text-muted text-xs d-block">0 KB</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="clearSelectedFile()">
+                            <i class="bi bi-trash fs-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Estado de Carga (Spinner) -->
+                    <div id="importLoadingContainer" class="d-none text-center py-3">
+                        <div class="spinner-border text-primary mb-2" role="status">
+                            <span class="visually-hidden">Procesando...</span>
+                        </div>
+                        <p class="text-muted small mb-0 fw-semibold">Procesando archivo e importando registros...</p>
+                    </div>
+
+                    <!-- Reporte de Éxito -->
+                    <div id="importSuccessContainer" class="d-none alert alert-success border-0 shadow-sm p-3 mb-0">
+                        <div class="d-flex">
+                            <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                            <div>
+                                <h6 class="alert-heading fw-bold mb-1 text-success">Carga Completada</h6>
+                                <p id="importSuccessText" class="mb-0 text-sm"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reporte de Errores -->
+                    <div id="importErrorsContainer" class="d-none alert alert-danger border-0 shadow-sm p-3 mt-3 mb-0" style="max-height: 200px; overflow-y: auto;">
+                        <h6 class="fw-bold mb-2 text-danger small">
+                            <i class="bi bi-exclamation-octagon-fill me-1"></i> Errores encontrados:
+                        </h6>
+                        <ul id="importErrorsList" class="mb-0 text-xs ps-3"></ul>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer del Modal -->
+            <div class="modal-footer bg-light border-0 py-3 d-flex gap-2">
+                <button type="button" class="btn btn-light border flex-grow-1" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" id="btnProcesarImportacion" class="btn btn-success flex-grow-1 disabled" onclick="procesarImportacion()">
+                    <i class="bi bi-check2-circle me-1"></i> Importar Datos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inicializar zona de arrastre
+    document.addEventListener('DOMContentLoaded', function () {
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropZone.style.backgroundColor = '#f1f5f9';
+                    dropZone.style.borderColor = '#3b82f6';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropZone.style.backgroundColor = '#f8fafc';
+                    dropZone.style.borderColor = '#cbd5e1';
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    const input = document.getElementById('importFile');
+                    input.files = files;
+                    onFileSelected(input);
+                }
+            }, false);
+        }
+    });
+
+    function abrirModalImportacion(catalogo, tabla = '') {
+        document.getElementById('importCatalogo').value = catalogo;
+        document.getElementById('importTabla').value = tabla;
+        clearSelectedFile();
+        
+        // Esconder alertas y spinners
+        document.getElementById('importLoadingContainer').classList.add('d-none');
+        document.getElementById('importSuccessContainer').classList.add('d-none');
+        document.getElementById('importErrorsContainer').classList.add('d-none');
+        
+        const myModal = new bootstrap.Modal(document.getElementById('modalImportacionMasiva'));
+        myModal.show();
+    }
+
+    function onFileSelected(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            document.getElementById('fileNameText').innerText = file.name;
+            document.getElementById('fileSizeText').innerText = (file.size / 1024).toFixed(1) + " KB";
+            
+            document.getElementById('dropZone').classList.add('d-none');
+            document.getElementById('fileInfoContainer').classList.remove('d-none');
+            document.getElementById('btnProcesarImportacion').classList.remove('disabled');
+        }
+    }
+
+    function clearSelectedFile() {
+        document.getElementById('importFile').value = '';
+        document.getElementById('dropZone').classList.remove('d-none');
+        document.getElementById('fileInfoContainer').classList.add('d-none');
+        document.getElementById('btnProcesarImportacion').classList.add('disabled');
+    }
+
+    function procesarImportacion() {
+        const fileInput = document.getElementById('importFile');
+        if (!fileInput.files || fileInput.files.length === 0) return;
+
+        const catalogo = document.getElementById('importCatalogo').value;
+        const tabla = document.getElementById('importTabla').value;
+
+        // Limpiar estados previos
+        document.getElementById('importLoadingContainer').classList.remove('d-none');
+        document.getElementById('importSuccessContainer').classList.add('d-none');
+        document.getElementById('importErrorsContainer').classList.add('d-none');
+        document.getElementById('btnProcesarImportacion').classList.add('disabled');
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('catalogo', catalogo);
+        formData.append('tabla', tabla);
+
+        $.ajax({
+            url: '/ImportacionMasiva/Importar',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                document.getElementById('importLoadingContainer').classList.add('d-none');
+                document.getElementById('btnProcesarImportacion').classList.remove('disabled');
+
+                if (response.success) {
+                    // Mostrar resumen de éxito
+                    document.getElementById('importSuccessContainer').classList.remove('d-none');
+                    document.getElementById('importSuccessText').innerHTML = 
+                        `Registros totales leídos: <strong>${response.total}</strong><br/>` +
+                        `Importados / Actualizados con éxito: <strong class="text-success">${response.imported}</strong><br/>` +
+                        `Filas con errores: <strong class="text-danger">${response.failed}</strong>`;
+
+                    if (response.failed > 0 && response.errors && response.errors.length > 0) {
+                        const errorList = document.getElementById('importErrorsList');
+                        errorList.innerHTML = '';
+                        response.errors.forEach(err => {
+                            const li = document.createElement('li');
+                            li.innerText = err;
+                            errorList.appendChild(li);
+                        });
+                        document.getElementById('importErrorsContainer').classList.remove('d-none');
+                    }
+
+                    // Mensaje de SweetAlert
+                    Swal.fire({
+                        icon: response.failed === 0 ? 'success' : 'warning',
+                        title: response.failed === 0 ? 'Carga Completada' : 'Carga con Advertencias',
+                        text: `Se cargaron ${response.imported} de ${response.total} registros con éxito.`,
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'Entendido'
+                    }).then(() => {
+                        // Recargar la página si se importó algo para mostrar los cambios
+                        if (response.imported > 0) {
+                            window.location.reload();
+                        }
+                    });
+
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Importación',
+                        text: response.message || 'No se pudo procesar el archivo.',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            },
+            error: function () {
+                document.getElementById('importLoadingContainer').classList.add('d-none');
+                document.getElementById('btnProcesarImportacion').classList.remove('disabled');
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error del Servidor',
+                    text: 'Ocurrió un error inesperado en el servidor al cargar los datos.',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        });
+    }
+</script>
